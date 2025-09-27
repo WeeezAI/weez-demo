@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, ArrowLeft, Loader2, Download, ExternalLink } from "lucide-react";
+import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, Loader2, Download, ExternalLink, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SuggestionBubbles from "./SuggestionBubbles";
-import ProgressSteps from "./ProgressSteps";
 import DocumentCard from "./DocumentCard";
-import { searchDocuments, demoDocuments } from "@/data/demoDocuments";
+import { searchDocuments } from "@/data/demoDocuments";
 
 interface Message {
   id: string;
@@ -18,7 +16,6 @@ interface Message {
   documents?: any[];
   actions?: string[];
   isProgress?: boolean;
-  progressSteps?: string[];
 }
 
 interface ChatInterfaceProps {
@@ -233,155 +230,165 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   const getMessageIcon = (message: Message) => {
     if (message.role === "user") return <User className="w-4 h-4" />;
     
-    if (message.isProgress) return <Loader2 className="w-4 h-4 text-weez-blue animate-spin" />;
+    if (message.isProgress) return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
     
     switch (message.type) {
-      case "search": return <Search className="w-4 h-4 text-weez-blue" />;
-      case "rfp": return <ClipboardList className="w-4 h-4 text-weez-blue" />;
-      case "presentation": return <Presentation className="w-4 h-4 text-weez-blue" />;
+      case "search": return <Search className="w-4 h-4 text-primary" />;
+      case "rfp": return <ClipboardList className="w-4 h-4 text-primary" />;
+      case "presentation": return <Presentation className="w-4 h-4 text-primary" />;
       case "summary": 
-      case "report": return <FileText className="w-4 h-4 text-weez-blue" />;
-      case "welcome": return <Bot className="w-4 h-4 text-weez-blue" />;
-      default: return <Bot className="w-4 h-4 text-weez-blue" />;
+      case "report": return <FileText className="w-4 h-4 text-primary" />;
+      case "welcome": return <Bot className="w-4 h-4 text-primary" />;
+      default: return <Bot className="w-4 h-4 text-primary" />;
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground">
-      {/* Back button */}
-      <div className="p-4 border-b border-weez-blue/20">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBackToCapabilities}
-            className="mb-2 text-weez-text hover:bg-weez-surface"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Capabilities
-          </Button>
+    <div className="flex-1 flex flex-col bg-background">
+      {/* Welcome message */}
+      {messages.length === 0 && (
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-2xl text-center space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-foreground">Experience Weez.AI Capabilities</h2>
+              <p className="text-muted-foreground">
+                Try searching documents, get summaries, run Q&A (RAG), or generate new deliverables like RFPs, reports, or presentations — all using demo data.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search multi-cloud cost optimization")}>
+                🔍 Search
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Cloud Migration Report 2024")}>
+                📄 Summarize
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("What are key security requirements for enterprise cloud?")}>
+                🤖 RAG Q&A
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create an RFP for a data migration project with $500K budget, 6 months")}>
+                📝 Create RFP
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Make a 6-slide presentation on cloud migration risks & mitigation")}>
+                📊 Make Presentation
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create a 1-page report on cost optimization opportunities")}>
+                📑 Create Report
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-4xl mx-auto">
-          {showProgress && (
-            <ProgressSteps
-              steps={progressSteps}
-              duration={4000}
-              onComplete={() => setShowProgress(false)}
-            />
-          )}
-          
-          {messages.map((message) => (
-            <Card key={message.id} className={`message-enter p-4 ${
-              message.role === "user" 
-                ? "ml-12 bg-weez-surface border-weez-blue/10" 
-                : "mr-12 bg-weez-card border-weez-blue/20"
-            }`}>
-              <div className="flex items-start space-x-3">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                  message.role === "user" 
-                    ? "bg-weez-surface" 
-                    : message.isProgress 
-                      ? "bg-weez-blue/20" 
-                      : "bg-gradient-primary"
+      )}
+
+      {/* Messages area */}
+      {messages.length > 0 && (
+        <ScrollArea className="flex-1 px-4">
+          <div className="max-w-4xl mx-auto py-6 space-y-5">
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-[18px] py-[14px] ${
+                  message.role === 'user' 
+                    ? 'bg-primary text-white ml-12' 
+                    : 'bg-gradient-to-br from-muted to-card text-foreground mr-12'
                 }`}>
-                  {getMessageIcon(message)}
-                </div>
-                <div className="flex-1 space-y-3">
-                  <div className="whitespace-pre-line text-sm leading-relaxed text-weez-text">
-                    {message.content}
-                  </div>
-                  
-                  {/* Document cards */}
-                  {message.documents && message.documents.length > 0 && (
-                    <div className="space-y-3">
-                      {message.documents.map((doc, index) => (
-                        <DocumentCard
-                          key={index}
-                          title={doc.title}
-                          type={doc.type}
-                          date={doc.date}
-                          snippet={doc.snippet}
-                          onOpen={() => toast({
-                            title: "Opening document",
-                            description: `Opening ${doc.title}...`,
-                            duration: 2000,
-                          })}
-                          onSummarize={() => handleActionClick("Summarize Results")}
-                          onCite={() => toast({
-                            title: "Citation copied",
-                            description: `Citation for ${doc.title} copied to clipboard`,
-                            duration: 2000,
-                          })}
-                        />
-                      ))}
+                  <div className="flex items-start space-x-3">
+                    {message.role === 'assistant' && (
+                      <div className="flex-shrink-0 mt-1">
+                        {getMessageIcon(message)}
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-3">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      
+                      {message.documents && message.documents.length > 0 && (
+                        <div className="space-y-2">
+                          {message.documents.map((doc, docIndex) => (
+                            <DocumentCard
+                              key={docIndex}
+                              title={doc.title}
+                              type={doc.type}
+                              date={doc.date}
+                              snippet={doc.snippet}
+                              onOpen={() => toast({
+                                title: "Opening document",
+                                description: `Opening ${doc.title}...`,
+                                duration: 2000,
+                              })}
+                              onSummarize={() => handleActionClick("Summarize Results")}
+                              onCite={() => toast({
+                                title: "Citation copied",
+                                description: `Citation for ${doc.title} copied to clipboard`,
+                                duration: 2000,
+                              })}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      
+                      {message.actions && message.actions.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-3">
+                          {message.actions.map((action, actionIndex) => (
+                            <Button
+                              key={actionIndex}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleActionClick(action)}
+                              className="text-xs px-4 py-2 rounded-xl bg-accent/10 border-accent/20 text-accent hover:bg-accent/20 hover:border-accent/40 transition-all hover:scale-105"
+                            >
+                              {action}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  
-                  {/* Action buttons */}
-                  {message.actions && message.actions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {message.actions.map((action, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleActionClick(action)}
-                          className="bg-weez-blue/10 border-weez-blue/30 text-weez-blue hover:bg-weez-blue/20"
-                        >
-                          {action.includes("Download") && <Download className="w-3 h-3 mr-1" />}
-                          {action.includes("Preview") && <ExternalLink className="w-3 h-3 mr-1" />}
-                          {action}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
-          
-          {isLoading && !showProgress && (
-            <Card className="mr-12 bg-weez-card border-weez-blue/20 p-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-primary">
-                  <Bot className="w-4 h-4 text-white animate-pulse" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-weez-blue rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-weez-blue rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2 h-2 bg-weez-blue rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                   </div>
                 </div>
               </div>
-            </Card>
-          )}
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+
+      {/* Progress indicator */}
+      {currentProgress && (
+        <div className="px-4 py-2">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-start">
+              <div className="bg-muted/30 rounded-2xl px-[18px] py-[14px] mr-12 border border-border/20">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-accent border-t-transparent rounded-full mr-2"></div>
+                  {currentProgress}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </ScrollArea>
-      
-      <div className="border-t border-weez-blue/20 p-4">
+      )}
+
+      {/* Input area */}
+      <div className="border-t border-border bg-background p-4">
         <div className="max-w-4xl mx-auto space-y-3">
-          <SuggestionBubbles 
-            onSuggestionClick={handleSuggestionClick}
-            disabled={isLoading}
-          />
-          
-          <div className="flex space-x-2">
+          <SuggestionBubbles onSuggestionClick={handleSuggestionClick} disabled={isLoading} />
+          <div className="flex space-x-3">
+            <Button
+              variant="outline"  
+              size="icon"
+              className="flex-shrink-0 w-10 h-10 rounded-full border-border hover:bg-muted"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
             <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder='Try: "Search multi-cloud cost optimization" OR "Create an RFP for a $500K data migration"'
-              onKeyPress={(e) => e.key === "Enter" && !isLoading && handleSend()}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+              placeholder="Ask me anything... e.g. 'Create RFP for $500k data migration'"
+              className="flex-1 h-10 rounded-full bg-input border-border text-foreground placeholder-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
               disabled={isLoading}
-              className="flex-1 bg-weez-surface border-weez-blue/20 text-weez-text placeholder:text-weez-text/50 focus:border-weez-blue"
             />
-            <Button 
-              onClick={() => handleSend()} 
-              disabled={isLoading || !input.trim()}
-              className="shadow-button bg-weez-blue hover:bg-weez-blue-light"
+            <Button
+              onClick={() => handleSendMessage()}
+              disabled={isLoading || !inputValue.trim()}
+              size="icon"
+              className="flex-shrink-0 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-lg hover:shadow-primary/25 transition-all"
             >
               <Send className="w-4 h-4" />
             </Button>
