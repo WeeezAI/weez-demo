@@ -50,9 +50,13 @@ export default {
         weez: {
           blue: "hsl(var(--weez-blue))",
           "blue-light": "hsl(var(--weez-blue-light))",
-          "gray-50": "hsl(var(--weez-gray-50))",
-          "gray-500": "hsl(var(--weez-gray-500))",
-          "gray-900": "hsl(var(--weez-gray-900))",
+          surface: "hsl(var(--weez-surface))",
+          card: "hsl(var(--weez-card))",
+          text: "hsl(var(--weez-text))",
+        },
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          foreground: "hsl(var(--surface-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -72,6 +76,7 @@ export default {
       boxShadow: {
         "soft": "var(--shadow-soft)",
         "button": "var(--shadow-button)",
+        "glow": "var(--shadow-glow)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -98,10 +103,21 @@ export default {
             height: "0",
           },
         },
+        "fade-in": {
+          from: {
+            opacity: "0",
+            transform: "translateY(10px)",
+          },
+          to: {
+            opacity: "1",
+            transform: "translateY(0)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.3s ease-out",
       },
     },
   },

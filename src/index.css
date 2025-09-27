@@ -8,49 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Weez.AI Brand Colors */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    /* Dark-first theme for Weez.AI Demo */
+    --background: 220 43% 6%;     /* #0b0f13 */
+    --foreground: 210 44% 91%;    /* #E6EEF3 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 218 35% 9%;           /* #0e1620 */
+    --card-foreground: 210 44% 91%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --surface: 220 40% 10%;       /* #0f1720 */
+    --surface-foreground: 210 44% 91%;
 
-    --primary: 217 91% 60%;  /* Weez.AI Blue */
+    --popover: 218 35% 9%;
+    --popover-foreground: 210 44% 91%;
+
+    --primary: 221 83% 53%;       /* #2563EB */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 220 40% 10%;
+    --secondary-foreground: 210 44% 91%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 40% 10%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217 91% 60%;  /* Weez.AI Blue */
-    --accent-foreground: 0 0% 100%;
+    --accent: 213 93% 68%;        /* #60A5FA */
+    --accent-foreground: 220 43% 6%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 44% 91%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --border: 220 35% 15%;
+    --input: 220 35% 15%;
+    --ring: 221 83% 53%;
 
     /* Custom Weez.AI tokens */
-    --weez-blue: 217 91% 60%;
-    --weez-blue-light: 217 91% 70%;
-    --weez-gray-50: 220 14% 96%;
-    --weez-gray-500: 215 16% 47%;
-    --weez-gray-900: 0 0% 9%;
+    --weez-blue: 221 83% 53%;     /* #2563EB */
+    --weez-blue-light: 213 93% 68%; /* #60A5FA */
+    --weez-surface: 220 40% 10%;  /* #0f1720 */
+    --weez-card: 218 35% 9%;      /* #0e1620 */
+    --weez-text: 210 44% 91%;     /* #E6EEF3 */
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--weez-blue)), hsl(var(--weez-blue-light)));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--weez-gray-50)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--weez-surface)));
 
     /* Shadows */
-    --shadow-soft: 0 4px 20px -2px hsl(var(--weez-blue) / 0.1);
-    --shadow-button: 0 2px 8px -2px hsl(var(--weez-blue) / 0.2);
+    --shadow-soft: 0 4px 20px -2px hsl(var(--weez-blue) / 0.15);
+    --shadow-button: 0 2px 8px -2px hsl(var(--weez-blue) / 0.25);
+    --shadow-glow: 0 0 20px hsl(var(--weez-blue) / 0.3);
 
     --radius: 0.5rem;
 
@@ -72,41 +76,7 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Dark theme inherits from root - already dark-first */
   }
 }
 
@@ -117,5 +87,48 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Progress animations */
+  @keyframes progress-fill {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .progress-bar {
+    animation: progress-fill 1.5s ease-out forwards;
+  }
+
+  .shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  /* Suggestion bubble animations */
+  .suggestion-bubble {
+    @apply transition-all duration-200 hover:scale-105 hover:shadow-button;
+  }
+
+  /* Message animations */
+  .message-enter {
+    @apply animate-fade-in;
+  }
+
+  /* Progress step animations */
+  .progress-step {
+    @apply transition-all duration-300;
+  }
+
+  .progress-step.active {
+    @apply text-weez-blue;
+  }
+
+  .progress-step.completed {
+    @apply text-weez-blue-light;
   }
 }
