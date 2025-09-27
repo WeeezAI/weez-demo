@@ -23,50 +23,33 @@ interface Message {
 
 interface ChatInterfaceProps {
   initialExample?: string;
-  onBackToCapabilities: () => void;
+  onConnectorMessage?: (message: string) => void;
 }
 
-const ChatInterface = ({ initialExample, onBackToCapabilities }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      type: "welcome",
-      content: "Welcome to the Weez.AI demo 👋. You can try me by asking to search documents, get summaries, run Q&A (RAG), or even generate new deliverables like RFPs, reports, or presentations — all using this demo data.",
-      actions: ["🔍 Search", "📄 Summarize", "🤖 RAG Q&A", "📝 Create RFP", "📊 Make Presentation", "📑 Create Report"]
-    }
-  ]);
-  const [input, setInput] = useState("");
+const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showProgress, setShowProgress] = useState(false);
-  const [progressSteps, setProgressSteps] = useState<string[]>([]);
+  const [currentProgress, setCurrentProgress] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Auto-send initial example when provided
   useEffect(() => {
     if (initialExample) {
-      setInput(initialExample);
+      setInputValue(initialExample);
       setTimeout(() => {
-        handleSend(initialExample);
+        handleSendMessage(initialExample);
       }, 500);
     }
   }, [initialExample]);
 
   const handleSuggestionClick = (suggestion: string) => {
-    // Show micro-visualization toast
-    toast({
-      title: "Preparing demo data...",
-      description: "Loading documents and processing request",
-      duration: 1000,
-    });
-    
-    setTimeout(() => {
-      handleSend(suggestion);
-    }, 800);
+    setInputValue(suggestion);
+    handleSendMessage(suggestion);
   };
 
-  const handleSend = async (messageText?: string) => {
-    const textToSend = messageText || input;
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || inputValue;
     if (!textToSend.trim()) return;
 
     const userMessage: Message = {
@@ -76,7 +59,7 @@ const ChatInterface = ({ initialExample, onBackToCapabilities }: ChatInterfacePr
     };
 
     setMessages(prev => [...prev, userMessage]);
-    if (!messageText) setInput("");
+    if (!messageText) setInputValue("");
     setIsLoading(true);
 
     // Determine response type and handle accordingly
@@ -103,45 +86,39 @@ const ChatInterface = ({ initialExample, onBackToCapabilities }: ChatInterfacePr
   };
 
   const handleSearch = (query: string) => {
-    // Show search progress
-    const searchMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: "Searching demo corpus — scanning 24 documents...",
-      type: "search",
-      isProgress: true
-    };
-    
-    setMessages(prev => [...prev, searchMessage]);
+    setCurrentProgress("Searching demo corpus — scanning 24 documents...");
     
     setTimeout(() => {
       const results = searchDocuments(query);
+      setCurrentProgress(null);
+      
       const response: Message = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString(),
         role: "assistant",
-        content: `**Search Results:**\n\nFound ${results.length} relevant documents:`,
+        content: `Found ${results.length} relevant documents in our demo corpus:`,
         type: "search",
         documents: results,
         actions: ["Summarize Results", "Create RFP", "Make Presentation"]
       };
       
-      setMessages(prev => prev.slice(0, -1).concat([response]));
+      setMessages(prev => [...prev, response]);
       setIsLoading(false);
     }, 1400);
   };
 
   const handleRFPGeneration = (query: string) => {
-    const steps = [
-      "Generating RFP — Step 1/3: drafting executive summary...",
-      "Generating RFP — Step 2/3: assembling scope & deliverables...",
-      "Generating RFP — Step 3/3: formatting & finalizing..."
-    ];
-    
-    setProgressSteps(steps);
-    setShowProgress(true);
+    setCurrentProgress("Generating RFP — Step 1/3: drafting executive summary...");
     
     setTimeout(() => {
-      setShowProgress(false);
+      setCurrentProgress("Generating RFP — Step 2/3: assembling scope & deliverables...");
+    }, 1500);
+    
+    setTimeout(() => {
+      setCurrentProgress("Generating RFP — Step 3/3: formatting & finalizing...");
+    }, 3000);
+    
+    setTimeout(() => {
+      setCurrentProgress(null);
       const response: Message = {
         id: Date.now().toString(),
         role: "assistant",
@@ -156,17 +133,18 @@ const ChatInterface = ({ initialExample, onBackToCapabilities }: ChatInterfacePr
   };
 
   const handlePresentationGeneration = (query: string) => {
-    const steps = [
-      "Converting content → Slide deck (6 slides)...",
-      "Generating slide content and structure...",
-      "Finalizing presentation format..."
-    ];
-    
-    setProgressSteps(steps);
-    setShowProgress(true);
+    setCurrentProgress("Converting content → Slide deck (6 slides)...");
     
     setTimeout(() => {
-      setShowProgress(false);
+      setCurrentProgress("Generating slide content and structure...");
+    }, 1200);
+    
+    setTimeout(() => {
+      setCurrentProgress("Finalizing presentation format...");
+    }, 2400);
+    
+    setTimeout(() => {
+      setCurrentProgress(null);
       const response: Message = {
         id: Date.now().toString(),
         role: "assistant",
@@ -247,7 +225,7 @@ const ChatInterface = ({ initialExample, onBackToCapabilities }: ChatInterfacePr
           duration: 2000,
         });
       } else {
-        handleSend(mappedAction);
+        handleSendMessage(mappedAction);
       }
     }
   };

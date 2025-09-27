@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react";
 const WeezHeader = () => {
   return (
     <header className="bg-background border-b border-border">
-      <div className="container mx-auto px-4 py-4">
+      <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-3">
           <div className="flex items-center justify-center w-8 h-8 bg-gradient-primary rounded-lg">
             <Sparkles className="w-5 h-5 text-white" />
@@ -11,6 +11,11 @@ const WeezHeader = () => {
           <div>
             <h1 className="text-xl font-semibold text-foreground">Weez AI</h1>
             <p className="text-sm text-muted-foreground">Demo Assistant</p>
+          </div>
+        </div>
+        <div className="flex items-center">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+            <span className="text-xs font-medium text-primary-foreground">U</span>
           </div>
         </div>
       </div>

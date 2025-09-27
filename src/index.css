@@ -8,44 +8,32 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Dark-first theme for Weez.AI Demo */
-    --background: 220 43% 6%;     /* #0b0f13 */
-    --foreground: 210 44% 91%;    /* #E6EEF3 */
+    /* Exact colors from spec */
+    --background: 217 23% 7%;           /* #0B0F13 */
+    --foreground: 210 25% 88%;          /* #E6EEF3 */
+    --card: 216 28% 12%;                /* #1E293B */
+    --card-foreground: 210 25% 88%;     /* #E6EEF3 */
+    --popover: 217 28% 11%;             /* #111827 */
+    --popover-foreground: 210 25% 88%;  /* #E6EEF3 */
+    --primary: 217 91% 60%;             /* #2563EB */
+    --primary-foreground: 210 20% 98%;  /* White text on primary */
+    --secondary: 217 19% 63%;           /* #94A3B8 */
+    --secondary-foreground: 210 25% 88%; /* #E6EEF3 */
+    --muted: 217 28% 11%;               /* #111827 */
+    --muted-foreground: 217 19% 63%;    /* #94A3B8 */
+    --accent: 217 96% 69%;              /* #60A5FA */
+    --accent-foreground: 210 20% 98%;   /* White text on accent */
+    --destructive: 0 62.8% 30.6%;       /* Red for destructive actions */
+    --destructive-foreground: 210 20% 98%; /* White text on destructive */
+    --border: 217 32% 17%;              /* Lighter border */
+    --input: 217 28% 11%;               /* #111827 */
+    --ring: 217 91% 60%;                /* #2563EB */
 
-    --card: 218 35% 9%;           /* #0e1620 */
-    --card-foreground: 210 44% 91%;
-
-    --surface: 220 40% 10%;       /* #0f1720 */
-    --surface-foreground: 210 44% 91%;
-
-    --popover: 218 35% 9%;
-    --popover-foreground: 210 44% 91%;
-
-    --primary: 221 83% 53%;       /* #2563EB */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 40% 10%;
-    --secondary-foreground: 210 44% 91%;
-
-    --muted: 220 40% 10%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 213 93% 68%;        /* #60A5FA */
-    --accent-foreground: 220 43% 6%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 44% 91%;
-
-    --border: 220 35% 15%;
-    --input: 220 35% 15%;
-    --ring: 221 83% 53%;
-
-    /* Custom Weez.AI tokens */
-    --weez-blue: 221 83% 53%;     /* #2563EB */
-    --weez-blue-light: 213 93% 68%; /* #60A5FA */
-    --weez-surface: 220 40% 10%;  /* #0f1720 */
-    --weez-card: 218 35% 9%;      /* #0e1620 */
-    --weez-text: 210 44% 91%;     /* #E6EEF3 */
+    /* Custom Weez.AI exact brand colors */
+    --weez-blue: 217 91% 60%;           /* #2563EB */
+    --weez-surface: 217 28% 11%;        /* #111827 */
+    --weez-text: 210 25% 88%;           /* #E6EEF3 */
+    --weez-card: 216 28% 12%;           /* #1E293B */
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--weez-blue)), hsl(var(--weez-blue-light)));
