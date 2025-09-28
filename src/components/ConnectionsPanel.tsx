@@ -17,11 +17,11 @@ interface Connector {
 
 const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const [connectors, setConnectors] = useState<Connector[]>([
-    { name: "Google Drive", icon: "🗂️", connected: false, description: "Creative assets, documents" },
-    { name: "Dropbox", icon: "📦", connected: false, description: "File sharing, collaboration" },
-    { name: "OneDrive", icon: "☁️", connected: false, description: "Microsoft Office files" },
-    { name: "Slack", icon: "💬", connected: false, description: "Team communications" },
-    { name: "Notion", icon: "📝", connected: false, description: "Project documentation" },
+    { name: "Google Drive", icon: "GD", connected: false, description: "Creative assets, documents" },
+    { name: "Dropbox", icon: "DB", connected: false, description: "File sharing, collaboration" },
+    { name: "OneDrive", icon: "OD", connected: false, description: "Microsoft Office files" },
+    { name: "Slack", icon: "SL", connected: false, description: "Team communications" },
+    { name: "Notion", icon: "NT", connected: false, description: "Project documentation" },
   ]);
   
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
@@ -66,7 +66,9 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
                 onClick={() => handleConnectorClick(connector.name)}
               >
                 <div className="flex items-center space-x-3 w-full">
-                  <div className="flex-shrink-0 text-lg">{connector.icon}</div>
+                  <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-md flex items-center justify-center">
+                    <span className="text-xs font-medium text-muted-foreground">{connector.icon}</span>
+                  </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="font-medium text-sm text-foreground truncate">
                       {connector.name}

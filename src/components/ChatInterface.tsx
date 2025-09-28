@@ -189,26 +189,23 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     return {
       id: Date.now().toString(),
       role: "assistant",
-      content: `I can help you with marketing & creative work:\n\n🔍 **Search creative assets** - "Search campaign performance data"\n📋 **Summarize briefs** - "Summarize Q4 Holiday Campaign Brief"\n❓ **Creative Q&A** - "What are our top-performing creative assets?"\n📄 **Generate RFPs** - "Create an RFP for influencer marketing campaign"\n📊 **Create presentations** - "Make a presentation on brand refresh strategy"\n📑 **Generate reports** - "Create a competitor analysis report"\n\nTry one of these examples or ask me anything about your marketing campaigns!`,
+      content: `I can help you with marketing & creative work:\n\n**Search creative assets** - "Search campaign performance data"\n**Summarize briefs** - "Summarize Q4 Holiday Campaign Brief"\n**Creative Q&A** - "What are our top-performing creative assets?"\n**Generate RFPs** - "Create an RFP for influencer marketing campaign"\n**Create presentations** - "Make a presentation on brand refresh strategy"\n**Generate reports** - "Create a competitor analysis report"\n\nTry one of these examples or ask me anything about your marketing campaigns!`,
       actions: ["Search Campaigns", "Create RFP", "Make Presentation", "Generate Report"]
     };
   };
 
   const handleActionClick = (action: string) => {
     const actionMap: { [key: string]: string } = {
-      "🔍 Search Campaigns": "Search campaign performance data",
-      "📄 Summarize Brief": "Summarize Q4 Holiday Campaign Brief",
-      "🤖 Creative Q&A": "What are our top-performing creative assets?",
-      "📝 Create RFP": "Create an RFP for influencer marketing campaign",
-      "📊 Make Presentation": "Make a presentation on brand refresh strategy",
-      "📑 Create Report": "Create a competitor analysis report",
       "Search Campaigns": "Search campaign performance data",
+      "Summarize Brief": "Summarize Q4 Holiday Campaign Brief", 
+      "Creative Q&A": "What are our top-performing creative assets?",
       "Create RFP": "Create an RFP for influencer marketing campaign",
       "Make Presentation": "Make a presentation on brand refresh strategy",
+      "Create Report": "Create a competitor analysis report",
       "Generate Report": "Create a competitor analysis report",
       "Summarize Results": "Summarize these search results",
       "Download .docx": "download-docx",
-      "Download PDF": "download-pdf",
+      "Download PDF": "download-pdf", 
       "Preview Slides": "preview-slides",
       "Download PPTX": "download-pptx"
     };
@@ -249,33 +246,33 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       {messages.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-2xl text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">👋 Hi, I'm Weez</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-foreground">Hi, I'm Weez</h2>
+              <p className="text-base text-muted-foreground leading-relaxed max-w-md mx-auto">
                 Your AI teammate for marketing & creative work. You can search, summarize, generate RFPs, create presentations, or build reports instantly.
               </p>
               <p className="text-sm text-muted-foreground">
                 Try linking a tool on the right or just start chatting below.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search campaign performance data")}>
-                🔍 Search Campaigns
+            <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search campaign performance data")} className="text-sm">
+                Search Campaigns
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Q4 Holiday Campaign Brief")}>
-                📄 Summarize Brief
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Q4 Holiday Campaign Brief")} className="text-sm">
+                Summarize Brief
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("What are our top-performing creative assets?")}>
-                🤖 Creative Q&A
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("What are our top-performing creative assets?")} className="text-sm">
+                Creative Q&A
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create an RFP for influencer marketing campaign")}>
-                📝 Create RFP
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create an RFP for influencer marketing campaign")} className="text-sm">
+                Create RFP
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Make a presentation on brand refresh strategy")}>
-                📊 Make Presentation
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Make a presentation on brand refresh strategy")} className="text-sm">
+                Make Presentation
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Generate a competitor analysis report")}>
-                📑 Create Report
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Generate a competitor analysis report")} className="text-sm">
+                Create Report
               </Button>
             </div>
           </div>
@@ -288,31 +285,34 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
           <div className="max-w-4xl mx-auto py-6 space-y-6">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {message.role === 'user' ? (
-                  /* User message in container */
-                  <div className="max-w-[70%] bg-white border border-border rounded-2xl px-4 py-3 shadow-soft">
-                    <p className="text-sm text-foreground leading-relaxed">{message.content}</p>
+                 {message.role === 'user' ? (
+                  /* User message in clean container */
+                  <div className="max-w-[70%] bg-card border border-border rounded-lg px-4 py-3 shadow-sm">
+                    <p className="text-sm text-foreground leading-relaxed font-medium">{message.content}</p>
                   </div>
-                ) : (
-                  /* AI message as plain text with icon */
-                  <div className="max-w-[85%] space-y-4">
+                 ) : (
+                  /* AI message as clean plain text */
+                  <div className="max-w-[85%] space-y-3">
                     <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 mt-1">
+                      <div className="flex-shrink-0 mt-0.5">
                         {getMessageIcon(message)}
                       </div>
-                      <div className="flex-1 space-y-4">
+                      <div className="flex-1 space-y-3">
                         {/* Render markdown content */}
                         <div 
-                          className="text-sm text-foreground leading-relaxed prose prose-sm max-w-none"
+                          className="text-sm text-foreground leading-relaxed"
+                          style={{ fontFamily: 'inherit' }}
                           dangerouslySetInnerHTML={{
                             __html: message.content
-                              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                              .replace(/^• (.+)$/gm, '<ul style="margin: 0; padding-left: 1rem;"><li>$1</li></ul>')
-                              .replace(/^(\d+\.) (.+)$/gm, '<ol style="margin: 0; padding-left: 1rem;"><li>$2</li></ol>')
-                              .replace(/^#{1,6} (.+)$/gm, (match, text, offset, string) => {
+                              .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
+                              .replace(/^• (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1rem; position: relative;"><span style="position: absolute; left: 0;">•</span>$1</div>')
+                              .replace(/^(\d+\.) (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">$1</span>$2</div>')
+                              .replace(/^#{1,6} (.+)$/gm, (match, text) => {
                                 const level = match.indexOf(' ');
-                                return `<h${level} style="margin: 0.5rem 0; font-weight: 600;">${text}</h${level}>`;
+                                const fontSize = level === 1 ? '1.125rem' : level === 2 ? '1rem' : '0.875rem';
+                                return `<h${level} style="margin: 1rem 0 0.5rem 0; font-weight: 600; font-size: ${fontSize}; line-height: 1.25;">${text}</h${level}>`;
                               })
+                              .replace(/\n\n/g, '<div style="height: 0.75rem;"></div>')
                               .replace(/\n/g, '<br>')
                           }}
                         />
