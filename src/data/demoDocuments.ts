@@ -9,185 +9,204 @@ export interface DemoDocument {
 }
 
 export const demoDocuments: DemoDocument[] = [
+  // Marketing Campaign Briefs
   {
     id: "1",
-    title: "Acme Cloud Migration Plan 2024",
-    type: "Report",
-    date: "2024-11-08",
-    size: "2.3 MB",
-    snippet: "Acme Inc. seeks to migrate 250 TB of on-prem data to a hybrid multi-cloud architecture over a 6-month period. Objectives: reduce TCO by 25%, improve disaster recovery RTO to < 2 hours.",
-    content: "Acme Inc. seeks to migrate 250 TB of on-prem data to a hybrid multi-cloud architecture over a 6-month period. Objectives: reduce TCO by 25%, improve disaster recovery RTO to < 2 hours, and enable auto-scaling for peak traffic. Key phases: discovery, pilot migration, bulk migration, cutover, optimization. Major risks: data egress cost, legacy database compatibility, and compliance with GDPR/CCPA."
+    title: "Q4 2024 Holiday Campaign Brief",
+    type: "Marketing Brief",
+    date: "2024-03-20",
+    size: "1.2 MB",
+    snippet: "Comprehensive holiday marketing strategy targeting 25% increase in seasonal sales. Multi-channel approach across digital, social, and traditional media...",
+    content: "Executive Summary: Q4 Holiday Campaign targeting premium gift market with $2.5M budget allocation..."
   },
   {
     id: "2", 
-    title: "Data Migration RFP - Sample",
-    type: "RFP",
-    date: "2024-08-15",
-    size: "1.8 MB",
-    snippet: "Client: MidCap Retailer. Project: End-to-End data center migration to cloud. Required: vendor to provide migration plan, staffing, testing, security hardening, and post-migration support for 12 months.",
-    content: "Client: MidCap Retailer. Project: End-to-End data center migration to cloud. Required: vendor to provide migration plan, staffing, testing, security hardening, and post-migration support for 12 months. Budget: ~$500,000. Timeline: 6 months. Evaluation criteria: migration experience, cost, security controls, SLA & support."
+    title: "Brand Refresh Campaign - Creative Direction",
+    type: "Creative Brief",
+    date: "2024-03-18",
+    size: "3.1 MB",
+    snippet: "Complete brand identity overhaul including logo redesign, color palette evolution, and typography system. Focus on modern, sustainable values...",
+    content: "Brand positioning strategy emphasizing sustainability and innovation..."
   },
+  
+  // Client RFP Drafts
   {
     id: "3",
-    title: "Cloud Security Requirements Policy",
-    type: "Whitepaper", 
-    date: "2023-12-01",
-    size: "3.1 MB",
-    snippet: "Enterprises need layered security: identity & access management, data encryption at rest and in transit, continuous vulnerability scanning, and centralized logging (SIEM).",
-    content: "Enterprises need layered security: identity & access management, data encryption at rest and in transit, continuous vulnerability scanning, and centralized logging (SIEM). Recommended controls: IAM least privilege, hardware-backed key management, and quarterly penetration testing."
+    title: "Acme Corp - Integrated Marketing RFP",
+    type: "RFP Draft",
+    date: "2024-03-16",
+    size: "2.8 MB", 
+    snippet: "Full-service marketing partnership proposal for Acme Corp's product launch. $800K budget, 12-month campaign timeline, digital-first approach...",
+    content: "Project Overview: Acme Corp seeks integrated marketing partner for Q2 product launch..."
   },
   {
     id: "4",
-    title: "Case Study: Retailer X Multi-Cloud Migration",
-    type: "Case Study",
-    date: "2024-03-30", 
-    size: "1.5 MB",
-    snippet: "Retailer X migrated web and analytics workloads to a multi-cloud setup using lift-and-shift and containerization for microservices. Outcome: 18% latency reduction, 22% infrastructure cost reduction.",
-    content: "Retailer X migrated web and analytics workloads to a multi-cloud setup using lift-and-shift and containerization for microservices. Outcome: 18% latency reduction, 22% infrastructure cost reduction after optimization. Lessons learned: focus on dependency mapping and automated tests for data integrity."
+    title: "TechStart Influencer Campaign RFP",
+    type: "RFP Draft", 
+    date: "2024-03-14",
+    size: "1.9 MB",
+    snippet: "Influencer marketing strategy for B2B SaaS startup. Target: 500K qualified leads, focus on LinkedIn and YouTube thought leaders...",
+    content: "Campaign Objectives: Generate 500K qualified B2B leads through strategic influencer partnerships..."
   },
+
+  // Creative Pitch Decks
   {
-    id: "5",
-    title: "Marketing Campaign Brief: Launch 2025",
-    type: "Brief",
-    date: "2024-10-10",
-    size: "950 KB", 
-    snippet: "Objective: 6-week acquisition push for new B2B SaaS offering. Target: mid-market IT teams. Deliverables: 3 sales enablement decks, 2 case studies, 10 social posts, one product demo video.",
-    content: "Objective: 6-week acquisition push for new B2B SaaS offering. Target: mid-market IT teams. Deliverables: 3 sales enablement decks, 2 case studies, 10 social posts, one product demo video. Success metrics: MQLs and demo signups; expected CPL <$150."
+    id: "5", 
+    title: "Nike Partnership - Creative Pitch Deck",
+    type: "Presentation",
+    date: "2024-03-12",
+    size: "15.4 MB",
+    snippet: "Award-winning creative concept for Nike's sustainability initiative. 360-degree campaign leveraging AR, social activism, and athlete partnerships...",
+    content: "Slide 1: The Challenge - Connecting Nike's sustainability mission with Gen Z consumers..."
   },
   {
     id: "6",
-    title: "Vendor Comparison: Cloud Compute", 
-    type: "Comparison",
-    date: "2024-06-05",
-    size: "2.7 MB",
-    snippet: "This matrix compares AWS, Azure, GCP compute offerings on price, instance types, managed services, and support options. All providers offer comparable VM families.",
-    content: "This matrix compares AWS, Azure, GCP compute offerings on price, instance types, managed services, and support options. Short summary: All providers offer comparable VM families; GCP tends to be cheaper on certain continuous workloads; Azure provides enterprise integrations for MS-centric shops; AWS has the broadest managed service portfolio."
+    title: "Apple Store Experience - UX Pitch",
+    type: "Presentation", 
+    date: "2024-03-10",
+    size: "22.1 MB",
+    snippet: "Revolutionary in-store experience design combining digital and physical touchpoints. Focus on seamless customer journey and premium service...",
+    content: "Executive Summary: Reimagining Apple Store experience for the digital-first generation..."
   },
+
+  // Performance Reports
   {
     id: "7",
-    title: "Evaluation Criteria Template",
-    type: "Template",
-    date: "2024-01-20", 
-    size: "640 KB",
-    snippet: "Evaluation criteria recommended: Technical Depth (30%), Cost (25%), Security & Compliance (20%), SLA & Uptime (15%), References & Past Projects (10%).",
-    content: "Evaluation criteria recommended: Technical Depth (30%), Cost (25%), Security & Compliance (20%), SLA & Uptime (15%), References & Past Projects (10%)."
+    title: "Meta Ads Performance - February 2024",
+    type: "Analytics Report",
+    date: "2024-03-01", 
+    size: "5.2 MB",
+    snippet: "February campaign performance across Facebook and Instagram. 340% ROAS, 2.1M impressions, 45K conversions. Video content outperformed static by 180%...",
+    content: "Campaign Performance Summary: February 2024 Meta campaigns exceeded targets by 40%..."
   },
   {
-    id: "8",
-    title: "Cloud Migration Presentation Slides",
-    type: "Slides",
-    date: "2024-09-12",
-    size: "4.2 MB", 
-    snippet: "Slide 1: Title — Cloud Migration Overview, Slide 2: Objectives — Reduce TCO, improve RTO, Slide 3: Timeline — 6 months, 4 major phases",
-    content: "Slide 1: Title — Cloud Migration Overview\nSlide 2: Objectives — Reduce TCO, improve RTO\nSlide 3: Timeline — 6 months, 4 major phases\nSlide 4: Risks & Mitigation\nSlide 5: Cost & Budget overview\nSlide 6: Next steps & contact"
+    id: "8", 
+    title: "Google Ads Optimization Report",
+    type: "Analytics Report",
+    date: "2024-02-28",
+    size: "3.7 MB", 
+    snippet: "Search and display campaign analysis with recommendations. CPC reduced 23%, conversion rate improved 31% through smart bidding and audience refinement...",
+    content: "Optimization Results: Smart bidding implementation resulted in 31% conversion improvement..."
   },
+
+  // Brand Guidelines & Assets
   {
     id: "9",
-    title: "Enterprise DevOps Transformation Guide",
-    type: "Guide",
-    date: "2024-07-22",
-    size: "3.8 MB",
-    snippet: "A comprehensive guide for enterprise DevOps adoption including CI/CD pipeline setup, containerization strategies, monitoring and observability frameworks.",
-    content: "A comprehensive guide for enterprise DevOps adoption including CI/CD pipeline setup, containerization strategies, monitoring and observability frameworks. Key metrics: deployment frequency, lead time, MTTR, and change failure rate. Recommended tools: Jenkins, GitLab, Docker, Kubernetes, Prometheus."
+    title: "Global Brand Guidelines v3.2",
+    type: "Brand Guide",
+    date: "2024-03-22",
+    size: "28.9 MB",
+    snippet: "Complete brand system including logo usage, color specifications, typography, photography style, and voice guidelines. 150+ pages of comprehensive standards...",
+    content: "Brand Identity System: Our brand reflects innovation, sustainability, and human-centered design..."
   },
   {
     id: "10",
-    title: "Multi-Cloud Cost Optimization Report",
-    type: "Report",
-    date: "2024-05-14",
-    size: "2.1 MB",
-    snippet: "Analysis of cost optimization strategies across AWS, Azure, and GCP. Key findings: Reserved instances save 30-60%, auto-scaling reduces costs by 25%, proper tagging enables 15% savings.",
-    content: "Analysis of cost optimization strategies across AWS, Azure, and GCP. Key findings: Reserved instances save 30-60%, auto-scaling reduces costs by 25%, proper tagging enables 15% savings through better allocation. Recommendations include right-sizing instances, leveraging spot instances, and implementing FinOps practices."
+    title: "Video Asset Library - Q1 2024", 
+    type: "Media Library",
+    date: "2024-03-25",
+    size: "1.2 GB",
+    snippet: "Curated collection of 200+ video assets: product demos, testimonials, behind-the-scenes content. All formats optimized for social platforms...",
+    content: "Video Content Inventory: Q1 2024 - 247 video assets across 15 campaign themes..."
   },
+
+  // Creative Campaigns
   {
     id: "11",
-    title: "SaaS Security Assessment Framework",
-    type: "Framework",
-    date: "2024-04-03",
-    size: "1.9 MB",
-    snippet: "Comprehensive security assessment framework for SaaS vendors including data protection, access controls, incident response, and compliance requirements (SOC2, ISO27001, GDPR).",
-    content: "Comprehensive security assessment framework for SaaS vendors including data protection, access controls, incident response, and compliance requirements (SOC2, ISO27001, GDPR). Assessment categories: Identity Management, Data Security, Infrastructure Security, Application Security, Compliance & Governance."
+    title: "SuperBowl 2024 - Campaign Retrospective",
+    type: "Case Study",
+    date: "2024-02-15",
+    size: "4.1 MB",
+    snippet: "Post-campaign analysis of SuperBowl commercial performance. 45M+ organic impressions, 2.3M social engagements, brand recall increased 67%...",
+    content: "Campaign Success Metrics: SuperBowl commercial generated 45M organic impressions..."
   },
   {
-    id: "12",
-    title: "Digital Transformation ROI Analysis",
-    type: "Analysis",
-    date: "2024-02-18",
-    size: "1.7 MB",
-    snippet: "ROI analysis for digital transformation initiatives. Average ROI: 3.2x over 24 months. Key success factors: executive sponsorship, change management, employee training.",
-    content: "ROI analysis for digital transformation initiatives. Average ROI: 3.2x over 24 months. Key success factors: executive sponsorship, change management, employee training, and phased implementation. Risk mitigation: proof of concepts, pilot programs, vendor evaluation frameworks."
+    id: "12", 
+    title: "Sustainability Campaign - Earth Day 2024",
+    type: "Campaign Plan",
+    date: "2024-03-05",
+    size: "6.3 MB",
+    snippet: "Earth Day activation strategy combining influencer partnerships, user-generated content, and carbon offset initiatives. Target: 10M reach, 500K engagements...",
+    content: "Earth Day Campaign Strategy: Authentic sustainability storytelling through community activation..."
   },
+
+  // Client Presentations
   {
     id: "13",
-    title: "API Integration Best Practices",
-    type: "Best Practices",
-    date: "2024-08-09",
-    size: "1.4 MB",
-    snippet: "Best practices for enterprise API integration including RESTful design principles, authentication & authorization (OAuth 2.0, API keys), rate limiting, versioning strategies.",
-    content: "Best practices for enterprise API integration including RESTful design principles, authentication & authorization (OAuth 2.0, API keys), rate limiting, versioning strategies, error handling, monitoring & logging. Recommended tools: Postman, Swagger, API Gateway services."
+    title: "Quarterly Business Review - Q1 2024", 
+    type: "Client Presentation",
+    date: "2024-03-28",
+    size: "8.7 MB",
+    snippet: "Comprehensive Q1 performance review with strategic recommendations for Q2. Revenue growth 23%, customer acquisition cost reduced 18%...",
+    content: "Q1 Performance Highlights: Exceeded growth targets by 23% through optimized acquisition strategies..."
   },
   {
     id: "14",
-    title: "Cloud Native Architecture Patterns",
-    type: "Architecture Guide",
-    date: "2024-06-27",
-    size: "4.1 MB",
-    snippet: "Modern cloud-native architecture patterns including microservices, serverless computing, container orchestration, service mesh, and event-driven architectures.",
-    content: "Modern cloud-native architecture patterns including microservices, serverless computing, container orchestration, service mesh, and event-driven architectures. Design principles: scalability, resilience, observability, security. Technology stack recommendations and implementation guidelines."
+    title: "2024 Marketing Strategy Presentation",
+    type: "Strategy Deck", 
+    date: "2024-01-15",
+    size: "12.4 MB",
+    snippet: "Annual marketing strategy focusing on digital transformation, customer experience, and data-driven personalization. Budget allocation across 8 key channels...",
+    content: "2024 Strategic Priorities: Digital-first approach with emphasis on personalization and customer experience..."
   },
+
+  // Competitive Analysis
   {
     id: "15",
-    title: "Data Governance Implementation Roadmap",
-    type: "Roadmap",
-    date: "2024-01-31",
-    size: "2.5 MB",
-    snippet: "12-month roadmap for implementing enterprise data governance including data classification, lineage tracking, quality management, and privacy compliance.",
-    content: "12-month roadmap for implementing enterprise data governance including data classification, lineage tracking, quality management, and privacy compliance. Key milestones: data catalog deployment, stewardship program launch, policy enforcement, and metrics dashboard implementation."
+    title: "Competitive Landscape Analysis - March 2024",
+    type: "Market Research",
+    date: "2024-03-20",
+    size: "7.8 MB", 
+    snippet: "In-depth analysis of top 10 competitors including messaging, pricing, campaign strategies, and market positioning. Key insights for differentiation...",
+    content: "Market Positioning Analysis: Competitive landscape shows opportunity for premium positioning..."
   },
   {
     id: "16",
-    title: "Cybersecurity Incident Response Playbook",
-    type: "Playbook",
-    date: "2024-09-05",
-    size: "2.8 MB",
-    snippet: "Comprehensive incident response playbook covering detection, analysis, containment, eradication, recovery, and lessons learned. Incident classification levels, escalation procedures.",
-    content: "Comprehensive incident response playbook covering detection, analysis, containment, eradication, recovery, and lessons learned. Incident classification levels, escalation procedures, communication templates, forensic procedures, and post-incident review processes."
+    title: "Social Media Benchmarking Report",
+    type: "Benchmark Report",
+    date: "2024-03-18",
+    size: "3.2 MB",
+    snippet: "Social media performance vs. industry benchmarks across all platforms. Engagement rates 40% above average, follower growth rate leading category...",
+    content: "Social Performance Benchmarks: Engagement rates consistently 40% above industry average..."
   },
+
+  // Creative Assets
   {
-    id: "17",
-    title: "Agile Project Management Framework",
-    type: "Framework",
-    date: "2024-03-15",
-    size: "1.6 MB",
-    snippet: "Enterprise agile framework combining Scrum, Kanban, and SAFe methodologies. Sprint planning templates, user story formats, retrospective guidelines.",
-    content: "Enterprise agile framework combining Scrum, Kanban, and SAFe methodologies. Sprint planning templates, user story formats, retrospective guidelines, and metrics tracking (velocity, burn-down charts, cycle time). Tool recommendations: Jira, Azure DevOps, Confluence."
+    id: "17", 
+    title: "Photography Style Guide - Spring 2024",
+    type: "Creative Guide",
+    date: "2024-03-10",
+    size: "45.2 MB",
+    snippet: "Visual guidelines for spring campaign photography including lighting, composition, color grading, and model direction. 100+ reference images...",
+    content: "Photography Direction: Spring 2024 aesthetic emphasizes natural lighting and authentic moments..."
   },
   {
     id: "18",
-    title: "Machine Learning Model Deployment Guide",
-    type: "Deployment Guide",  
-    date: "2024-11-12",
-    size: "3.3 MB",
-    snippet: "End-to-end guide for ML model deployment including containerization with Docker, orchestration with Kubernetes, CI/CD pipelines, monitoring and observability.",
-    content: "End-to-end guide for ML model deployment including containerization with Docker, orchestration with Kubernetes, CI/CD pipelines, monitoring and observability, A/B testing frameworks, and model versioning strategies. MLOps best practices and tool ecosystem overview."
+    title: "Influencer Content Library",
+    type: "Content Archive", 
+    date: "2024-03-15",
+    size: "2.1 GB",
+    snippet: "Archived influencer-generated content from 50+ partnerships. High-performing posts, stories, and reels organized by campaign and platform...",
+    content: "Influencer Content Performance: Top-performing creators generated 15M+ impressions..."
   },
+
+  // Campaign Results
   {
     id: "19",
-    title: "Customer Data Platform Strategy",
-    type: "Strategy Document",
-    date: "2024-07-08",
-    size: "2.2 MB",
-    snippet: "Strategic framework for implementing a Customer Data Platform (CDP) including data ingestion, identity resolution, segmentation, personalization, and privacy compliance.",
-    content: "Strategic framework for implementing a Customer Data Platform (CDP) including data ingestion, identity resolution, segmentation, personalization, and privacy compliance. Vendor comparison: Segment, mParticle, Adobe Experience Platform. Implementation timeline and success metrics."
+    title: "Holiday 2023 - Final Performance Report",
+    type: "Campaign Results", 
+    date: "2024-01-10",
+    size: "9.1 MB",
+    snippet: "Complete holiday campaign analysis: $5.2M revenue generated, 180% return on ad spend, 2.3M new customers acquired across all channels...",
+    content: "Holiday Campaign Success: Generated $5.2M revenue with 180% ROAS across integrated channels..."
   },
   {
     id: "20",
-    title: "Enterprise Backup & Disaster Recovery Plan",
-    type: "DR Plan",
-    date: "2024-10-20",
-    size: "3.6 MB",
-    snippet: "Comprehensive backup and disaster recovery plan including RTO/RPO definitions, backup strategies (full, incremental, differential), recovery procedures, testing protocols.",
-    content: "Comprehensive backup and disaster recovery plan including RTO/RPO definitions, backup strategies (full, incremental, differential), recovery procedures, testing protocols, and business continuity planning. Technology stack: Veeam, AWS Backup, Azure Site Recovery."
+    title: "Email Marketing Performance - Q1 2024",
+    type: "Email Analytics",
+    date: "2024-03-30",
+    size: "2.6 MB", 
+    snippet: "Email campaign performance metrics: 34% open rate, 8.2% CTR, 12% conversion rate. Segmented campaigns outperformed broadcast by 290%...",
+    content: "Email Performance Analysis: Segmented campaigns achieved 290% higher performance than broadcast..."
   }
 ];
 

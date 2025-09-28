@@ -7,18 +7,18 @@ interface SuggestionBubblesProps {
 }
 
 const suggestions = [
-  "Search multi-cloud cost optimization",
-  "Summarize \"Cloud Migration Report 2024\" (exec summary)",
-  "What are key security requirements for enterprise cloud?",
-  "Create an RFP for a data migration project with $500K budget, 6 months",
-  "Make a 6-slide presentation on cloud migration risks & mitigation",
-  "Generate a vendor comparison for AWS vs Azure vs GCP",
-  "Create a 1-page report on cost optimization opportunities (short)",
-  "Summarize the RFP \"Acme Corp - Data Center Exit\" (bullets)",
-  "Show me the full file: \"Acme Cloud Migration Plan 2024\"",
-  "Extract the timeline and deliverables from \"Cloud Migration RFP - Demo\"",
-  "Generate vendor comparison: AWS vs Azure vs GCP",
-  "What are the security requirements for cloud migration?"
+  "Search campaign performance data",
+  "Summarize Q4 Holiday Campaign Brief",
+  "What are our top-performing creative assets?",
+  "Create an RFP for influencer marketing campaign",
+  "Make a presentation on brand refresh strategy",
+  "Generate a competitor analysis report",
+  "Create a campaign performance summary",
+  "Analyze social media benchmarking data",
+  "Show me the Nike partnership pitch deck",
+  "Extract key insights from Meta Ads performance",
+  "Generate creative brief for sustainability campaign",
+  "What are the latest brand guideline updates?"
 ];
 
 const SuggestionBubbles = ({ onSuggestionClick, disabled }: SuggestionBubblesProps) => {
@@ -33,7 +33,7 @@ const SuggestionBubbles = ({ onSuggestionClick, disabled }: SuggestionBubblesPro
               size="sm"
               onClick={() => onSuggestionClick(suggestion)}
               disabled={disabled}
-              className="suggestion-bubble whitespace-nowrap bg-weez-surface border-weez-blue/20 text-weez-text hover:bg-weez-blue/10 hover:border-weez-blue/40 flex-shrink-0"
+              className="suggestion-bubble whitespace-nowrap bg-card border-border text-foreground hover:bg-muted hover:border-weez-accent/40 flex-shrink-0"
             >
               {suggestion.length > 40 ? suggestion.substring(0, 40) + "..." : suggestion}
             </Button>

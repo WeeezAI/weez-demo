@@ -8,41 +8,44 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Exact colors from spec */
-    --background: 217 23% 7%;           /* #0B0F13 */
-    --foreground: 210 25% 88%;          /* #E6EEF3 */
-    --card: 216 28% 12%;                /* #1E293B */
-    --card-foreground: 210 25% 88%;     /* #E6EEF3 */
-    --popover: 217 28% 11%;             /* #111827 */
-    --popover-foreground: 210 25% 88%;  /* #E6EEF3 */
-    --primary: 217 91% 60%;             /* #2563EB */
-    --primary-foreground: 210 20% 98%;  /* White text on primary */
-    --secondary: 217 19% 63%;           /* #94A3B8 */
-    --secondary-foreground: 210 25% 88%; /* #E6EEF3 */
-    --muted: 217 28% 11%;               /* #111827 */
-    --muted-foreground: 217 19% 63%;    /* #94A3B8 */
-    --accent: 217 96% 69%;              /* #60A5FA */
-    --accent-foreground: 210 20% 98%;   /* White text on accent */
-    --destructive: 0 62.8% 30.6%;       /* Red for destructive actions */
-    --destructive-foreground: 210 20% 98%; /* White text on destructive */
-    --border: 217 32% 17%;              /* Lighter border */
-    --input: 217 28% 11%;               /* #111827 */
-    --ring: 217 91% 60%;                /* #2563EB */
+    /* Light theme - Whitish + Greyish palette */
+    --background: 210 20% 98%;           /* #F8F9FA */
+    --foreground: 220 13% 22%;           /* #374151 */
+    --card: 0 0% 100%;                   /* #FFFFFF */
+    --card-foreground: 220 13% 22%;      /* #374151 */
+    --popover: 0 0% 100%;                /* #FFFFFF */
+    --popover-foreground: 220 13% 22%;   /* #374151 */
+    --primary: 217 91% 60%;              /* #2563EB */
+    --primary-foreground: 0 0% 100%;     /* White text on primary */
+    --secondary: 220 14% 96%;            /* #F3F4F6 */
+    --secondary-foreground: 220 13% 22%; /* #374151 */
+    --muted: 220 14% 96%;                /* #F3F4F6 */
+    --muted-foreground: 220 9% 46%;      /* #6B7280 */
+    --accent: 220 9% 46%;                /* #6B7280 - Muted Blue-Grey */
+    --accent-foreground: 0 0% 100%;      /* White text on accent */
+    --destructive: 0 84% 60%;            /* Red for destructive actions */
+    --destructive-foreground: 0 0% 100%; /* White text on destructive */
+    --border: 220 13% 91%;               /* #E5E7EB */
+    --input: 0 0% 100%;                  /* #FFFFFF */
+    --ring: 217 91% 60%;                 /* #2563EB */
 
-    /* Custom Weez.AI exact brand colors */
-    --weez-blue: 217 91% 60%;           /* #2563EB */
-    --weez-surface: 217 28% 11%;        /* #111827 */
-    --weez-text: 210 25% 88%;           /* #E6EEF3 */
-    --weez-card: 216 28% 12%;           /* #1E293B */
+    /* Custom Weez.AI Marketing colors */
+    --weez-blue: 217 91% 60%;            /* #2563EB */
+    --weez-blue-light: 217 96% 69%;      /* #60A5FA */
+    --weez-surface: 0 0% 100%;           /* #FFFFFF */
+    --weez-text: 220 13% 22%;            /* #374151 */
+    --weez-card: 0 0% 100%;              /* #FFFFFF */
+    --weez-accent: 220 9% 46%;           /* #6B7280 */
+    --weez-accent-hover: 220 13% 32%;    /* #4B5563 */
     
-    /* Gradients */
+    /* Light theme gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--weez-blue)), hsl(var(--weez-blue-light)));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--weez-surface)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--secondary)));
 
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -2px hsl(var(--weez-blue) / 0.15);
-    --shadow-button: 0 2px 8px -2px hsl(var(--weez-blue) / 0.25);
-    --shadow-glow: 0 0 20px hsl(var(--weez-blue) / 0.3);
+    /* Light theme shadows */
+    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-button: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-glow: 0 0 0 1px hsl(var(--weez-blue) / 0.1);
 
     --radius: 0.5rem;
 

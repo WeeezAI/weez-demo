@@ -24,33 +24,37 @@ const ConnectorModal = ({ platform, isOpen, onClose, onConfirm }: ConnectorModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-card border-border">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+          <DialogTitle className="flex items-center space-x-3">
             <span className="text-2xl">{getPlatformIcon(platform)}</span>
-            <span>Connect {platform}</span>
+            <span>Authorize Demo Connection</span>
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            This will simulate connecting to {platform} and importing demo files for testing purposes.
+          <DialogDescription>
+            Connect to <strong>{platform}</strong> to sync your marketing assets and creative files for demo purposes.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4">
-          <div className="bg-weez-surface rounded-lg p-4 border border-weez-blue/20">
-            <p className="text-sm text-foreground mb-2">Demo Connection Features:</p>
+        <div className="space-y-4">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium text-sm mb-2">Demo Connection Will:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Import sample documents</li>
-              <li>• Simulate file sync process</li>
-              <li>• Enable search across demo files</li>
+              <li>• Import sample marketing & creative documents</li>
+              <li>• Enable search across demo asset library</li>
+              <li>• Simulate real platform integration</li>
             </ul>
           </div>
+          
+          <p className="text-xs text-muted-foreground">
+            This is a demo environment. No real credentials are required or stored.
+          </p>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button onClick={onConfirm} className="bg-primary hover:bg-primary/90">
+          <Button onClick={onConfirm} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
             Authorize Demo Connection
           </Button>
         </DialogFooter>

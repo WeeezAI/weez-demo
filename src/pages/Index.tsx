@@ -1,7 +1,8 @@
 import { useState } from "react";
 import WeezHeader from "@/components/WeezHeader";
 import ChatInterface from "@/components/ChatInterface";
-import AppSidebar from "@/components/AppSidebar";
+import ConversationSidebar from "@/components/ConversationSidebar";
+import ConnectionsPanel from "@/components/ConnectionsPanel";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,25 +17,25 @@ const Index = () => {
   };
 
   const handleConnectorSync = (platform: string) => {
-    // Simulate sync messages in chat
+    // Simulate sync messages in chat  
     const syncMessages = [
       `🔌 Connecting to ${platform}...`,
-      `📂 Syncing files (12/12)`,
-      `✅ Imported 12 demo files — ready to search.`
+      `📂 Syncing demo assets (images, videos, files)...`,
+      `✅ Imported 12 demo marketing & creative documents — ready to search.`
     ];
 
     // Show toast notification
     toast({
-      title: "Connection Successful",
-      description: `Imported 12 files from ${platform} — added to demo workspace.`,
+      title: "Connection Successful", 
+      description: `Imported 12 marketing assets from ${platform} — added to demo workspace.`,
       duration: 3000,
     });
   };
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
-      {/* Sidebar */}
-      <AppSidebar onNewChat={handleNewChat} onConnectorSync={handleConnectorSync} />
+    <div className="min-h-screen flex bg-background text-foreground w-full">
+      {/* Left Sidebar - Conversations only */}
+      <ConversationSidebar onNewChat={handleNewChat} />
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
@@ -45,6 +46,9 @@ const Index = () => {
           onConnectorMessage={(message) => console.log(message)}
         />
       </div>
+      
+      {/* Right Panel - Connections */}
+      <ConnectionsPanel onConnectorSync={handleConnectorSync} />
       
       <Toaster />
     </div>

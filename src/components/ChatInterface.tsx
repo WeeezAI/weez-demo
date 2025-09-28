@@ -189,23 +189,23 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     return {
       id: Date.now().toString(),
       role: "assistant",
-      content: `I can help you with:\n\n🔍 **Search documents** - "Search multi-cloud optimization"\n📋 **Summarize content** - "Summarize the latest reports"\n❓ **Q&A (RAG)** - "What are the security requirements for cloud migration?"\n📄 **Generate RFPs** - "Create an RFP for a $500K data migration project"\n📊 **Create presentations** - "Make a slide deck about cloud strategy"\n📑 **Generate reports** - "Create a 1-page report on cost optimization"\n\nTry one of these examples or ask me anything else!`,
-      actions: ["Search Documents", "Create RFP", "Make Presentation", "Generate Summary"]
+      content: `I can help you with marketing & creative work:\n\n🔍 **Search creative assets** - "Search campaign performance data"\n📋 **Summarize briefs** - "Summarize Q4 Holiday Campaign Brief"\n❓ **Creative Q&A** - "What are our top-performing creative assets?"\n📄 **Generate RFPs** - "Create an RFP for influencer marketing campaign"\n📊 **Create presentations** - "Make a presentation on brand refresh strategy"\n📑 **Generate reports** - "Create a competitor analysis report"\n\nTry one of these examples or ask me anything about your marketing campaigns!`,
+      actions: ["Search Campaigns", "Create RFP", "Make Presentation", "Generate Report"]
     };
   };
 
   const handleActionClick = (action: string) => {
     const actionMap: { [key: string]: string } = {
-      "🔍 Search": "Search multi-cloud cost optimization",
-      "📄 Summarize": "Summarize the latest cloud migration reports",
-      "🤖 RAG Q&A": "What are key security requirements for enterprise cloud?",
-      "📝 Create RFP": "Create an RFP for a data migration project with $500K budget, 6 months",
-      "📊 Make Presentation": "Make a 6-slide presentation on cloud migration risks & mitigation",
-      "📑 Create Report": "Create a 1-page report on cost optimization opportunities",
-      "Search Documents": "Search multi-cloud cost optimization",
-      "Create RFP": "Create an RFP for a $500K data migration project",
-      "Make Presentation": "Make a slide deck about cloud strategy",
-      "Generate Summary": "Summarize the latest reports",
+      "🔍 Search Campaigns": "Search campaign performance data",
+      "📄 Summarize Brief": "Summarize Q4 Holiday Campaign Brief",
+      "🤖 Creative Q&A": "What are our top-performing creative assets?",
+      "📝 Create RFP": "Create an RFP for influencer marketing campaign",
+      "📊 Make Presentation": "Make a presentation on brand refresh strategy",
+      "📑 Create Report": "Create a competitor analysis report",
+      "Search Campaigns": "Search campaign performance data",
+      "Create RFP": "Create an RFP for influencer marketing campaign",
+      "Make Presentation": "Make a presentation on brand refresh strategy",
+      "Generate Report": "Create a competitor analysis report",
       "Summarize Results": "Summarize these search results",
       "Download .docx": "download-docx",
       "Download PDF": "download-pdf",
@@ -249,29 +249,32 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       {messages.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-2xl text-center space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-foreground">Experience Weez.AI Capabilities</h2>
-              <p className="text-muted-foreground">
-                Try searching documents, get summaries, run Q&A (RAG), or generate new deliverables like RFPs, reports, or presentations — all using demo data.
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-foreground">👋 Hi, I'm Weez</h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Your AI teammate for marketing & creative work. You can search, summarize, generate RFPs, create presentations, or build reports instantly.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Try linking a tool on the right or just start chatting below.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search multi-cloud cost optimization")}>
-                🔍 Search
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search campaign performance data")}>
+                🔍 Search Campaigns
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Cloud Migration Report 2024")}>
-                📄 Summarize
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Q4 Holiday Campaign Brief")}>
+                📄 Summarize Brief
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("What are key security requirements for enterprise cloud?")}>
-                🤖 RAG Q&A
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("What are our top-performing creative assets?")}>
+                🤖 Creative Q&A
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create an RFP for a data migration project with $500K budget, 6 months")}>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create an RFP for influencer marketing campaign")}>
                 📝 Create RFP
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Make a 6-slide presentation on cloud migration risks & mitigation")}>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Make a presentation on brand refresh strategy")}>
                 📊 Make Presentation
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Create a 1-page report on cost optimization opportunities")}>
+              <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Generate a competitor analysis report")}>
                 📑 Create Report
               </Button>
             </div>
@@ -281,67 +284,83 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
 
       {/* Messages area */}
       {messages.length > 0 && (
-        <ScrollArea className="flex-1 px-4">
-          <div className="max-w-4xl mx-auto py-6 space-y-5">
+        <ScrollArea className="flex-1 px-6">
+          <div className="max-w-4xl mx-auto py-6 space-y-6">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-[18px] py-[14px] ${
-                  message.role === 'user' 
-                    ? 'bg-primary text-white ml-12' 
-                    : 'bg-gradient-to-br from-muted to-card text-foreground mr-12'
-                }`}>
-                  <div className="flex items-start space-x-3">
-                    {message.role === 'assistant' && (
+                {message.role === 'user' ? (
+                  /* User message in container */
+                  <div className="max-w-[70%] bg-white border border-border rounded-2xl px-4 py-3 shadow-soft">
+                    <p className="text-sm text-foreground leading-relaxed">{message.content}</p>
+                  </div>
+                ) : (
+                  /* AI message as plain text with icon */
+                  <div className="max-w-[85%] space-y-4">
+                    <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 mt-1">
                         {getMessageIcon(message)}
                       </div>
-                    )}
-                    <div className="flex-1 space-y-3">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                      
-                      {message.documents && message.documents.length > 0 && (
-                        <div className="space-y-2">
-                          {message.documents.map((doc, docIndex) => (
-                            <DocumentCard
-                              key={docIndex}
-                              title={doc.title}
-                              type={doc.type}
-                              date={doc.date}
-                              snippet={doc.snippet}
-                              onOpen={() => toast({
-                                title: "Opening document",
-                                description: `Opening ${doc.title}...`,
-                                duration: 2000,
-                              })}
-                              onSummarize={() => handleActionClick("Summarize Results")}
-                              onCite={() => toast({
-                                title: "Citation copied",
-                                description: `Citation for ${doc.title} copied to clipboard`,
-                                duration: 2000,
-                              })}
-                            />
-                          ))}
-                        </div>
-                      )}
-                      
-                      {message.actions && message.actions.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-3">
-                          {message.actions.map((action, actionIndex) => (
-                            <Button
-                              key={actionIndex}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleActionClick(action)}
-                              className="text-xs px-4 py-2 rounded-xl bg-accent/10 border-accent/20 text-accent hover:bg-accent/20 hover:border-accent/40 transition-all hover:scale-105"
-                            >
-                              {action}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex-1 space-y-4">
+                        {/* Render markdown content */}
+                        <div 
+                          className="text-sm text-foreground leading-relaxed prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: message.content
+                              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                              .replace(/^• (.+)$/gm, '<ul style="margin: 0; padding-left: 1rem;"><li>$1</li></ul>')
+                              .replace(/^(\d+\.) (.+)$/gm, '<ol style="margin: 0; padding-left: 1rem;"><li>$2</li></ol>')
+                              .replace(/^#{1,6} (.+)$/gm, (match, text, offset, string) => {
+                                const level = match.indexOf(' ');
+                                return `<h${level} style="margin: 0.5rem 0; font-weight: 600;">${text}</h${level}>`;
+                              })
+                              .replace(/\n/g, '<br>')
+                          }}
+                        />
+                        
+                        {message.documents && message.documents.length > 0 && (
+                          <div className="space-y-3">
+                            {message.documents.map((doc, docIndex) => (
+                              <DocumentCard
+                                key={docIndex}
+                                title={doc.title}
+                                type={doc.type}
+                                date={doc.date}
+                                snippet={doc.snippet}
+                                onOpen={() => toast({
+                                  title: "Opening document",
+                                  description: `Opening ${doc.title}...`,
+                                  duration: 2000,
+                                })}
+                                onSummarize={() => handleActionClick("Summarize Results")}
+                                onCite={() => toast({
+                                  title: "Citation copied",
+                                  description: `Citation for ${doc.title} copied to clipboard`,
+                                  duration: 2000,
+                                })}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        
+                        {message.actions && message.actions.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {message.actions.map((action, actionIndex) => (
+                              <Button
+                                key={actionIndex}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleActionClick(action)}
+                                className="text-xs px-3 py-1.5 rounded-lg border-weez-accent/20 text-weez-accent hover:bg-weez-accent/10 hover:border-weez-accent/40 transition-all hover:scale-105"
+                              >
+                                {action}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

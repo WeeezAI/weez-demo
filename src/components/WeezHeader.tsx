@@ -9,8 +9,8 @@ const WeezHeader = () => {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Weez AI</h1>
-            <p className="text-sm text-muted-foreground">Demo Assistant</p>
+            <h1 className="text-xl font-semibold text-foreground">Weez.AI</h1>
+            <p className="text-sm text-muted-foreground">Marketing & Creative Teammate</p>
           </div>
         </div>
         <div className="flex items-center">
