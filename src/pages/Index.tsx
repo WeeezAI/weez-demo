@@ -33,12 +33,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground w-full">
+    <div className="h-screen flex bg-background text-foreground w-full overflow-hidden">
       {/* Left Sidebar - Conversations only */}
       <ConversationSidebar onNewChat={handleNewChat} />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <WeezHeader />
         <ChatInterface 
           key={chatKey}

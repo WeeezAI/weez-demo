@@ -122,4 +122,20 @@ All colors MUST be HSL.
   .progress-step.completed {
     @apply text-weez-blue-light;
   }
+
+  /* Loading animations */
+  @keyframes breath {
+    0%, 100% {
+      opacity: 0.4;
+      transform: scale(0.95);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-breath {
+    animation: breath 2s ease-in-out infinite;
+  }
 }

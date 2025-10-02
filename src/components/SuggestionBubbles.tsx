@@ -13,7 +13,7 @@ const suggestions = [
   "Create an RFP for influencer marketing campaign",
   "Make a presentation on brand refresh strategy",
   "Generate a competitor analysis report",
-  "Create a campaign performance summary",
+  "Find Assets from Q4 campaigns",
   "Analyze social media benchmarking data",
   "Show me the Nike partnership pitch deck",
   "Extract key insights from Meta Ads performance",

@@ -6,16 +6,21 @@ import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, Loader2
 import { useToast } from "@/hooks/use-toast";
 import SuggestionBubbles from "./SuggestionBubbles";
 import DocumentCard from "./DocumentCard";
+import LoadingAnimation from "./LoadingAnimation";
+import FilePreviewCard from "./FilePreviewCard";
 import { searchDocuments } from "@/data/demoDocuments";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  type?: "search" | "summary" | "qna" | "rfp" | "presentation" | "report" | "progress" | "welcome";
+  type?: "search" | "summary" | "qna" | "rfp" | "presentation" | "report" | "progress" | "welcome" | "loading";
   documents?: any[];
   actions?: string[];
   isProgress?: boolean;
+  fileName?: string;
+  fileSize?: string;
+  fileType?: "docx" | "pdf" | "pptx";
 }
 
 interface ChatInterfaceProps {
@@ -104,15 +109,27 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   };
 
   const handleRFPGeneration = (query: string) => {
-    setCurrentProgress("Generating RFP — Step 1/3: drafting executive summary...");
+    // Show "Weezy is working..." first
+    const loadingMsg: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: "Weezy is working...",
+      type: "loading"
+    };
+    setMessages(prev => [...prev, loadingMsg]);
     
     setTimeout(() => {
-      setCurrentProgress("Generating RFP — Step 2/3: assembling scope & deliverables...");
+      setMessages(prev => prev.filter(m => m.type !== "loading"));
+      setCurrentProgress("Generating RFP — Step 1/3: drafting executive summary...");
     }, 1500);
     
     setTimeout(() => {
-      setCurrentProgress("Generating RFP — Step 3/3: formatting & finalizing...");
+      setCurrentProgress("Generating RFP — Step 2/3: assembling scope & deliverables...");
     }, 3000);
+    
+    setTimeout(() => {
+      setCurrentProgress("Generating RFP — Step 3/3: formatting & finalizing...");
+    }, 4500);
     
     setTimeout(() => {
       setCurrentProgress(null);
@@ -121,24 +138,39 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
         role: "assistant",
         content: `**Generated RFP: Data Migration Project**\n\n**Executive Summary:**\nEnterprise data migration from legacy systems to modern cloud infrastructure.\n\n**Project Overview:**\n• **Budget:** $500,000\n• **Timeline:** 6 months\n• **Scope:** End-to-end data center migration\n\n**Key Requirements:**\n• Data assessment and mapping\n• Migration strategy and execution\n• Security and compliance validation\n• Testing and quality assurance\n• Training and documentation\n\n**Deliverables:**\n• Migration plan and timeline\n• Risk assessment report\n• Security implementation guide\n• Performance benchmarks\n\n**Evaluation Criteria:**\n• Technical Depth (30%)\n• Cost (25%)\n• Security & Compliance (20%)\n• SLA & Uptime (15%)\n• References & Past Projects (10%)\n\n---\n**Executive Summary:** This RFP seeks a qualified vendor to execute a $500K, 6-month data migration project with comprehensive security validation and post-migration support.`,
         type: "rfp",
-        actions: ["Download .docx", "Download PDF", "Make Presentation", "Create Report"]
+        fileName: "Enterprise_RFP_Draft.docx",
+        fileSize: "2.4 MB",
+        fileType: "docx",
+        actions: ["Make Presentation", "Create Report"]
       };
       
       setMessages(prev => [...prev, response]);
       setIsLoading(false);
-    }, 4500);
+    }, 6000);
   };
 
   const handlePresentationGeneration = (query: string) => {
-    setCurrentProgress("Converting content → Slide deck (6 slides)...");
+    // Show "Weezy is working..." first
+    const loadingMsg: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: "Weezy is working...",
+      type: "loading"
+    };
+    setMessages(prev => [...prev, loadingMsg]);
+    
+    setTimeout(() => {
+      setMessages(prev => prev.filter(m => m.type !== "loading"));
+      setCurrentProgress("Creating Slide Deck — Designing layouts...");
+    }, 1500);
     
     setTimeout(() => {
       setCurrentProgress("Generating slide content and structure...");
-    }, 1200);
+    }, 2700);
     
     setTimeout(() => {
       setCurrentProgress("Finalizing presentation format...");
-    }, 2400);
+    }, 3900);
     
     setTimeout(() => {
       setCurrentProgress(null);
@@ -147,12 +179,15 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
         role: "assistant",
         content: `**Presentation: Enterprise Cloud Migration Strategy**\n\n**Slide 1:** Executive Summary\n• Key benefits and ROI projections\n• Strategic overview and objectives\n\n**Slide 2:** Multi-Cloud Cost Optimization\n• 25-40% cost reduction strategies\n• Automated workload placement\n• Resource optimization techniques\n\n**Slide 3:** Migration Strategy\n• Timeline and budget considerations\n• Risk mitigation approaches\n• Phase-by-phase implementation\n\n**Slide 4:** Security & Compliance\n• Data protection frameworks\n• Regulatory requirements (GDPR/CCPA)\n• Identity and access management\n\n**Slide 5:** Implementation Roadmap\n• Phase 1: Discovery and assessment\n• Phase 2: Pilot migration\n• Phase 3: Bulk migration and cutover\n\n**Slide 6:** Success Metrics & Next Steps\n• Performance benchmarks\n• Success criteria and KPIs\n• Contact information and timeline`,
         type: "presentation",
-        actions: ["Preview Slides", "Download PPTX", "Export as PDF", "Get Speaker Notes"]
+        fileName: "Cloud_Migration_Strategy.pptx",
+        fileSize: "5.8 MB",
+        fileType: "pptx",
+        actions: ["Export as PDF", "Get Speaker Notes"]
       };
       
       setMessages(prev => [...prev, response]);
       setIsLoading(false);
-    }, 3800);
+    }, 5300);
   };
 
   const handleSummarization = (query: string) => {
@@ -171,18 +206,40 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   };
 
   const handleReportGeneration = (query: string) => {
+    // Show "Weezy is working..." first
+    const loadingMsg: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: "Weezy is working...",
+      type: "loading"
+    };
+    setMessages(prev => [...prev, loadingMsg]);
+    
     setTimeout(() => {
+      setMessages(prev => prev.filter(m => m.type !== "loading"));
+      setCurrentProgress("Analyzing Data — Structuring report...");
+    }, 1500);
+    
+    setTimeout(() => {
+      setCurrentProgress("Formatting Document — Finalizing...");
+    }, 2700);
+    
+    setTimeout(() => {
+      setCurrentProgress(null);
       const response: Message = {
         id: Date.now().toString(),
         role: "assistant",
         content: `**Report: Cloud Migration Strategy Analysis**\n\n**1. Executive Overview**\nEnterprise cloud migration represents a critical strategic initiative with potential for significant cost reduction and operational improvements.\n\n**2. Cost Optimization Opportunities**\n• Multi-cloud strategies can reduce TCO by 25-40%\n• Automated workload placement optimizes resource utilization\n• Rightsizing and governance policies prevent cost overruns\n\n**3. Security Requirements**\n• Identity and access management with least privilege\n• Data encryption at rest and in transit\n• Continuous vulnerability scanning and SIEM integration\n• Compliance with GDPR, CCPA, and industry regulations\n\n**4. Implementation Strategy**\n• Phase 1: Discovery and assessment (4-6 weeks)\n• Phase 2: Pilot migration (6-8 weeks)\n• Phase 3: Bulk migration (12-16 weeks)\n• Phase 4: Optimization and cutover (4-6 weeks)\n\n**5. Risk Mitigation**\n• Legacy system compatibility assessment\n• Data egress cost management\n• Comprehensive testing protocols\n• Rollback and disaster recovery procedures\n\n**6. Success Metrics**\n• RTO improvement to <2 hours\n• 25% TCO reduction within 12 months\n• 99.9% uptime SLA achievement\n• Zero security incidents during migration`,
         type: "report",
-        actions: ["Download Report", "Create Executive Summary", "Make Presentation", "Generate RFP"]
+        fileName: "Migration_Analysis_Report.pdf",
+        fileSize: "3.2 MB",
+        fileType: "pdf",
+        actions: ["Create Executive Summary", "Make Presentation", "Generate RFP"]
       };
       
       setMessages(prev => [...prev, response]);
       setIsLoading(false);
-    }, 2000);
+    }, 4200);
   };
 
   const generateDefaultResponse = (userInput: string): Message => {
@@ -190,13 +247,13 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       id: Date.now().toString(),
       role: "assistant",
       content: `I can help you with marketing & creative work:\n\n**Search creative assets** - "Search campaign performance data"\n**Summarize briefs** - "Summarize Q4 Holiday Campaign Brief"\n**Creative Q&A** - "What are our top-performing creative assets?"\n**Generate RFPs** - "Create an RFP for influencer marketing campaign"\n**Create presentations** - "Make a presentation on brand refresh strategy"\n**Generate reports** - "Create a competitor analysis report"\n\nTry one of these examples or ask me anything about your marketing campaigns!`,
-      actions: ["Search Campaigns", "Create RFP", "Make Presentation", "Generate Report"]
+      actions: ["Find Assets", "Create RFP", "Make Presentation", "Generate Report"]
     };
   };
 
   const handleActionClick = (action: string) => {
     const actionMap: { [key: string]: string } = {
-      "Search Campaigns": "Search campaign performance data",
+      "Find Assets": "Search campaign performance data",
       "Summarize Brief": "Summarize Q4 Holiday Campaign Brief", 
       "Creative Q&A": "What are our top-performing creative assets?",
       "Create RFP": "Create an RFP for influencer marketing campaign",
@@ -204,15 +261,13 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       "Create Report": "Create a competitor analysis report",
       "Generate Report": "Create a competitor analysis report",
       "Summarize Results": "Summarize these search results",
-      "Download .docx": "download-docx",
-      "Download PDF": "download-pdf", 
-      "Preview Slides": "preview-slides",
-      "Download PPTX": "download-pptx"
+      "Export as PDF": "export-pdf",
+      "Get Speaker Notes": "speaker-notes"
     };
     
     const mappedAction = actionMap[action];
     if (mappedAction) {
-      if (mappedAction.startsWith("download-") || mappedAction.startsWith("preview-")) {
+      if (mappedAction.startsWith("download-") || mappedAction.startsWith("preview-") || mappedAction.startsWith("export-") || mappedAction.startsWith("speaker-")) {
         toast({
           title: `${action} initiated`,
           description: `Your ${action.toLowerCase()} is being prepared...`,
@@ -230,6 +285,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     if (message.isProgress) return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
     
     switch (message.type) {
+      case "loading": return null;
       case "search": return <Search className="w-4 h-4 text-primary" />;
       case "rfp": return <ClipboardList className="w-4 h-4 text-primary" />;
       case "presentation": return <Presentation className="w-4 h-4 text-primary" />;
@@ -257,7 +313,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
             </div>
             <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
               <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Search campaign performance data")} className="text-sm">
-                Search Campaigns
+                Find Assets
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleSuggestionClick("Summarize Q4 Holiday Campaign Brief")} className="text-sm">
                 Summarize Brief
@@ -293,72 +349,94 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
                  ) : (
                   /* AI message as clean plain text */
                   <div className="max-w-[85%] space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getMessageIcon(message)}
+                    {message.type === "loading" ? (
+                      <LoadingAnimation message={message.content} />
+                    ) : (
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getMessageIcon(message)}
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          {/* Render markdown content */}
+                          <div 
+                            className="text-sm text-foreground leading-relaxed"
+                            style={{ fontFamily: 'inherit' }}
+                            dangerouslySetInnerHTML={{
+                              __html: message.content
+                                .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
+                                .replace(/^• (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1rem; position: relative;"><span style="position: absolute; left: 0;">•</span>$1</div>')
+                                .replace(/^(\d+\.) (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">$1</span>$2</div>')
+                                .replace(/^#{1,6} (.+)$/gm, (match, text) => {
+                                  const level = match.indexOf(' ');
+                                  const fontSize = level === 1 ? '1.125rem' : level === 2 ? '1rem' : '0.875rem';
+                                  return `<h${level} style="margin: 1rem 0 0.5rem 0; font-weight: 600; font-size: ${fontSize}; line-height: 1.25;">${text}</h${level}>`;
+                                })
+                                .replace(/\n\n/g, '<div style="height: 0.75rem;"></div>')
+                                .replace(/\n/g, '<br>')
+                            }}
+                          />
+                          
+                          {message.fileName && message.fileSize && message.fileType && (
+                            <FilePreviewCard
+                              fileName={message.fileName}
+                              fileSize={message.fileSize}
+                              fileType={message.fileType}
+                              onDownload={() => toast({
+                                title: "Download started",
+                                description: `Downloading ${message.fileName}...`,
+                                duration: 2000,
+                              })}
+                              onPreview={() => toast({
+                                title: "Opening preview",
+                                description: `Opening ${message.fileName}...`,
+                                duration: 2000,
+                              })}
+                            />
+                          )}
+                          
+                          {message.documents && message.documents.length > 0 && (
+                            <div className="space-y-3">
+                              {message.documents.map((doc, docIndex) => (
+                                <DocumentCard
+                                  key={docIndex}
+                                  title={doc.title}
+                                  type={doc.type}
+                                  date={doc.date}
+                                  snippet={doc.snippet}
+                                  onOpen={() => toast({
+                                    title: "Opening document",
+                                    description: `Opening ${doc.title}...`,
+                                    duration: 2000,
+                                  })}
+                                  onSummarize={() => handleActionClick("Summarize Results")}
+                                  onCite={() => toast({
+                                    title: "Citation copied",
+                                    description: `Citation for ${doc.title} copied to clipboard`,
+                                    duration: 2000,
+                                  })}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {message.actions && message.actions.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {message.actions.map((action, actionIndex) => (
+                                <Button
+                                  key={actionIndex}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleActionClick(action)}
+                                  className="text-xs px-3 py-1.5 rounded-lg border-weez-accent/20 text-weez-accent hover:bg-weez-accent/10 hover:border-weez-accent/40 transition-all hover:scale-105"
+                                >
+                                  {action}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1 space-y-3">
-                        {/* Render markdown content */}
-                        <div 
-                          className="text-sm text-foreground leading-relaxed"
-                          style={{ fontFamily: 'inherit' }}
-                          dangerouslySetInnerHTML={{
-                            __html: message.content
-                              .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
-                              .replace(/^• (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1rem; position: relative;"><span style="position: absolute; left: 0;">•</span>$1</div>')
-                              .replace(/^(\d+\.) (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">$1</span>$2</div>')
-                              .replace(/^#{1,6} (.+)$/gm, (match, text) => {
-                                const level = match.indexOf(' ');
-                                const fontSize = level === 1 ? '1.125rem' : level === 2 ? '1rem' : '0.875rem';
-                                return `<h${level} style="margin: 1rem 0 0.5rem 0; font-weight: 600; font-size: ${fontSize}; line-height: 1.25;">${text}</h${level}>`;
-                              })
-                              .replace(/\n\n/g, '<div style="height: 0.75rem;"></div>')
-                              .replace(/\n/g, '<br>')
-                          }}
-                        />
-                        
-                        {message.documents && message.documents.length > 0 && (
-                          <div className="space-y-3">
-                            {message.documents.map((doc, docIndex) => (
-                              <DocumentCard
-                                key={docIndex}
-                                title={doc.title}
-                                type={doc.type}
-                                date={doc.date}
-                                snippet={doc.snippet}
-                                onOpen={() => toast({
-                                  title: "Opening document",
-                                  description: `Opening ${doc.title}...`,
-                                  duration: 2000,
-                                })}
-                                onSummarize={() => handleActionClick("Summarize Results")}
-                                onCite={() => toast({
-                                  title: "Citation copied",
-                                  description: `Citation for ${doc.title} copied to clipboard`,
-                                  duration: 2000,
-                                })}
-                              />
-                            ))}
-                          </div>
-                        )}
-                        
-                        {message.actions && message.actions.length > 0 && (
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            {message.actions.map((action, actionIndex) => (
-                              <Button
-                                key={actionIndex}
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleActionClick(action)}
-                                className="text-xs px-3 py-1.5 rounded-lg border-weez-accent/20 text-weez-accent hover:bg-weez-accent/10 hover:border-weez-accent/40 transition-all hover:scale-105"
-                              >
-                                {action}
-                              </Button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
