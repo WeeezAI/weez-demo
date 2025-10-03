@@ -75,7 +75,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     // Determine response type and handle accordingly
     const lowInput = textToSend.toLowerCase();
     
-    if (lowInput.includes("search") || lowInput.includes("find")) {
+    if (lowInput.includes("search") || lowInput.includes("find") || lowInput.includes("assets") || lowInput.includes("asset")) {
       handleSearch(textToSend);
     } else if (lowInput.includes("rfp") || lowInput.includes("request for proposal")) {
       handleRFPGeneration(textToSend);
@@ -305,7 +305,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="flex-1 min-w-0 flex flex-col bg-background">
       {/* Welcome message */}
       {messages.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-8">
@@ -366,24 +366,33 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
                           {getMessageIcon(message)}
                         </div>
                         <div className="flex-1 space-y-3">
-                          {/* Render markdown content with ReactMarkdown */}
+                           {/* Render markdown content with ReactMarkdown */}
                           <div className="prose prose-sm max-w-none">
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                h1: ({node, ...props}) => <h1 className="text-xl font-semibold mb-3 mt-4 text-foreground" {...props} />,
-                                h2: ({node, ...props}) => <h2 className="text-lg font-semibold mb-2 mt-3 text-foreground" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-base font-semibold mb-2 mt-2 text-foreground" {...props} />,
-                                p: ({node, ...props}) => <p className="mb-3 leading-relaxed text-muted-foreground" {...props} />,
-                                ul: ({node, ...props}) => <ul className="mb-3 space-y-1 pl-6 list-disc text-muted-foreground" {...props} />,
-                                ol: ({node, ...props}) => <ol className="mb-3 space-y-1 pl-6 list-decimal text-muted-foreground" {...props} />,
-                                li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                                code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
+                            {(() => {
+                              const normalizeBullets = (text: string) =>
+                                text
+                                  .replace(/^\s*•\s+/gm, '- ') // convert bullet symbol to markdown list
+                                  .replace(/\n\s*•\s+/g, '\n- ');
+                              const normalized = normalizeBullets(message.content);
+                              return (
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    h1: ({node, ...props}) => <h1 className="text-xl font-semibold mb-3 mt-4 text-foreground" {...props} />,
+                                    h2: ({node, ...props}) => <h2 className="text-lg font-semibold mb-2 mt-3 text-foreground" {...props} />,
+                                    h3: ({node, ...props}) => <h3 className="text-base font-semibold mb-2 mt-2 text-foreground" {...props} />,
+                                    p: ({node, ...props}) => <p className="mb-3 leading-relaxed text-muted-foreground" {...props} />,
+                                    ul: ({node, ...props}) => <ul className="mb-3 space-y-1 pl-6 list-disc text-muted-foreground" {...props} />,
+                                    ol: ({node, ...props}) => <ol className="mb-3 space-y-1 pl-6 list-decimal text-muted-foreground" {...props} />,
+                                    li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                                    strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                    code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
+                                  }}
+                                >
+                                  {normalized}
+                                </ReactMarkdown>
+                              );
+                            })()}
                           </div>
                           
                           {message.fileName && message.fileSize && message.fileType && (
