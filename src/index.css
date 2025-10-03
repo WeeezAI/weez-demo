@@ -81,6 +81,31 @@ All colors MUST be HSL.
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  /* Markdown Typography Improvements */
+  .prose {
+    @apply text-foreground;
+  }
+  
+  .prose h1, .prose h2, .prose h3 {
+    @apply text-foreground font-semibold;
+  }
+  
+  .prose p {
+    @apply text-muted-foreground leading-relaxed mb-3;
+  }
+  
+  .prose ul, .prose ol {
+    @apply text-muted-foreground space-y-1;
+  }
+  
+  .prose li {
+    @apply leading-relaxed;
+  }
+  
+  .prose strong {
+    @apply text-foreground font-semibold;
+  }
+
   /* Progress animations */
   @keyframes progress-fill {
     from { width: 0%; }

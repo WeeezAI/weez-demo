@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +9,8 @@ import DocumentCard from "./DocumentCard";
 import LoadingAnimation from "./LoadingAnimation";
 import FilePreviewCard from "./FilePreviewCard";
 import { searchDocuments } from "@/data/demoDocuments";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -34,6 +36,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   const [isLoading, setIsLoading] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<string | null>(null);
   const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-send initial example when provided
   useEffect(() => {
@@ -44,6 +47,11 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       }, 500);
     }
   }, [initialExample]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion);
@@ -337,8 +345,9 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
 
       {/* Messages area */}
       {messages.length > 0 && (
-        <ScrollArea className="flex-1 px-6">
-          <div className="max-w-4xl mx-auto py-6 space-y-6">
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full">
+            <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                  {message.role === 'user' ? (
@@ -357,24 +366,25 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
                           {getMessageIcon(message)}
                         </div>
                         <div className="flex-1 space-y-3">
-                          {/* Render markdown content */}
-                          <div 
-                            className="text-sm text-foreground leading-relaxed"
-                            style={{ fontFamily: 'inherit' }}
-                            dangerouslySetInnerHTML={{
-                              __html: message.content
-                                .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
-                                .replace(/^• (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1rem; position: relative;"><span style="position: absolute; left: 0;">•</span>$1</div>')
-                                .replace(/^(\d+\.) (.+)$/gm, '<div style="margin: 0.25rem 0; padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">$1</span>$2</div>')
-                                .replace(/^#{1,6} (.+)$/gm, (match, text) => {
-                                  const level = match.indexOf(' ');
-                                  const fontSize = level === 1 ? '1.125rem' : level === 2 ? '1rem' : '0.875rem';
-                                  return `<h${level} style="margin: 1rem 0 0.5rem 0; font-weight: 600; font-size: ${fontSize}; line-height: 1.25;">${text}</h${level}>`;
-                                })
-                                .replace(/\n\n/g, '<div style="height: 0.75rem;"></div>')
-                                .replace(/\n/g, '<br>')
-                            }}
-                          />
+                          {/* Render markdown content with ReactMarkdown */}
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({node, ...props}) => <h1 className="text-xl font-semibold mb-3 mt-4 text-foreground" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-lg font-semibold mb-2 mt-3 text-foreground" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-base font-semibold mb-2 mt-2 text-foreground" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-3 leading-relaxed text-muted-foreground" {...props} />,
+                                ul: ({node, ...props}) => <ul className="mb-3 space-y-1 pl-6 list-disc text-muted-foreground" {...props} />,
+                                ol: ({node, ...props}) => <ol className="mb-3 space-y-1 pl-6 list-decimal text-muted-foreground" {...props} />,
+                                li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
                           
                           {message.fileName && message.fileSize && message.fileType && (
                             <FilePreviewCard
@@ -441,8 +451,10 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
                 )}
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       )}
 
       {/* Progress indicator */}

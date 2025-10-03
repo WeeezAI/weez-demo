@@ -14,8 +14,8 @@ const ConversationSidebar = ({ onNewChat }: ConversationSidebarProps) => {
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
 
   return (
-    <div className="w-64 h-screen bg-background border-r border-border flex flex-col">
-      <div className="p-4 flex-shrink-0">
+    <div className="w-full md:w-64 lg:w-72 max-w-[280px] bg-background border-r border-border flex flex-col min-h-screen">
+      <div className="p-4 border-b border-border flex-shrink-0">
         <Button 
           onClick={onNewChat}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-button"
@@ -25,8 +25,9 @@ const ConversationSidebar = ({ onNewChat }: ConversationSidebarProps) => {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-4 space-y-4">
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
+          <div className="px-4 py-4 space-y-4">
           {/* Spaces Section */}
           <div>
             <div className="flex items-center space-x-2 mb-2">
@@ -76,7 +77,8 @@ const ConversationSidebar = ({ onNewChat }: ConversationSidebarProps) => {
             </div>
           </div>
         </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
 
       <div className="p-4 border-t border-border flex-shrink-0">
         <p className="text-xs text-muted-foreground text-center">

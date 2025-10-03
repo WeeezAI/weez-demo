@@ -63,7 +63,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
   return (
     <>
-      <div className="w-80 h-screen bg-background border-l border-border flex flex-col">
+      <div className="w-full md:w-80 lg:w-80 max-w-[320px] bg-background border-l border-border flex flex-col min-h-screen">
         <div className="p-4 border-b border-border flex-shrink-0">
           <div className="flex items-center space-x-2 mb-2">
             <Cable className="w-4 h-4 text-muted-foreground" />
@@ -74,8 +74,9 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
           </p>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-3">
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-3">
             {connectors.map((connector) => {
               const IconComponent = connector.icon;
               return (
@@ -116,16 +117,17 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
               );
             })}
 
-            <Button
-              variant="outline"
-              className="w-full justify-start mt-2"
-              onClick={() => setShowCustomModal(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Custom Connection
-            </Button>
-          </div>
-        </ScrollArea>
+              <Button
+                variant="outline"
+                className="w-full justify-start mt-2"
+                onClick={() => setShowCustomModal(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Custom Connection
+              </Button>
+            </div>
+          </ScrollArea>
+        </div>
 
         <div className="p-4 border-t border-border flex-shrink-0">
           <p className="text-xs text-muted-foreground text-center">
