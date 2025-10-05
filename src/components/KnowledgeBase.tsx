@@ -56,7 +56,7 @@ const KnowledgeBase = () => {
         </div>
       </div>
       
-      <ScrollArea className="max-h-[65vh]">
+      <ScrollArea className="h-[400px]">
         <div className="space-y-2 pr-3">
           {demoAssets.map((asset) => (
             <Card
