@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, Loader2, Download, ExternalLink, Plus, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SuggestionBubbles from "./SuggestionBubbles";
@@ -36,7 +34,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeepResearchMode, setIsDeepResearchMode] = useState(false);
+  const [activeMode, setActiveMode] = useState<'deep-research' | 'creative' | null>(null);
   const [currentProgress, setCurrentProgress] = useState<string | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -61,6 +59,19 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     handleSendMessage(suggestion);
   };
 
+  const handleModeClick = (mode: 'deep-research' | 'creative') => {
+    if (activeMode === mode) {
+      setActiveMode(null);
+      setInputValue("");
+    } else {
+      setActiveMode(mode);
+      const prompt = mode === 'deep-research' 
+        ? "Analyze the current market trends and provide comprehensive insights with data sources"
+        : "Generate creative content ideas and marketing strategies for our latest campaign";
+      setInputValue(prompt);
+    }
+  };
+
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputValue;
     if (!textToSend.trim()) return;
@@ -74,6 +85,17 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
     setMessages(prev => [...prev, userMessage]);
     if (!messageText) setInputValue("");
     setIsLoading(true);
+
+    // Check if this is a mode-specific prompt
+    if (activeMode === 'deep-research' && textToSend.includes("market trends")) {
+      setActiveMode(null);
+      simulateDeepResearchResponse();
+      return;
+    } else if (activeMode === 'creative' && textToSend.includes("creative content ideas")) {
+      setActiveMode(null);
+      simulateCreativeResponse();
+      return;
+    }
 
     // Determine response type and handle accordingly
     const lowInput = textToSend.toLowerCase();
@@ -96,6 +118,230 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
         setIsLoading(false);
       }, 1200);
     }
+  };
+
+  const simulateDeepResearchResponse = () => {
+    setCurrentProgress("Analyzing market data...");
+
+    setTimeout(() => {
+      setCurrentProgress("Gathering insights from multiple sources...");
+    }, 1000);
+
+    setTimeout(() => {
+      setCurrentProgress("Generating comprehensive report...");
+    }, 2000);
+
+    setTimeout(() => {
+      setCurrentProgress(null);
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `# 📊 Deep Market Research Report
+
+## Executive Summary
+Based on comprehensive analysis across multiple data sources, here are the key market insights:
+
+## 🎯 Market Trends Analysis
+
+### Current Market Dynamics
+- **Growth Rate**: Market showing 23% YoY growth
+- **Key Drivers**: Digital transformation, automation, AI integration
+- **Market Size**: Estimated $45B globally
+
+### Consumer Sentiment Analysis
+
+**Positive Indicators:**
+- 78% customer satisfaction rate
+- Strong brand recognition increasing by 15%
+- High engagement on social platforms
+
+**Areas of Concern:**
+- Price sensitivity in emerging markets
+- Competition intensifying in Q4
+- Supply chain considerations
+
+## 📈 Data Insights
+
+### Source Analysis
+
+**Reddit Discussions** ([r/technology](https://reddit.com/r/technology))
+- 2.3K mentions in past 30 days
+- Overall sentiment: 72% positive
+- Key topics: Innovation, user experience
+
+**Twitter Analytics** ([@TechNews](https://twitter.com/TechNews))
+- 15.4K tweets analyzed
+- Trending hashtags: #Innovation #DigitalTransformation
+- Influencer engagement: High
+
+**Industry Reports** ([TechCrunch](https://techcrunch.com))
+- Featured in 12 major publications
+- Analyst ratings: Mostly positive
+- Investment interest increasing
+
+## 💡 Strategic Recommendations
+
+1. **Market Expansion**
+   - Focus on untapped regions
+   - Leverage digital channels
+   - Partnership opportunities
+
+2. **Product Development**
+   - Enhance AI capabilities
+   - Improve user interface
+   - Mobile-first approach
+
+3. **Marketing Strategy**
+   - Increase social media presence
+   - Influencer partnerships
+   - Content marketing focus
+
+## 🔍 Competitive Landscape
+
+- Main competitors showing similar growth patterns
+- Market share opportunities in mid-tier segment
+- Innovation remains key differentiator
+
+---
+
+*Analysis completed at ${new Date().toLocaleString()}*  
+*Sources: Reddit, Twitter, Industry Reports, Market Research Databases*`,
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false);
+    }, 3000);
+  };
+
+  const simulateCreativeResponse = () => {
+    setCurrentProgress("Generating creative ideas...");
+
+    setTimeout(() => {
+      setCurrentProgress("Analyzing campaign assets...");
+    }, 1000);
+
+    setTimeout(() => {
+      setCurrentProgress("Crafting content strategies...");
+    }, 2000);
+
+    setTimeout(() => {
+      setCurrentProgress(null);
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `# 🎨 Creative Content & Marketing Ideas
+
+## Campaign Overview
+Here are innovative content ideas and marketing strategies tailored for your campaign:
+
+## 💡 Content Ideas
+
+### 1. Interactive Content Series
+**"Behind the Scenes" Campaign**
+- Weekly video series showcasing team culture
+- User-generated content challenges
+- Live Q&A sessions with product experts
+- **Engagement Potential**: High (Est. 40% increase)
+
+### 2. Educational Content Hub
+**"Master Class Monday"**
+- Tutorial videos and how-to guides
+- Industry expert interviews
+- Case study breakdowns
+- Downloadable resources and templates
+
+### 3. Social Media Storytelling
+**"Customer Success Stories"**
+- Real testimonials in video format
+- Before/after transformations
+- Mini-documentary series
+- Share across all platforms
+
+## 🚀 Marketing Strategies
+
+### Multi-Channel Approach
+
+**Social Media Tactics:**
+- Instagram Reels showcasing product features
+- TikTok challenges with branded hashtags
+- LinkedIn thought leadership articles
+- Twitter polls for audience engagement
+
+**Content Calendar Highlights:**
+- Monday: Educational content
+- Wednesday: Product spotlights
+- Friday: Community engagement
+- Weekend: User-generated content
+
+## 📱 Platform-Specific Ideas
+
+### Instagram
+- Carousel posts with tips and tricks
+- Stories with polls and quizzes
+- IGTV for longer format content
+- Reels trending audio integration
+
+### LinkedIn
+- Industry insights articles
+- Professional case studies
+- Webinar promotions
+- Employee advocacy posts
+
+### TikTok
+- Trend-jacking opportunities
+- Educational snippets (< 60 sec)
+- Behind-the-scenes culture
+- Product demos with humor
+
+## 🎯 Engagement Tips
+
+### Building Community
+1. **Respond promptly** to comments and messages
+2. **Create conversation starters** with thought-provoking questions
+3. **Host virtual events** (webinars, AMAs, live demos)
+4. **Reward engagement** with exclusive content or early access
+
+### Content Optimization
+- Use high-quality visuals consistently
+- Incorporate trending topics naturally
+- A/B test headlines and thumbnails
+- Optimize posting times per platform
+
+### Storytelling Framework
+- **Hook**: Grab attention in first 3 seconds
+- **Problem**: Identify pain points
+- **Solution**: Present your offering
+- **Call-to-Action**: Clear next steps
+
+## 📊 Success Metrics to Track
+
+- Engagement rate (likes, comments, shares)
+- Reach and impressions
+- Click-through rates
+- Conversion rates
+- Follower growth
+- Content saves/bookmarks
+
+## 🌟 Innovative Campaign Concepts
+
+### Concept 1: "Innovation Challenge"
+Partner with customers to co-create solutions. Monthly challenges with prizes.
+
+### Concept 2: "Spotlight Series"
+Feature different team members, customers, or partners weekly.
+
+### Concept 3: "Value Drop Fridays"
+Release exclusive tips, resources, or discounts every Friday.
+
+---
+
+*Creative brief generated at ${new Date().toLocaleString()}*  
+*Ready to implement? Let's bring these ideas to life! 🚀*`,
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false);
+    }, 3000);
   };
 
   const handleSearch = (query: string) => {
@@ -488,30 +734,6 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       {/* Input area */}
       <div className="border-t border-border bg-background p-4">
         <div className="max-w-4xl mx-auto space-y-3">
-          {/* Deep Research Mode Toggle */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="deep-research-mode"
-                checked={isDeepResearchMode}
-                onCheckedChange={setIsDeepResearchMode}
-                className="data-[state=checked]:bg-primary"
-              />
-              <Label 
-                htmlFor="deep-research-mode" 
-                className="text-sm font-medium text-foreground flex items-center gap-2 cursor-pointer"
-              >
-                <Zap className={`w-4 h-4 transition-colors ${isDeepResearchMode ? 'text-primary' : 'text-muted-foreground'}`} />
-                Deep Research Mode
-              </Label>
-            </div>
-            {isDeepResearchMode && (
-              <span className="text-xs text-muted-foreground bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                Enhanced Analysis Active
-              </span>
-            )}
-          </div>
-
           <SuggestionBubbles onSuggestionClick={handleSuggestionClick} disabled={isLoading} />
           <div className="flex space-x-3">
             <Button
@@ -525,8 +747,8 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-              placeholder={isDeepResearchMode ? "Ask me anything... (Deep Research Mode ON)" : "Ask me anything... e.g. 'Create RFP for $500k data migration'"}
-              className={`flex-1 h-10 rounded-full bg-input border-border text-foreground placeholder-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent ${isDeepResearchMode ? 'border-primary/40' : ''}`}
+              placeholder="Ask me anything... e.g. 'Create RFP for $500k data migration'"
+              className="flex-1 h-10 rounded-full bg-input border-border text-foreground placeholder-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
               disabled={isLoading}
             />
             <Button
@@ -536,6 +758,30 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
               className="flex-shrink-0 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-lg hover:shadow-primary/25 transition-all"
             >
               <Send className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {/* Mode Buttons */}
+          <div className="flex items-center gap-2 px-1">
+            <Button
+              variant={activeMode === 'deep-research' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleModeClick('deep-research')}
+              disabled={isLoading}
+              className="h-8 rounded-full text-xs font-medium transition-all"
+            >
+              <Search className="h-3.5 w-3.5 mr-1.5" />
+              Deep Research Mode
+            </Button>
+            <Button
+              variant={activeMode === 'creative' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleModeClick('creative')}
+              disabled={isLoading}
+              className="h-8 rounded-full text-xs font-medium transition-all"
+            >
+              <Zap className="h-3.5 w-3.5 mr-1.5" />
+              Creative Mode
             </Button>
           </div>
         </div>
