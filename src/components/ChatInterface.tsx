@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, Loader2, Download, ExternalLink, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Send, Bot, User, FileText, Search, Presentation, ClipboardList, Loader2, Download, ExternalLink, Plus, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SuggestionBubbles from "./SuggestionBubbles";
 import DocumentCard from "./DocumentCard";
@@ -34,6 +36,7 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeepResearchMode, setIsDeepResearchMode] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<string | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -485,6 +488,30 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
       {/* Input area */}
       <div className="border-t border-border bg-background p-4">
         <div className="max-w-4xl mx-auto space-y-3">
+          {/* Deep Research Mode Toggle */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center space-x-3">
+              <Switch
+                id="deep-research-mode"
+                checked={isDeepResearchMode}
+                onCheckedChange={setIsDeepResearchMode}
+                className="data-[state=checked]:bg-primary"
+              />
+              <Label 
+                htmlFor="deep-research-mode" 
+                className="text-sm font-medium text-foreground flex items-center gap-2 cursor-pointer"
+              >
+                <Zap className={`w-4 h-4 transition-colors ${isDeepResearchMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                Deep Research Mode
+              </Label>
+            </div>
+            {isDeepResearchMode && (
+              <span className="text-xs text-muted-foreground bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                Enhanced Analysis Active
+              </span>
+            )}
+          </div>
+
           <SuggestionBubbles onSuggestionClick={handleSuggestionClick} disabled={isLoading} />
           <div className="flex space-x-3">
             <Button
@@ -498,8 +525,8 @@ const ChatInterface = ({ initialExample, onConnectorMessage }: ChatInterfaceProp
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-              placeholder="Ask me anything... e.g. 'Create RFP for $500k data migration'"
-              className="flex-1 h-10 rounded-full bg-input border-border text-foreground placeholder-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
+              placeholder={isDeepResearchMode ? "Ask me anything... (Deep Research Mode ON)" : "Ask me anything... e.g. 'Create RFP for $500k data migration'"}
+              className={`flex-1 h-10 rounded-full bg-input border-border text-foreground placeholder-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent ${isDeepResearchMode ? 'border-primary/40' : ''}`}
               disabled={isLoading}
             />
             <Button
