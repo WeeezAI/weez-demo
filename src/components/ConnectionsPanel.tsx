@@ -69,7 +69,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
   return (
     <>
-      <div className="hidden md:flex w-80 lg:w-80 max-w-[320px] bg-background border-l border-border flex flex-col h-screen">
+      <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen flex-shrink-0">
         <div className="p-4 border-b border-border flex-shrink-0">
           <div className="flex items-center space-x-2 mb-2">
             <Cable className="w-4 h-4 text-muted-foreground" />
