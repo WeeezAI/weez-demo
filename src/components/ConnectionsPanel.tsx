@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Cable, Check, Plus, HardDrive, Box, Cloud, Hash, FileText } from "lucide-react";
+import { Cable, Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ConnectorModal from "./ConnectorModal";
 import CustomConnectorModal from "./CustomConnectorModal";
+import googleDriveIcon from "@/assets/google-drive-icon.png";
+import dropboxIcon from "@/assets/dropbox-icon.png";
+import onedriveIcon from "@/assets/onedrive-icon.png";
+import slackIcon from "@/assets/slack-icon.png";
+import notionIcon from "@/assets/notion-icon.png";
 
 interface ConnectionsPanelProps {
   onConnectorSync: (platform: string) => void;
@@ -12,7 +17,8 @@ interface ConnectionsPanelProps {
 
 interface Connector {
   name: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
+  iconImage?: string;
   connected: boolean;
   description: string;
   color: string;
@@ -20,11 +26,11 @@ interface Connector {
 
 const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const [connectors, setConnectors] = useState<Connector[]>([
-    { name: "Google Drive", icon: HardDrive, connected: false, description: "Creative assets, documents", color: "text-yellow-600" },
-    { name: "Dropbox", icon: Box, connected: false, description: "File sharing, collaboration", color: "text-blue-500" },
-    { name: "OneDrive", icon: Cloud, connected: false, description: "Microsoft Office files", color: "text-blue-600" },
-    { name: "Slack", icon: Hash, connected: false, description: "Team communications", color: "text-purple-600" },
-    { name: "Notion", icon: FileText, connected: false, description: "Project documentation", color: "text-foreground" },
+    { name: "Google Drive", iconImage: googleDriveIcon, connected: false, description: "Creative assets, documents", color: "text-yellow-600" },
+    { name: "Dropbox", iconImage: dropboxIcon, connected: false, description: "File sharing, collaboration", color: "text-blue-500" },
+    { name: "OneDrive", iconImage: onedriveIcon, connected: false, description: "Microsoft Office files", color: "text-blue-600" },
+    { name: "Slack", iconImage: slackIcon, connected: false, description: "Team communications", color: "text-purple-600" },
+    { name: "Notion", iconImage: notionIcon, connected: false, description: "Project documentation", color: "text-foreground" },
   ]);
   
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
@@ -78,7 +84,6 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
           <ScrollArea className="h-full">
             <div className="p-4 space-y-3">
             {connectors.map((connector) => {
-              const IconComponent = connector.icon;
               return (
                 <Card key={connector.name} className="p-3 hover:shadow-button transition-shadow">
                   <Button
@@ -88,7 +93,11 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
                   >
                     <div className="flex items-center space-x-3 w-full">
                       <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-md flex items-center justify-center">
-                        <IconComponent className={`w-4 h-4 ${connector.color}`} />
+                        {connector.iconImage ? (
+                          <img src={connector.iconImage} alt={connector.name} className="w-5 h-5 object-contain" />
+                        ) : connector.icon && (
+                          <connector.icon className={`w-4 h-4 ${connector.color}`} />
+                        )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <div className="font-medium text-sm text-foreground truncate">

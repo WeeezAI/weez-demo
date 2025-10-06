@@ -554,10 +554,12 @@ Release exclusive tips, resources, or discounts every Friday.
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-background">
+    <div className="flex-1 min-w-0 flex flex-col bg-background overflow-hidden">
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col min-h-full">
       {/* Welcome message */}
       {messages.length === 0 && (
-        <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex-1 flex items-center justify-center p-8 min-h-[calc(100vh-200px)]">
           <div className="max-w-2xl text-center space-y-6">
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-foreground">Hi, I'm Weez</h2>
@@ -594,9 +596,8 @@ Release exclusive tips, resources, or discounts every Friday.
 
       {/* Messages area */}
       {messages.length > 0 && (
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
-            <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
+        <div className="flex-1 py-6">
+          <div className="max-w-4xl mx-auto px-4 space-y-6">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                  {message.role === 'user' ? (
@@ -711,7 +712,6 @@ Release exclusive tips, resources, or discounts every Friday.
             ))}
             <div ref={messagesEndRef} />
           </div>
-          </ScrollArea>
         </div>
       )}
 
@@ -730,9 +730,11 @@ Release exclusive tips, resources, or discounts every Friday.
           </div>
         </div>
       )}
+        </div>
+      </ScrollArea>
 
       {/* Input area */}
-      <div className="border-t border-border bg-background p-4">
+      <div className="border-t border-border bg-background p-4 flex-shrink-0">
         <div className="max-w-4xl mx-auto space-y-3">
           <SuggestionBubbles onSuggestionClick={handleSuggestionClick} disabled={isLoading} />
           <div className="flex space-x-3">
