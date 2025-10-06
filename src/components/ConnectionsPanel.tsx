@@ -85,12 +85,11 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
             <div className="p-4 space-y-3">
             {connectors.map((connector) => {
               return (
-                <Card key={connector.name} className="p-3 hover:shadow-button transition-shadow">
-                  <Button
-                    variant="ghost"
-                    className="w-full h-auto p-0 justify-start"
-                    onClick={() => handleConnectorClick(connector.name)}
-                  >
+                <Card 
+                  key={connector.name} 
+                  className="p-3 hover:bg-muted hover:shadow-button transition-all cursor-pointer"
+                  onClick={() => handleConnectorClick(connector.name)}
+                >
                     <div className="flex items-center space-x-3 w-full">
                       <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-md flex items-center justify-center">
                         {connector.iconImage ? (
@@ -121,7 +120,6 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
                         )}
                       </div>
                     </div>
-                  </Button>
                 </Card>
               );
             })}

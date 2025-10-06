@@ -33,7 +33,7 @@ const Index = () => {
   };
 
   return (
-    <div className="h-screen max-h-screen flex bg-background text-foreground w-full overflow-hidden">
+    <div className="h-screen flex bg-background text-foreground w-full overflow-hidden">
       {/* Left Sidebar - Conversations only */}
       <ConversationSidebar onNewChat={handleNewChat} />
       

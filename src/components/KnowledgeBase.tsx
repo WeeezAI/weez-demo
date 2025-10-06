@@ -49,14 +49,14 @@ const KnowledgeBase = () => {
   };
 
   return (
-    <div className="px-4 pb-4">
-      <div className="mb-3">
-        <div className="text-xs font-medium text-muted-foreground mb-2">
+    <div className="pl-6">
+      <div className="mb-2">
+        <div className="text-xs font-medium text-muted-foreground">
           {demoAssets.length} assets
         </div>
       </div>
       
-      <ScrollArea className="h-[400px]">
+      <ScrollArea className="h-[300px]">
         <div className="space-y-2 pr-3">
           {demoAssets.map((asset) => (
             <Card
