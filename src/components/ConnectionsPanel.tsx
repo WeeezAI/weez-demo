@@ -82,7 +82,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
-            <div className="p-6 pr-12 space-y-3">
+            <div className="p-6 pr-16 space-y-3">
             {connectors.map((connector) => {
               return (
                 <Card 
