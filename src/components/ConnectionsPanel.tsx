@@ -70,7 +70,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   return (
     <>
       <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen flex-shrink-0">
-        <div className="p-4 border-b border-border flex-shrink-0">
+        <div className="p-6 border-b border-border flex-shrink-0">
           <div className="flex items-center space-x-2 mb-2">
             <Cable className="w-4 h-4 text-muted-foreground" />
             <h3 className="font-medium text-foreground">Link your tools</h3>
@@ -82,7 +82,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
-            <div className="p-4 pr-10 space-y-3">
+            <div className="p-6 pr-12 space-y-3">
             {connectors.map((connector) => {
               return (
                 <Card 
@@ -136,7 +136,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
           </ScrollArea>
         </div>
 
-        <div className="p-4 border-t border-border flex-shrink-0">
+        <div className="p-6 border-t border-border flex-shrink-0">
           <p className="text-xs text-muted-foreground text-center">
             Demo mode - connections simulate real integrations
           </p>
