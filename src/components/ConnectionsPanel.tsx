@@ -82,12 +82,12 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
-            <div className="p-6 pr-16 space-y-3">
+            <div className="px-8 py-6 space-y-3 md:px-10">
             {connectors.map((connector) => {
               return (
                 <Card 
                   key={connector.name} 
-                  className="p-3 hover:bg-muted hover:shadow-button transition-all cursor-pointer"
+                  className="w-full p-3 hover:bg-muted hover:shadow-button transition-all cursor-pointer"
                   onClick={() => handleConnectorClick(connector.name)}
                 >
                     <div className="flex items-center space-x-3 w-full">

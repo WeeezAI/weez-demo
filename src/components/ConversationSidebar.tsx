@@ -22,7 +22,7 @@ const ConversationSidebar = ({ onNewChat }: ConversationSidebarProps) => {
   ];
 
   return (
-    <div className="w-full md:w-64 lg:w-72 max-w-[280px] bg-background border-r border-border flex flex-col h-screen">
+    <div className="w-full md:w-64 lg:w-72 bg-background border-r border-border flex flex-col h-screen flex-shrink-0">
       <div className="p-4 border-b border-border flex-shrink-0">
         <Button 
           onClick={onNewChat}
