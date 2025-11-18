@@ -137,11 +137,11 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
               <Button
                 variant="outline"
-                className="w-full justify-start mt-2 hover-scale"
+                className="w-full justify-start mt-2 rainbow-border-hover"
                 onClick={() => setShowInviteBrandModal(true)}
               >
                 <Mail className="w-4 h-4 mr-2" />
-                Invite a Brand to Share Assets
+                Invite Brand to Share Assets
               </Button>
             </div>
           </ScrollArea>

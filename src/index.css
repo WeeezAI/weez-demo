@@ -125,6 +125,27 @@ All colors MUST be HSL.
     animation: shimmer 2s infinite;
   }
 
+  /* Rainbow border animation */
+  @keyframes rainbow-border {
+    0% { border-color: hsl(0, 100%, 60%); }
+    14% { border-color: hsl(30, 100%, 60%); }
+    28% { border-color: hsl(60, 100%, 60%); }
+    42% { border-color: hsl(120, 100%, 60%); }
+    57% { border-color: hsl(180, 100%, 60%); }
+    71% { border-color: hsl(240, 100%, 60%); }
+    85% { border-color: hsl(300, 100%, 60%); }
+    100% { border-color: hsl(360, 100%, 60%); }
+  }
+
+  .rainbow-border-hover {
+    @apply border-2 border-transparent;
+    transition: all 0.3s ease;
+  }
+
+  .rainbow-border-hover:hover {
+    animation: rainbow-border 2s linear infinite;
+  }
+
   /* Suggestion bubble animations */
   .suggestion-bubble {
     @apply transition-all duration-200 hover:scale-105 hover:shadow-button;
