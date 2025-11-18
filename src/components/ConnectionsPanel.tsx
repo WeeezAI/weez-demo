@@ -38,6 +38,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const [showModal, setShowModal] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [showInviteBrandModal, setShowInviteBrandModal] = useState(false);
+  const [invitedBrands, setInvitedBrands] = useState<Array<{ name: string; email: string }>>([]);
 
   const handleConnectorClick = (connectorName: string) => {
     const connector = connectors.find(c => c.name === connectorName);
@@ -67,6 +68,10 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
     setConnectors(prev => [...prev, newConnector]);
     onConnectorSync(platformName);
     setShowCustomModal(false);
+  };
+
+  const handleInviteSent = (brandName: string, email: string) => {
+    setInvitedBrands([...invitedBrands, { name: brandName, email }]);
   };
 
   return (
@@ -143,6 +148,27 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
                 <Mail className="w-4 h-4 mr-2" />
                 Invite Brand to Share Assets
               </Button>
+
+              {invitedBrands.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {invitedBrands.map((brand, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border animate-fade-in"
+                    >
+                      <div className="relative">
+                        <span className="text-xl">🎨</span>
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-background animate-pulse"></span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{brand.name}</p>
+                        <p className="text-xs text-muted-foreground">{brand.email}</p>
+                      </div>
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Pending</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -173,6 +199,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       <InviteBrandModal
         isOpen={showInviteBrandModal}
         onClose={() => setShowInviteBrandModal(false)}
+        onInviteSent={handleInviteSent}
       />
     </>
   );
