@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Cable, Check, Plus } from "lucide-react";
+import { Cable, Check, Plus, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ConnectorModal from "./ConnectorModal";
 import CustomConnectorModal from "./CustomConnectorModal";
+import InviteBrandModal from "./InviteBrandModal";
 import googleDriveIcon from "@/assets/google-drive-icon.png";
 import dropboxIcon from "@/assets/dropbox-icon.png";
 import onedriveIcon from "@/assets/onedrive-icon.png";
@@ -36,6 +37,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showInviteBrandModal, setShowInviteBrandModal] = useState(false);
 
   const handleConnectorClick = (connectorName: string) => {
     const connector = connectors.find(c => c.name === connectorName);
@@ -82,7 +84,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
-            <div className="px-1 py-6 space-y-3">
+            <div className="px-1 py-6 space-y-3 animate-fade-in">
             {connectors.map((connector) => {
               return (
                 <Card 
@@ -132,6 +134,15 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
                 <Plus className="w-4 h-4 mr-2" />
                 Add Custom Connection
               </Button>
+
+              <Button
+                variant="outline"
+                className="w-full justify-start mt-2 hover-scale"
+                onClick={() => setShowInviteBrandModal(true)}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Invite a Brand to Share Assets
+              </Button>
             </div>
           </ScrollArea>
         </div>
@@ -157,6 +168,11 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
         isOpen={showCustomModal}
         onClose={() => setShowCustomModal(false)}
         onConfirm={handleCustomConnector}
+      />
+
+      <InviteBrandModal
+        isOpen={showInviteBrandModal}
+        onClose={() => setShowInviteBrandModal(false)}
       />
     </>
   );
