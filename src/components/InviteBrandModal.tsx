@@ -44,6 +44,7 @@ const InviteBrandModal = ({ isOpen, onClose }: InviteBrandModalProps) => {
               placeholder="e.g., Acme Corporation"
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
+              className="border-2 border-primary/20 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </div>
           <div className="space-y-2">
@@ -55,6 +56,7 @@ const InviteBrandModal = ({ isOpen, onClose }: InviteBrandModalProps) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
+              className="border-2 border-primary/20 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </div>
         </div>
