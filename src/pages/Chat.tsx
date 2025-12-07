@@ -1,15 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import WeezHeader from "@/components/WeezHeader";
 import ChatInterface from "@/components/ChatInterface";
 import ConversationSidebar from "@/components/ConversationSidebar";
 import ConnectionsPanel from "@/components/ConnectionsPanel";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Index = () => {
+const Chat = () => {
   const [initialExample, setInitialExample] = useState("");
   const [chatKey, setChatKey] = useState(0);
   const { toast } = useToast();
+  const { isAuthenticated, currentSpace } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/auth");
+    } else if (!currentSpace) {
+      navigate("/spaces");
+    }
+  }, [isAuthenticated, currentSpace, navigate]);
 
   const handleNewChat = () => {
     setInitialExample("");
@@ -17,20 +29,16 @@ const Index = () => {
   };
 
   const handleConnectorSync = (platform: string) => {
-    // Simulate sync messages in chat  
-    const syncMessages = [
-      `🔌 Connecting to ${platform}...`,
-      `📂 Syncing demo assets (images, videos, files)...`,
-      `✅ Imported 12 demo marketing & creative documents — ready to search.`
-    ];
-
-    // Show toast notification
     toast({
       title: "Connection Successful", 
       description: `Imported 12 marketing assets from ${platform} — added to demo workspace.`,
       duration: 3000,
     });
   };
+
+  if (!isAuthenticated || !currentSpace) {
+    return null;
+  }
 
   return (
     <div className="h-screen flex bg-background text-foreground w-full overflow-hidden">
@@ -39,7 +47,7 @@ const Index = () => {
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0">
-        <WeezHeader />
+        <WeezHeader spaceName={currentSpace.name} />
         <ChatInterface 
           key={chatKey}
           initialExample={initialExample} 
@@ -55,4 +63,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Chat;
