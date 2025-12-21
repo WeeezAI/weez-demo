@@ -1,19 +1,17 @@
-// src/App.tsx - Add these routes to your existing router configuration
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider } from "./contexts/AuthContext";
 
+import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Spaces from "./pages/Spaces";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
-// NEW IMPORTS - Add these
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
 import VerificationFailed from "./pages/VerificationFailed";
@@ -29,13 +27,13 @@ const App = () => (
 
         <BrowserRouter>
           <Routes>
-            {/* Redirect root → auth */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            {/* Landing Page */}
+            <Route path="/" element={<Landing />} />
 
             {/* Auth */}
             <Route path="/auth" element={<Auth />} />
 
-            {/* NEW ROUTES - Add these 3 email verification routes */}
+            {/* Email verification routes */}
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/verification-success" element={<VerificationSuccess />} />
             <Route path="/verification-failed" element={<VerificationFailed />} />
@@ -43,7 +41,7 @@ const App = () => (
             {/* Spaces list */}
             <Route path="/spaces" element={<Spaces />} />
 
-            {/* FULL CHAT INTERFACE PER SPACE */}
+            {/* Chat interface per space */}
             <Route path="/chat/:spaceId" element={<Chat />} />
             <Route path="/platform/success" element={<PlatformCallback />} />
 

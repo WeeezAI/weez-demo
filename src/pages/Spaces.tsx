@@ -172,20 +172,16 @@ const Spaces = () => {
                 className="group bg-card border border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:shadow-lg transition-all duration-200"
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: `${space.color || "#6366F1"}20` }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary/10"
                 >
-                  <Folder
-                    className="w-6 h-6"
-                    style={{ color: space.color || "#6366F1" }}
-                  />
+                  <Folder className="w-6 h-6 text-primary" />
                 </div>
 
                 <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
                   {space.name}
                 </h3>
 
-                <p className="text-sm text-muted-foreground">{space.description}</p>
+                <p className="text-sm text-muted-foreground">Click to open workspace</p>
               </button>
             ))}
 
