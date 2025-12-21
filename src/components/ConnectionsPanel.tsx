@@ -1,16 +1,19 @@
-import { useState } from "react";
-import { Cable, Check, Plus, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Cable, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import ConnectorModal from "./ConnectorModal";
-import CustomConnectorModal from "./CustomConnectorModal";
-import InviteBrandModal from "./InviteBrandModal";
+
 import googleDriveIcon from "@/assets/google-drive-icon.png";
 import dropboxIcon from "@/assets/dropbox-icon.png";
 import onedriveIcon from "@/assets/onedrive-icon.png";
 import slackIcon from "@/assets/slack-icon.png";
 import notionIcon from "@/assets/notion-icon.png";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { platformAPI } from "@/services/platformAPI";
+import { metadataAPI } from "@/services/metadataAPI";
+import FolderSelectionModal from "./connections/FolderSelectionModal";
+import { toast } from "sonner";
 
 interface ConnectionsPanelProps {
   onConnectorSync: (platform: string) => void;
@@ -18,7 +21,7 @@ interface ConnectionsPanelProps {
 
 interface Connector {
   name: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  providerKey: string;
   iconImage?: string;
   connected: boolean;
   description: string;
@@ -26,180 +29,235 @@ interface Connector {
 }
 
 const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
-  const [connectors, setConnectors] = useState<Connector[]>([
-    { name: "Google Drive", iconImage: googleDriveIcon, connected: false, description: "Creative assets, documents", color: "text-yellow-600" },
-    { name: "Dropbox", iconImage: dropboxIcon, connected: false, description: "File sharing, collaboration", color: "text-blue-500" },
-    { name: "OneDrive", iconImage: onedriveIcon, connected: false, description: "Microsoft Office files", color: "text-blue-600" },
-    { name: "Slack", iconImage: slackIcon, connected: false, description: "Team communications", color: "text-purple-600" },
-    { name: "Notion", iconImage: notionIcon, connected: false, description: "Project documentation", color: "text-foreground" },
-  ]);
-  
-  const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showCustomModal, setShowCustomModal] = useState(false);
-  const [showInviteBrandModal, setShowInviteBrandModal] = useState(false);
-  const [invitedBrands, setInvitedBrands] = useState<Array<{ name: string; email: string }>>([]);
+  const { currentSpace } = useAuth();
+  const token = localStorage.getItem("token");
 
-  const handleConnectorClick = (connectorName: string) => {
-    const connector = connectors.find(c => c.name === connectorName);
-    if (!connector?.connected) {
-      setSelectedConnector(connectorName);
-      setShowModal(true);
+  const [connectors, setConnectors] = useState<Connector[]>([
+    {
+      name: "Google Drive",
+      providerKey: "google",
+      iconImage: googleDriveIcon,
+      connected: false,
+      description: "Creative assets, documents",
+      color: "text-yellow-600",
+    },
+    {
+      name: "Dropbox",
+      providerKey: "dropbox",
+      iconImage: dropboxIcon,
+      connected: false,
+      description: "File sharing, collaboration",
+      color: "text-blue-500",
+    },
+    {
+      name: "OneDrive",
+      providerKey: "onedrive",
+      iconImage: onedriveIcon,
+      connected: false,
+      description: "Microsoft Office files",
+      color: "text-blue-600",
+    },
+    {
+      name: "Slack",
+      providerKey: "slack",
+      iconImage: slackIcon,
+      connected: false,
+      description: "Team communication",
+      color: "text-purple-600",
+    },
+    {
+      name: "Notion",
+      providerKey: "notion",
+      iconImage: notionIcon,
+      connected: false,
+      description: "Documentation",
+      color: "text-foreground",
+    },
+  ]);
+
+  // ---------------------------------------------------
+  // 🔄 Load connected platforms
+  // ---------------------------------------------------
+  const loadConnections = async () => {
+    if (!currentSpace || !token) return;
+
+    try {
+      const list = await platformAPI.getConnections(currentSpace.id, token);
+      const connectedPlatforms = list.map((c: any) =>
+        c.platform?.toLowerCase()
+      );
+
+      setConnectors((prev) =>
+        prev.map((c) => ({
+          ...c,
+          connected: connectedPlatforms.includes(c.providerKey),
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to load connections:", err);
     }
   };
 
-  const handleConnectorSync = (platform: string) => {
-    setConnectors(prev => 
-      prev.map(c => c.name === platform ? { ...c, connected: true } : c)
-    );
-    onConnectorSync(platform);
-    setShowModal(false);
-    setSelectedConnector(null);
+  useEffect(() => {
+    loadConnections();
+  }, [currentSpace]);
+
+  // ---------------------------------------------------
+  // 🔗 OAuth start
+  // ---------------------------------------------------
+  const handleConnect = async (connector: Connector) => {
+    if (!currentSpace || !token) return;
+
+    try {
+      const resp = await platformAPI.getAuthUrl(
+        currentSpace.id,
+        connector.providerKey,
+        token
+      );
+
+      if (!resp.auth_url) {
+        toast.error("Failed to start OAuth");
+        return;
+      }
+
+      window.location.href = resp.auth_url;
+    } catch (err) {
+      toast.error("OAuth flow failed");
+    }
   };
 
-  const handleCustomConnector = (platformName: string) => {
-    const newConnector: Connector = {
-      name: platformName,
-      icon: Cable,
-      connected: true,
-      description: "Custom integration",
-      color: "text-muted-foreground"
-    };
-    setConnectors(prev => [...prev, newConnector]);
-    onConnectorSync(platformName);
-    setShowCustomModal(false);
+  // ---------------------------------------------------
+  // 🗂 Folder Selection
+  // ---------------------------------------------------
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [folderList, setFolderList] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
+
+  const openFolderSelection = async () => {
+    if (!currentSpace || !token) return;
+
+    try {
+      const resp = await platformAPI.getFolders(
+        currentSpace.id,
+        "google",
+        token
+      );
+      setFolderList(resp.folders || []);
+      setFolderModalOpen(true);
+    } catch (err) {
+      toast.error("Failed to load folders");
+    }
   };
 
-  const handleInviteSent = (brandName: string, email: string) => {
-    setInvitedBrands([...invitedBrands, { name: brandName, email }]);
+  // ---------------------------------------------------
+  // ✅ FINAL: Sync → Metadata
+  // ---------------------------------------------------
+  const handleFolderConfirm = async (selectedFolders: any[]) => {
+    if (!currentSpace || selectedFolders.length === 0) return;
+
+    setFolderModalOpen(false);
+    setSyncing(true);
+
+    try {
+      // 1️⃣ Sync selected folders
+      await platformAPI.syncFolders(
+        currentSpace.id,
+        "google",
+        selectedFolders,
+        token
+      );
+
+      toast.success("Folders synced. Generating metadata...");
+
+      // 2️⃣ Trigger metadata processing
+      await metadataAPI.processAll(currentSpace.id);
+
+      toast.success("Assets processed and ready!");
+      onConnectorSync("google");
+    } catch (err) {
+      console.error(err);
+      toast.error("Folder sync or metadata processing failed");
+    } finally {
+      setSyncing(false);
+    }
   };
 
+  // ---------------------------------------------------
+  // UI
+  // ---------------------------------------------------
   return (
     <>
-      <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen flex-shrink-0">
-        <div className="p-6 border-b border-border flex-shrink-0">
-          <div className="flex items-center space-x-2 mb-2">
+      <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-foreground font-semibold flex items-center gap-2">
             <Cable className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium text-foreground">Link your tools</h3>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Connect your marketing platforms to search and analyze your creative assets
+            Link your tools
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Connect platforms to sync your creative & marketing assets
           </p>
         </div>
 
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
-            <div className="px-1 py-6 space-y-3 animate-fade-in">
-            {connectors.map((connector) => {
-              return (
-                <Card 
-                  key={connector.name} 
-                  className="w-full p-3 hover:bg-muted hover:shadow-button transition-all cursor-pointer"
-                  onClick={() => handleConnectorClick(connector.name)}
-                >
-                    <div className="flex items-center space-x-3 w-full">
-                      <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-md flex items-center justify-center">
-                        {connector.iconImage ? (
-                          <img src={connector.iconImage} alt={connector.name} className="w-5 h-5 object-contain" />
-                        ) : connector.icon && (
-                          <connector.icon className={`w-4 h-4 ${connector.color}`} />
-                        )}
-                      </div>
-                      <div className="flex-1 text-left min-w-0">
-                        <div className="font-medium text-sm text-foreground truncate">
-                          {connector.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {connector.description}
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        {connector.connected ? (
-                          <div className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                            <Check className="w-3 h-3" />
-                            <span>Connected</span>
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center space-x-1 px-2 py-1 bg-weez-accent/10 text-weez-accent rounded-full text-xs font-medium hover:bg-weez-accent-hover/10 hover:text-weez-accent-hover transition-colors">
-                            <Cable className="w-3 h-3" />
-                            <span>Connect</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                </Card>
-              );
-            })}
-
-              <Button
-                variant="outline"
-                className="w-full justify-start mt-2"
-                onClick={() => setShowCustomModal(true)}
+        <ScrollArea className="flex-1">
+          <div className="px-1 py-6 space-y-3">
+            {connectors.map((connector) => (
+              <Card
+                key={connector.name}
+                onClick={() =>
+                  !connector.connected && handleConnect(connector)
+                }
+                className="p-3 hover:bg-muted cursor-pointer transition-all"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Custom Connection
-              </Button>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center">
+                    <img
+                      src={connector.iconImage}
+                      alt={connector.name}
+                      className="w-5 h-5"
+                    />
+                  </div>
 
-              <Button
-                variant="outline"
-                className="w-full justify-start mt-2 rainbow-border-hover"
-                onClick={() => setShowInviteBrandModal(true)}
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Invite Brand to Share Assets
-              </Button>
-
-              {invitedBrands.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {invitedBrands.map((brand, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border animate-fade-in"
-                    >
-                      <div className="relative">
-                        <span className="text-xl">🎨</span>
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-background animate-pulse"></span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{brand.name}</p>
-                        <p className="text-xs text-muted-foreground">{brand.email}</p>
-                      </div>
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Pending</span>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{connector.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {connector.description}
                     </div>
-                  ))}
+                  </div>
+
+                  {connector.connected ? (
+                    <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Connected
+                    </div>
+                  ) : (
+                    <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
+                      Connect
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
 
-        <div className="p-6 border-t border-border flex-shrink-0">
-          <p className="text-xs text-muted-foreground text-center">
-            Demo mode - connections simulate real integrations
-          </p>
-        </div>
+                {connector.connected &&
+                  connector.providerKey === "google" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFolderSelection();
+                      }}
+                      className="mt-2 text-xs text-blue-600 hover:underline"
+                    >
+                      Select folders →
+                    </button>
+                  )}
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
 
-      <ConnectorModal
-        platform={selectedConnector}
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setSelectedConnector(null);
-        }}
-        onConfirm={() => selectedConnector && handleConnectorSync(selectedConnector)}
-      />
-
-      <CustomConnectorModal
-        isOpen={showCustomModal}
-        onClose={() => setShowCustomModal(false)}
-        onConfirm={handleCustomConnector}
-      />
-
-      <InviteBrandModal
-        isOpen={showInviteBrandModal}
-        onClose={() => setShowInviteBrandModal(false)}
-        onInviteSent={handleInviteSent}
+      <FolderSelectionModal
+        open={folderModalOpen}
+        folders={folderList}
+        onClose={() => setFolderModalOpen(false)}
+        onConfirm={handleFolderConfirm}
       />
     </>
   );

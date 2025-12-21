@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+
+import { authApi } from "@/services/authAPI";
+import { spaceApi } from "@/services/spaceAPI";
 
 interface User {
   id: string;
@@ -9,124 +18,229 @@ interface User {
 interface Space {
   id: string;
   name: string;
-  description: string;
-  color: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  loadingAuth: boolean;
+
   currentSpace: Space | null;
   spaces: Space[];
+  token: string | null;
+
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+
   selectSpace: (space: Space) => void;
   exitSpace: () => void;
+
+  createSpace: (name: string) => Promise<{ success: boolean; error?: string }>;
+  deleteSpace: (space_id: string) => Promise<{ success: boolean; error?: string }>;
+  refreshSpaces: () => Promise<void>; // Manual refresh function
+
+  selectedSpace: Space | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const demoSpaces: Space[] = [
-  { id: "1", name: "Dexra Client Space", description: "Marketing campaigns and brand assets", color: "hsl(var(--primary))" },
-  { id: "2", name: "Summer Campaign 2024", description: "Seasonal marketing initiatives", color: "hsl(262, 83%, 58%)" },
-  { id: "3", name: "Product Launch", description: "New product marketing materials", color: "hsl(142, 71%, 45%)" },
-  { id: "4", name: "Social Media Strategy", description: "Content calendar and analytics", color: "hsl(38, 92%, 50%)" },
-];
+// Cache key and expiry time (5 minutes)
+const SPACES_CACHE_KEY = "weez_spaces_cache";
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
-  const [spaces] = useState<Space[]>(demoSpaces);
 
-  useEffect(() => {
-    // Check for existing session in localStorage
-    const storedUser = localStorage.getItem("weez_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("token")
+  );
+
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+
+  // Load cached spaces from localStorage
+  const loadCachedSpaces = () => {
+    try {
+      const cached = localStorage.getItem(SPACES_CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const now = Date.now();
+        
+        // Check if cache is still valid
+        if (now - timestamp < CACHE_EXPIRY_MS) {
+          setSpaces(data || []);
+          setLastFetchTime(timestamp);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load cached spaces", err);
     }
+    return false;
+  };
+
+  // Save spaces to cache
+  const cacheSpaces = (spacesData: Space[]) => {
+    try {
+      const cacheData = {
+        data: spacesData,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(SPACES_CACHE_KEY, JSON.stringify(cacheData));
+      setLastFetchTime(Date.now());
+    } catch (err) {
+      console.error("Failed to cache spaces", err);
+    }
+  };
+
+  // Fetch spaces from API
+  const fetchSpaces = async (forceRefresh = false) => {
+    if (!token) return;
+
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime;
+
+    // Skip fetch if cache is still valid and not forcing refresh
+    if (!forceRefresh && timeSinceLastFetch < CACHE_EXPIRY_MS && spaces.length > 0) {
+      return;
+    }
+
+    try {
+      const data = await spaceApi.getSpaces(token);
+      setSpaces(data || []);
+      cacheSpaces(data || []);
+    } catch (err) {
+      console.error("Failed to load spaces", err);
+      // If API fails, try to use cached data
+      loadCachedSpaces();
+    }
+  };
+
+  // Manual refresh function exposed to components
+  const refreshSpaces = async () => {
+    await fetchSpaces(true);
+  };
+
+  // LOGIN
+  const login = async (email: string, password: string) => {
+    try {
+      const data = await authApi.login({ email, password });
+
+      const mappedUser = {
+        id: data.user.user_id,
+        email: data.user.email,
+        name: `${data.user.first_name} ${data.user.last_name}`,
+      };
+
+      localStorage.setItem("token", data.access_token);
+      setToken(data.access_token);
+
+      localStorage.setItem("weez_user", JSON.stringify(mappedUser));
+      setUser(mappedUser);
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Login failed" };
+    }
+  };
+
+  // REGISTER
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      await authApi.register({ name, email, password });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
+    }
+  };
+
+  // LOGOUT
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("weez_user");
+    localStorage.removeItem(SPACES_CACHE_KEY);
+    setToken(null);
+    setUser(null);
+    setSpaces([]);
+    setCurrentSpace(null);
+    setLastFetchTime(0);
+  };
+
+  // Select space
+  const selectSpace = (space: Space) => setCurrentSpace(space);
+  const exitSpace = () => setCurrentSpace(null);
+
+  // CREATE SPACE
+  const createSpace = async (name: string) => {
+    if (!token) return { success: false, error: "Not authenticated" };
+    try {
+      await spaceApi.createSpace(name, token);
+      await fetchSpaces(true); // Force refresh after creating
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
+    }
+  };
+
+  // DELETE SPACE
+  const deleteSpace = async (space_id: string) => {
+    if (!token) return { success: false, error: "Not authenticated" };
+    try {
+      await spaceApi.deleteSpace(space_id, token);
+      await fetchSpaces(true); // Force refresh after deleting
+      if (currentSpace?.id === space_id) setCurrentSpace(null);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
+    }
+  };
+
+  // LOAD USER ONCE
+  useEffect(() => {
+    const storedUser = localStorage.getItem("weez_user");
+
+    if (storedUser && token) {
+      setUser(JSON.parse(storedUser));
+      // Load cached spaces immediately
+      loadCachedSpaces();
+    }
+
+    setLoadingAuth(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Demo validation
-    if (!email || !password) {
-      return { success: false, error: "Please enter both email and password" };
+  // FETCH SPACES WHEN TOKEN CHANGES (respects cache)
+  useEffect(() => {
+    if (token) {
+      fetchSpaces();
     }
-
-    if (password.length < 6) {
-      return { success: false, error: "Password must be at least 6 characters" };
-    }
-
-    // Create demo user
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      email,
-      name: email.split("@")[0],
-    };
-
-    setUser(newUser);
-    localStorage.setItem("weez_user", JSON.stringify(newUser));
-    return { success: true };
-  };
-
-  const register = async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Demo validation
-    if (!name || !email || !password) {
-      return { success: false, error: "Please fill in all fields" };
-    }
-
-    if (password.length < 6) {
-      return { success: false, error: "Password must be at least 6 characters" };
-    }
-
-    if (!email.includes("@")) {
-      return { success: false, error: "Please enter a valid email address" };
-    }
-
-    // Create demo user
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      email,
-      name,
-    };
-
-    setUser(newUser);
-    localStorage.setItem("weez_user", JSON.stringify(newUser));
-    return { success: true };
-  };
-
-  const logout = () => {
-    setUser(null);
-    setCurrentSpace(null);
-    localStorage.removeItem("weez_user");
-  };
-
-  const selectSpace = (space: Space) => {
-    setCurrentSpace(space);
-  };
-
-  const exitSpace = () => {
-    setCurrentSpace(null);
-  };
+  }, [token]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
-        currentSpace,
+        loadingAuth,
+
         spaces,
+        currentSpace,
+        token,
+
         login,
         register,
         logout,
+
         selectSpace,
         exitSpace,
+
+        createSpace,
+        deleteSpace,
+        refreshSpaces,
+
+        selectedSpace: currentSpace,
       }}
     >
       {children}
@@ -135,9 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
+  return ctx;
 };

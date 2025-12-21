@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/pages/Auth.tsx - Fixed version
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,15 +16,16 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { login, register, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate("/spaces");
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/spaces");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,15 +40,28 @@ const Auth = () => {
       }
 
       if (result.success) {
-        toast({
-          title: isLogin ? "Welcome back!" : "Account created!",
-          description: isLogin ? "You have successfully logged in." : "Your account has been created successfully.",
-        });
-        navigate("/spaces");
+        if (isLogin) {
+          // Login successful - redirect to spaces
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully logged in.",
+          });
+          // Use navigate instead of window.location.href for better UX
+          navigate("/spaces");
+        } else {
+          // Registration successful - redirect to verification page
+          toast({
+            title: "Registration Successful!",
+            description: "Please check your email to verify your account.",
+          });
+          setTimeout(() => {
+            navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+          }, 500);
+        }
       } else {
         toast({
-          title: "Error",
-          description: result.error,
+          title: "Authentication Failed",
+          description: result.error || "Invalid email or password.",
           variant: "destructive",
         });
       }
@@ -92,6 +107,7 @@ const Auth = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="h-11"
+                  required
                 />
               </div>
             )}
@@ -105,6 +121,7 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11"
+                required
               />
             </div>
 
@@ -118,6 +135,7 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-11 pr-10"
+                  required
                 />
                 <button
                   type="button"
@@ -158,10 +176,6 @@ const Auth = () => {
             </p>
           </div>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Demo: Enter any email and password (6+ characters) to continue
-        </p>
       </div>
     </div>
   );
