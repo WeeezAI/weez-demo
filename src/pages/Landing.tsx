@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Suspense, lazy } from "react";
-
-const Hero3DElement = lazy(() => import("@/components/Hero3DElement"));
+import Hero3DElement from "@/components/Hero3DElement";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -139,13 +137,7 @@ const Landing = () => {
 
             {/* Right 3D Element */}
             <div className="hidden lg:block relative">
-              <Suspense fallback={
-                <div className="w-full h-[500px] flex items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-gray-900 animate-pulse" />
-                </div>
-              }>
-                <Hero3DElement />
-              </Suspense>
+              <Hero3DElement />
             </div>
           </div>
         </div>
