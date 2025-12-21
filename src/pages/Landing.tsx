@@ -101,7 +101,7 @@ const Landing = () => {
                 </span>
               </h1>
               
-              <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-8">
+              <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-8 text-center lg:text-center mx-auto lg:mx-0">
                 Transform your marketing with AI that understands your brand, audience, and goals. 
                 Create campaigns that convert, content that captivates, and strategies that scale.
               </p>
