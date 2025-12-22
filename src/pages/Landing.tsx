@@ -47,7 +47,7 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden font-agrandir">
+    <div className="min-h-screen bg-white overflow-hidden">
       {/* Animated Background - Purple orbs */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse" />
@@ -93,7 +93,7 @@ const Landing = () => {
                 <span className="text-sm text-purple-700 font-medium">AI-Powered Marketing Revolution</span>
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-agrandir">
                 <span className="text-gray-900">The Future of</span>
                 <br />
                 <span className="bg-gradient-to-r from-purple-600 via-violet-500 to-gray-900 bg-clip-text text-transparent">
@@ -147,7 +147,7 @@ const Landing = () => {
       <section className="relative z-10 px-6 md:px-12 py-20 bg-gradient-to-b from-purple-50/50 to-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
               Everything You Need to
               <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent"> Dominate </span>
               Digital Marketing
@@ -178,7 +178,7 @@ const Landing = () => {
       <section className="relative z-10 px-6 md:px-12 py-24">
         <div className="max-w-4xl mx-auto text-center">
           <div className="p-12 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-agrandir">
               Ready to Transform Your Marketing?
             </h2>
             <p className="text-purple-100 text-lg mb-8 max-w-2xl mx-auto">
