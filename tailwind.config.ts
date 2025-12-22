@@ -85,6 +85,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        agrandir: ["Agrandir", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
