@@ -1,6 +1,6 @@
 // services/rfpAPI.ts
 
-const RFP_BASE_URL = "http://localhost:8000"; // Replace with actual base URL of the RFP API
+const RFP_BASE_URL = "https://dexraflow-rfp-generator-fqdng4atghgpbwg4.canadacentral-01.azurewebsites.net"; // Replace with actual base URL of the RFP API
 
 /* =======================
    REQUEST / RESPONSE TYPES
