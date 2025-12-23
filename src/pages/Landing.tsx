@@ -59,7 +59,7 @@ const Landing = () => {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
         <div className="flex items-center">
-          <img src={dexraflowLogo} alt="Dexraflow" className="h-16 md:h-20 w-auto" />
+          <img src={dexraflowLogo} alt="Dexraflow" className="h-20 md:h-28 w-auto" />
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#uniqueness" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Uniqueness</a>
