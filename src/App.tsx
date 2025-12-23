@@ -11,6 +11,8 @@ import Auth from "./pages/Auth";
 import Spaces from "./pages/Spaces";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
 
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
@@ -44,6 +46,10 @@ const App = () => (
             {/* Chat interface per space */}
             <Route path="/chat/:spaceId" element={<Chat />} />
             <Route path="/platform/success" element={<PlatformCallback />} />
+
+            {/* Legal pages */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-conditions" element={<TermsConditions />} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
