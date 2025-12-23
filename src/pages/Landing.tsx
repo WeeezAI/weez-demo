@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle } from "lucide-react";
 import Hero3DElement from "@/components/Hero3DElement";
+import dexraflowLogo from "@/assets/dexraflow-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -57,13 +58,15 @@ const Landing = () => {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-gray-900 flex items-center justify-center shadow-lg shadow-purple-500/25">
-            <Sparkles className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-4">
+          <img src={dexraflowLogo} alt="Dexraflow" className="h-12 w-auto" />
+          <div className="h-8 w-px bg-purple-200" />
+          <div className="flex flex-col">
+            <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-gray-900 bg-clip-text text-transparent">
+              Weez.AI
+            </span>
+            <span className="text-xs text-gray-500">by Dexraflow</span>
           </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-gray-900 bg-clip-text text-transparent">
-            Weez.AI
-          </span>
         </div>
         <div className="flex items-center gap-4">
           <Button 
@@ -391,17 +394,44 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 px-6 md:px-12 py-8 border-t border-purple-100">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-gray-900 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+      <footer className="relative z-10 px-6 md:px-12 py-12 border-t border-purple-100 bg-gray-50/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            {/* Brand Column */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto" />
+              </div>
+              <p className="text-sm text-gray-500">
+                Weez.AI is a product by Dexraflow. Transform your marketing with AI-powered document intelligence and automation.
+              </p>
             </div>
-            <span className="font-semibold text-gray-900">Weez.AI</span>
+            
+            {/* Product Column */}
+            <div className="flex flex-col gap-3">
+              <h4 className="font-semibold text-gray-900">Product</h4>
+              <Link to="/auth" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Get Started</Link>
+              <a href="#features" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Features</a>
+              <a href="#pricing" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Pricing</a>
+            </div>
+            
+            {/* Legal Column */}
+            <div className="flex flex-col gap-3">
+              <h4 className="font-semibold text-gray-900">Legal</h4>
+              <Link to="/privacy-policy" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Privacy Policy</Link>
+              <Link to="/terms-conditions" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Terms & Conditions</Link>
+              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Contact Support</a>
+            </div>
           </div>
-          <p className="text-sm text-gray-500">
-            © 2025 Weez.AI. All rights reserved.
-          </p>
+          
+          <div className="pt-8 border-t border-purple-100 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-gray-500">
+              © 2025 Dexraflow. All rights reserved.
+            </p>
+            <p className="text-sm text-gray-400">
+              Weez.AI is a registered trademark of Dexraflow.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
