@@ -61,6 +61,12 @@ const Landing = () => {
         <div className="flex items-center">
           <img src={dexraflowLogo} alt="Dexraflow" className="h-16 md:h-20 w-auto" />
         </div>
+        <nav className="hidden md:flex items-center gap-6">
+          <a href="#uniqueness" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Uniqueness</a>
+          <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Pricing</a>
+          <Link to="/privacy-policy" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Privacy Policy</Link>
+          <Link to="/terms-conditions" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Terms & Conditions</Link>
+        </nav>
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
@@ -139,8 +145,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="relative z-10 px-6 md:px-12 py-20 bg-gradient-to-b from-purple-50/50 to-white">
+      {/* Features Grid - Uniqueness Section */}
+      <section id="uniqueness" className="relative z-10 px-6 md:px-12 py-20 bg-gradient-to-b from-purple-50/50 to-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
@@ -171,7 +177,7 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="relative z-10 px-6 md:px-12 py-24">
+      <section id="pricing" className="relative z-10 px-6 md:px-12 py-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
