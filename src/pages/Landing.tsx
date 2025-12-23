@@ -58,15 +58,8 @@ const Landing = () => {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
-        <div className="flex items-center gap-4">
-          <img src={dexraflowLogo} alt="Dexraflow" className="h-12 w-auto" />
-          <div className="h-8 w-px bg-purple-200" />
-          <div className="flex flex-col">
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-gray-900 bg-clip-text text-transparent">
-              Weez.AI
-            </span>
-            <span className="text-xs text-gray-500">by Dexraflow</span>
-          </div>
+        <div className="flex items-center">
+          <img src={dexraflowLogo} alt="Dexraflow" className="h-16 md:h-20 w-auto" />
         </div>
         <div className="flex items-center gap-4">
           <Button 
@@ -97,10 +90,10 @@ const Landing = () => {
               </div>
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-agrandir">
-                <span className="text-gray-900">The Future of</span>
+                <span className="text-gray-900">Introducing Weez.AI</span>
                 <br />
                 <span className="bg-gradient-to-r from-purple-600 via-violet-500 to-gray-900 bg-clip-text text-transparent">
-                  Digital Marketing
+                  The Future of Digital Marketing
                 </span>
               </h1>
               
