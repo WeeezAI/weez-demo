@@ -402,7 +402,7 @@ const Landing = () => {
                 <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto" />
               </div>
               <p className="text-sm text-gray-500">
-                Weez.AI is a product by Dexraflow. Transform your marketing with AI-powered document intelligence and automation.
+                Weez.AI - Creative OS for Marketing Teams & Brands, Redefining How Marketing Works
               </p>
             </div>
             
