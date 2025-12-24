@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Folder, LogOut, Plus, Loader2 } from "lucide-react";
+import { Sparkles, Folder, LogOut, Plus, Loader2, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
@@ -83,7 +83,19 @@ const Spaces = () => {
     navigate("/auth");
   };
 
+  const MAX_SPACES = 3;
+  const canCreateSpace = spaces.length < MAX_SPACES;
+
   const handleCreateSpace = async () => {
+    if (!canCreateSpace) {
+      toast({
+        title: "Limit Reached",
+        description: `You can only create up to ${MAX_SPACES} spaces.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!newSpaceName.trim()) {
       toast({
         title: "Error",
@@ -163,41 +175,78 @@ const Spaces = () => {
               <p className="text-muted-foreground">Loading your spaces...</p>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {spaces.map((space) => (
-              <button
-                key={space.id}
-                onClick={() => handleSpaceClick(space)}
-                className="group bg-card border border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:shadow-lg transition-all duration-200"
-              >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary/10"
-                >
-                  <Folder className="w-6 h-6 text-primary" />
-                </div>
-
-                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
-                  {space.name}
-                </h3>
-
-                <p className="text-sm text-muted-foreground">Click to open workspace</p>
-              </button>
-            ))}
-
-            {/* Create New Space Button */}
-            <button
-              className="bg-card border-2 border-dashed border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 flex flex-col items-center justify-center min-h-[160px]"
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                <Plus className="w-6 h-6 text-muted-foreground" />
+        ) : spaces.length === 0 ? (
+          /* Welcome Card for New Users */
+          <div className="max-w-lg mx-auto">
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl p-8 text-center">
+              <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Rocket className="w-8 h-8 text-primary" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">
-                Create New Space
-              </span>
-            </button>
+              <h3 className="text-2xl font-bold text-foreground mb-3">
+                Welcome to Weez.AI! 🎉
+              </h3>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                Get started by creating your first space. Spaces help you organize your marketing projects and collaborate with your team.
+              </p>
+              <Button 
+                size="lg" 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="px-8"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create Your First Space
+              </Button>
+              <p className="text-xs text-muted-foreground mt-4">
+                You can create up to {MAX_SPACES} spaces
+              </p>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Space limit indicator */}
+            <div className="mb-4">
+              <p className="text-sm text-muted-foreground">
+                {spaces.length} of {MAX_SPACES} spaces used
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {spaces.map((space) => (
+                <button
+                  key={space.id}
+                  onClick={() => handleSpaceClick(space)}
+                  className="group bg-card border border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:shadow-lg transition-all duration-200"
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary/10"
+                  >
+                    <Folder className="w-6 h-6 text-primary" />
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
+                    {space.name}
+                  </h3>
+
+                  <p className="text-sm text-muted-foreground">Click to open workspace</p>
+                </button>
+              ))}
+
+              {/* Create New Space Button - Only show if under limit */}
+              {canCreateSpace && (
+                <button
+                  className="bg-card border-2 border-dashed border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 flex flex-col items-center justify-center min-h-[160px]"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                    <Plus className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Create New Space
+                  </span>
+                </button>
+              )}
+            </div>
+          </>
         )}
       </main>
 
