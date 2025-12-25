@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle } from "lucide-react";
-import Hero3DElement from "@/components/Hero3DElement";
 import dexraflowLogo from "@/assets/dexraflow-logo.png";
+import heroIllustration from "@/assets/weez-hero-illustration.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -137,9 +137,13 @@ const Landing = () => {
               </div>
             </div>
 
-            {/* Right 3D Element */}
+            {/* Right Hero Illustration */}
             <div className="hidden lg:block relative">
-              <Hero3DElement />
+              <img 
+                src={heroIllustration} 
+                alt="Marketing collage showcasing creative designs" 
+                className="w-full max-w-xl mx-auto rounded-2xl shadow-2xl shadow-purple-500/20"
+              />
             </div>
           </div>
         </div>
