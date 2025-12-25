@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle } from "lucide-react";
 import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
+import { ScratchCard } from "@/components/ScratchCard";
 import dexraflowLogo from "@/assets/dexraflow-logo.png";
 import heroIllustration from "@/assets/weez-hero-illustration.png";
 
@@ -156,15 +157,17 @@ const Landing = () => {
               </div>
             </div>
 
-            {/* Right Hero Illustration */}
+            {/* Right Hero Illustration with Scratch Card */}
             <div 
-              className="hidden lg:block relative opacity-0 animate-fade-in-right"
+              className="hidden lg:flex justify-end items-start opacity-0 animate-fade-in-right pr-4"
               style={{ animationDelay: '400ms' }}
             >
-              <img 
-                src={heroIllustration} 
-                alt="Marketing collage showcasing creative designs" 
-                className="w-full max-w-xl mx-auto rounded-2xl shadow-2xl shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02] transition-all duration-500 animate-float-slow"
+              <ScratchCard
+                imageSrc={heroIllustration}
+                alt="Marketing collage showcasing creative designs"
+                className="w-full max-w-lg shadow-2xl shadow-purple-500/20"
+                brushSize={40}
+                revealThreshold={40}
               />
             </div>
           </div>
