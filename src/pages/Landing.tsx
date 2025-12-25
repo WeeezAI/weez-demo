@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle } from "lucide-react";
+import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
 import dexraflowLogo from "@/assets/dexraflow-logo.png";
 import heroIllustration from "@/assets/weez-hero-illustration.png";
 
@@ -49,35 +50,35 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
-      {/* Animated Background - Purple orbs */}
+      {/* Animated Background - Purple orbs with enhanced animations */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[100px] animate-pulse delay-1000" />
-        <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-purple-400/10 rounded-full blur-[80px] animate-pulse delay-500" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse-glow" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-purple-400/10 rounded-full blur-[80px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
+      {/* Header - Animated on load */}
+      <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6 animate-fade-in-down">
         <div className="flex items-center">
-          <img src={dexraflowLogo} alt="Dexraflow" className="h-20 md:h-28 w-auto" />
+          <img src={dexraflowLogo} alt="Dexraflow" className="h-20 md:h-28 w-auto hover:scale-105 transition-transform duration-300" />
         </div>
         <nav className="hidden md:flex items-center gap-6">
-          <a href="#uniqueness" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Uniqueness</a>
-          <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Pricing</a>
-          <Link to="/privacy-policy" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Privacy Policy</Link>
-          <Link to="/terms-conditions" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">Terms & Conditions</Link>
+          <a href="#uniqueness" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Uniqueness</a>
+          <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Pricing</a>
+          <Link to="/privacy-policy" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Privacy Policy</Link>
+          <Link to="/terms-conditions" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Terms & Conditions</Link>
         </nav>
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/auth')}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-gray-600 hover:text-gray-900 hover:scale-105 transition-all duration-300"
           >
             Sign In
           </Button>
           <Button 
             onClick={() => navigate('/auth')}
-            className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white shadow-lg shadow-purple-500/25"
+            className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
           >
             Get Started
           </Button>
@@ -90,29 +91,41 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             {/* Left Content */}
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 border border-purple-200 mb-8">
-                <Sparkles className="w-4 h-4 text-purple-600" />
+              <div 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 border border-purple-200 mb-8 opacity-0 animate-fade-in-up"
+                style={{ animationDelay: '100ms' }}
+              >
+                <Sparkles className="w-4 h-4 text-purple-600 animate-bounce-subtle" />
                 <span className="text-sm text-purple-700 font-medium">AI-Powered Marketing Revolution</span>
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-agrandir">
+              <h1 
+                className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-agrandir opacity-0 animate-fade-in-up"
+                style={{ animationDelay: '200ms' }}
+              >
                 <span className="text-gray-900">Introducing Weez.AI</span>
                 <br />
-                <span className="bg-gradient-to-r from-purple-600 via-violet-500 to-gray-900 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-purple-600 via-violet-500 to-gray-900 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
                   The Future of Digital Marketing
                 </span>
               </h1>
               
-              <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-8 text-center lg:text-center mx-auto lg:mx-0">
+              <p 
+                className="text-lg md:text-xl text-gray-600 max-w-xl mb-8 text-center lg:text-center mx-auto lg:mx-0 opacity-0 animate-fade-in-up"
+                style={{ animationDelay: '300ms' }}
+              >
                 Transform your marketing with AI that understands your brand, audience, and goals. 
                 Create campaigns that convert, content that captivates, and strategies that scale.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-8">
+              <div 
+                className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-8 opacity-0 animate-fade-in-up"
+                style={{ animationDelay: '400ms' }}
+              >
                 <Button 
                   size="lg" 
                   onClick={() => navigate('/auth')}
-                  className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white px-8 py-6 text-lg group shadow-xl shadow-purple-500/25"
+                  className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white px-8 py-6 text-lg group shadow-xl shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
                 >
                   Start Free Trial
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -120,16 +133,22 @@ const Landing = () => {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="px-8 py-6 text-lg border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300"
+                  className="px-8 py-6 text-lg border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-105 transition-all duration-300"
                 >
                   Watch Demo
                 </Button>
               </div>
 
-              {/* Benefits */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+              {/* Benefits - Staggered animation */}
+              <div 
+                className="flex flex-wrap items-center justify-center lg:justify-start gap-4 opacity-0 animate-fade-in-up"
+                style={{ animationDelay: '500ms' }}
+              >
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-2 text-gray-600">
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors duration-300"
+                  >
                     <CheckCircle2 className="w-4 h-4 text-purple-600" />
                     <span className="text-sm">{benefit}</span>
                   </div>
@@ -138,11 +157,14 @@ const Landing = () => {
             </div>
 
             {/* Right Hero Illustration */}
-            <div className="hidden lg:block relative">
+            <div 
+              className="hidden lg:block relative opacity-0 animate-fade-in-right"
+              style={{ animationDelay: '400ms' }}
+            >
               <img 
                 src={heroIllustration} 
                 alt="Marketing collage showcasing creative designs" 
-                className="w-full max-w-xl mx-auto rounded-2xl shadow-2xl shadow-purple-500/20"
+                className="w-full max-w-xl mx-auto rounded-2xl shadow-2xl shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02] transition-all duration-500 animate-float-slow"
               />
             </div>
           </div>
@@ -152,7 +174,7 @@ const Landing = () => {
       {/* Features Grid - Uniqueness Section */}
       <section id="uniqueness" className="relative z-10 px-6 md:px-12 py-20 bg-gradient-to-b from-purple-50/50 to-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <AnimatedSection animation="fade-up" className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
               Everything You Need to
               <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent"> Dominate </span>
@@ -161,13 +183,17 @@ const Landing = () => {
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               Our AI-powered platform provides all the tools you need to create, optimize, and scale your marketing efforts.
             </p>
-          </div>
+          </AnimatedSection>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <StaggeredChildren 
+            animation="fade-up" 
+            staggerDelay={100} 
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
             {features.map((feature, index) => (
               <div 
                 key={index}
-                className="group p-6 rounded-2xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10"
+                className="group p-6 rounded-2xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2"
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100 flex items-center justify-center text-purple-600 mb-4 group-hover:scale-110 group-hover:from-purple-600 group-hover:to-gray-900 group-hover:text-white transition-all duration-300">
                   {feature.icon}
@@ -176,14 +202,14 @@ const Landing = () => {
                 <p className="text-gray-600 text-sm">{feature.description}</p>
               </div>
             ))}
-          </div>
+          </StaggeredChildren>
         </div>
       </section>
 
       {/* Pricing Section */}
       <section id="pricing" className="relative z-10 px-6 md:px-12 py-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <AnimatedSection animation="fade-up" className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
               Simple, Transparent
               <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent"> Pricing</span>
@@ -191,12 +217,16 @@ const Landing = () => {
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               Choose the plan that fits your needs. Scale as you grow.
             </p>
-          </div>
+          </AnimatedSection>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <StaggeredChildren 
+            animation="fade-up" 
+            staggerDelay={150}
+            className="grid md:grid-cols-3 gap-8 mb-16"
+          >
             {/* Starter Plan */}
-            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10">
+            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
                 <p className="text-sm text-gray-500">Best for solo marketers & freelancers</p>
@@ -236,16 +266,16 @@ const Landing = () => {
               <Button 
                 onClick={() => navigate('/auth')}
                 variant="outline"
-                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300"
+                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-[1.02] transition-all duration-300"
               >
                 Get Started
               </Button>
             </div>
 
             {/* Pro Plan - Featured */}
-            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 scale-105">
+            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 scale-105 hover:scale-[1.08] transition-all duration-300">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 text-sm font-semibold shadow-lg">
+                <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 text-sm font-semibold shadow-lg animate-bounce-subtle">
                   <Star className="w-4 h-4 fill-current" />
                   Most Popular
                 </div>
@@ -290,14 +320,14 @@ const Landing = () => {
 
               <Button 
                 onClick={() => navigate('/auth')}
-                className="w-full py-6 bg-white text-purple-700 hover:bg-purple-50"
+                className="w-full py-6 bg-white text-purple-700 hover:bg-purple-50 hover:scale-[1.02] transition-all duration-300"
               >
                 Get Started
               </Button>
             </div>
 
             {/* Agency Plan */}
-            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10">
+            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Agency</h3>
                 <p className="text-sm text-gray-500">Best for agencies managing multiple brands</p>
@@ -338,47 +368,47 @@ const Landing = () => {
               <Button 
                 onClick={() => navigate('/auth')}
                 variant="outline"
-                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300"
+                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-[1.02] transition-all duration-300"
               >
                 Get Started
               </Button>
             </div>
-          </div>
+          </StaggeredChildren>
 
           {/* Add-ons Section */}
-          <div className="max-w-4xl mx-auto">
+          <AnimatedSection animation="fade-up" delay={200} className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-gray-900 font-agrandir mb-2">Optional Add-ons</h3>
               <p className="text-gray-500">Add flexibility and scale without bloating your plan</p>
             </div>
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
+              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <p className="text-sm font-medium text-gray-900 mb-1">Extra Deep Research Credits</p>
                 <p className="text-lg font-bold text-purple-600">$29 / pack</p>
               </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
+              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <p className="text-sm font-medium text-gray-900 mb-1">Extra Creative Generations</p>
                 <p className="text-lg font-bold text-purple-600">$49</p>
               </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
+              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <p className="text-sm font-medium text-gray-900 mb-1">White-label Access</p>
                 <p className="text-lg font-bold text-purple-600">$199 / month</p>
                 <p className="text-xs text-gray-400 mt-1">Coming soon</p>
               </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
+              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <p className="text-sm font-medium text-gray-900 mb-1">Custom Onboarding & Setup</p>
                 <p className="text-lg font-bold text-purple-600">$499 – $1,499</p>
               </div>
             </div>
-          </div>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="relative z-10 px-6 md:px-12 py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="p-12 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30">
+        <AnimatedSection animation="scale" className="max-w-4xl mx-auto text-center">
+          <div className="p-12 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-500">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 font-agrandir">
               Ready to Transform Your Marketing?
             </h2>
@@ -388,12 +418,12 @@ const Landing = () => {
             <Button 
               size="lg" 
               onClick={() => navigate('/auth')}
-              className="bg-white text-purple-700 hover:bg-purple-50 px-10 py-6 text-lg shadow-lg"
+              className="bg-white text-purple-700 hover:bg-purple-50 px-10 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             >
               Get Started for Free
             </Button>
           </div>
-        </div>
+        </AnimatedSection>
       </section>
 
       {/* Footer */}
@@ -403,7 +433,7 @@ const Landing = () => {
             {/* Brand Column */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto" />
+                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto hover:scale-105 transition-transform duration-300" />
               </div>
               <p className="text-sm text-gray-500">
                 Weez.AI - Creative OS for Marketing Teams & Brands, Redefining How Marketing Works
@@ -413,17 +443,17 @@ const Landing = () => {
             {/* Product Column */}
             <div className="flex flex-col gap-3">
               <h4 className="font-semibold text-gray-900">Product</h4>
-              <Link to="/auth" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Get Started</Link>
-              <a href="#features" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Features</a>
-              <a href="#pricing" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Pricing</a>
+              <Link to="/auth" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Get Started</Link>
+              <a href="#features" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Features</a>
+              <a href="#pricing" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Pricing</a>
             </div>
             
             {/* Legal Column */}
             <div className="flex flex-col gap-3">
               <h4 className="font-semibold text-gray-900">Legal</h4>
-              <Link to="/privacy-policy" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Privacy Policy</Link>
-              <Link to="/terms-conditions" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Terms & Conditions</Link>
-              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-500 hover:text-purple-600 transition-colors">Contact Support</a>
+              <Link to="/privacy-policy" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Privacy Policy</Link>
+              <Link to="/terms-conditions" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Terms & Conditions</Link>
+              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Contact Support</a>
             </div>
           </div>
           
