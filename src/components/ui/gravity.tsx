@@ -151,7 +151,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       grabCursor = true,
       resetOnResize = true,
       addTopWall = true,
-      autoStart = true,
+      autoStart = false,
       className,
       ...props
     },
@@ -191,6 +191,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
           const radius = Math.max(width, height) / 2;
           body = Bodies.circle(x, y, radius, {
             ...props.matterBodyOptions,
+            isStatic: true, // Start as static (at rest)
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -201,6 +202,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         } else {
           body = Bodies.rectangle(x, y, width, height, {
             ...props.matterBodyOptions,
+            isStatic: true, // Start as static (at rest)
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -233,6 +235,8 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       
       let allSettled = true;
       bodiesMap.current.forEach(({ body }) => {
+        if (body.isStatic) return; // Skip static bodies
+        
         const velocity = body.velocity;
         const angularVelocity = body.angularVelocity;
         
@@ -302,22 +306,31 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         },
       });
 
-      // When user starts dragging, restart physics temporarily
-      Events.on(mouseConstraint.current, 'startdrag', () => {
-        if (hasSettled.current) {
-          hasSettled.current = false;
+      // When user starts dragging, make body dynamic and start physics
+      Events.on(mouseConstraint.current, 'startdrag', (event) => {
+        const draggedBody = event.body;
+        
+        // Make all bodies dynamic when user interacts
+        bodiesMap.current.forEach(({ body }) => {
+          Matter.Body.setStatic(body, false);
+        });
+        
+        hasSettled.current = false;
+        if (!isRunning.current) {
           startEngine();
-          // Start checking for settlement again
-          if (!settlementCheckInterval.current) {
-            settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
-          }
+        }
+        
+        // Start checking for settlement
+        if (!settlementCheckInterval.current) {
+          settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
         }
       });
 
-      // Add walls
+      // Add walls with proper boundaries
+      const wallThickness = 50;
       const walls = [
         // Floor
-        Bodies.rectangle(width / 2, height + 10, width, 20, {
+        Bodies.rectangle(width / 2, height + wallThickness / 2, width + wallThickness * 2, wallThickness, {
           isStatic: true,
           friction: 1,
           render: {
@@ -326,7 +339,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         }),
 
         // Right wall
-        Bodies.rectangle(width + 10, height / 2, 20, height, {
+        Bodies.rectangle(width + wallThickness / 2, height / 2, wallThickness, height + wallThickness * 2, {
           isStatic: true,
           friction: 1,
           render: {
@@ -335,7 +348,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         }),
 
         // Left wall
-        Bodies.rectangle(-10, height / 2, 20, height, {
+        Bodies.rectangle(-wallThickness / 2, height / 2, wallThickness, height + wallThickness * 2, {
           isStatic: true,
           friction: 1,
           render: {
@@ -344,17 +357,16 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         }),
       ];
 
-      const topWall = addTopWall
-        ? Bodies.rectangle(width / 2, -10, width, 20, {
-            isStatic: true,
-            friction: 1,
-            render: {
-              visible: debug,
-            },
-          })
-        : null;
+      // Top wall
+      const topWall = Bodies.rectangle(width / 2, -wallThickness / 2, width + wallThickness * 2, wallThickness, {
+        isStatic: true,
+        friction: 1,
+        render: {
+          visible: debug,
+        },
+      });
 
-      if (topWall) {
+      if (addTopWall) {
         walls.push(topWall);
       }
 
@@ -409,15 +421,17 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       Render.run(render.current);
       runner.current.enabled = false;
 
+      // Always keep rendering for visual updates
+      updateElements();
+
       if (autoStart) {
         runner.current.enabled = true;
         startEngine();
-        // Start checking for settlement after a short delay to let bodies register
         setTimeout(() => {
           settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
         }, 500);
       }
-    }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement]);
+    }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement, updateElements]);
 
     // Clear the Matter.js world
     const clearRenderer = useCallback(() => {
@@ -518,9 +532,10 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         body.position.x = x;
         body.position.y = y;
         
-        // Reset velocities
+        // Reset velocities and make static again
         Matter.Body.setVelocity(body, { x: 0, y: 0 });
         Matter.Body.setAngularVelocity(body, 0);
+        Matter.Body.setStatic(body, true);
       });
       updateElements();
       handleResize();
