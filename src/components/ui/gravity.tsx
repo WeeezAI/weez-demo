@@ -160,6 +160,8 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     const mouseConstraint = useRef<Matter.MouseConstraint | undefined>(undefined);
     const mouseDown = useRef(false);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+    const hasSettled = useRef(false);
+    const settlementCheckInterval = useRef<number | undefined>(undefined);
 
     const isRunning = useRef(false);
 
@@ -217,6 +219,29 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       }
     }, []);
 
+    // Check if all bodies have settled (stopped moving)
+    const checkSettlement = useCallback(() => {
+      let allSettled = true;
+      bodiesMap.current.forEach(({ body }) => {
+        const velocity = body.velocity;
+        const angularVelocity = body.angularVelocity;
+        
+        // Check if body is moving (velocity threshold)
+        if (Math.abs(velocity.x) > 0.01 || Math.abs(velocity.y) > 0.01 || Math.abs(angularVelocity) > 0.01) {
+          allSettled = false;
+        }
+      });
+
+      if (allSettled && !hasSettled.current && bodiesMap.current.size > 0) {
+        hasSettled.current = true;
+        stopEngine();
+        if (settlementCheckInterval.current) {
+          clearInterval(settlementCheckInterval.current);
+          settlementCheckInterval.current = undefined;
+        }
+      }
+    }, []);
+
     // Keep react elements in sync with the physics world
     const updateElements = useCallback(() => {
       bodiesMap.current.forEach(({ element, body }) => {
@@ -228,7 +253,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         }px, ${y - element.offsetHeight / 2}px) rotate(${rotation}deg)`;
       });
 
-      frameId.current = requestAnimationFrame(updateElements);
+      if (isRunning.current) {
+        frameId.current = requestAnimationFrame(updateElements);
+      }
     }, []);
 
     const initializeRenderer = useCallback(() => {
@@ -262,6 +289,18 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
             visible: debug,
           },
         },
+      });
+
+      // When user starts dragging, restart physics temporarily
+      Events.on(mouseConstraint.current, 'startdrag', () => {
+        hasSettled.current = false;
+        if (!isRunning.current) {
+          startEngine();
+          // Start checking for settlement again
+          if (!settlementCheckInterval.current) {
+            settlementCheckInterval.current = window.setInterval(checkSettlement, 100);
+          }
+        }
       });
 
       // Add walls
@@ -363,13 +402,20 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       if (autoStart) {
         runner.current.enabled = true;
         startEngine();
+        // Start checking for settlement
+        settlementCheckInterval.current = window.setInterval(checkSettlement, 100);
       }
-    }, [updateElements, debug, autoStart, gravity, addTopWall, grabCursor]);
+    }, [updateElements, debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement]);
 
     // Clear the Matter.js world
     const clearRenderer = useCallback(() => {
       if (frameId.current) {
         cancelAnimationFrame(frameId.current);
+      }
+
+      if (settlementCheckInterval.current) {
+        clearInterval(settlementCheckInterval.current);
+        settlementCheckInterval.current = undefined;
       }
 
       if (mouseConstraint.current) {
@@ -392,6 +438,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       }
 
       bodiesMap.current.clear();
+      hasSettled.current = false;
     }, []);
 
     const handleResize = useCallback(() => {
@@ -416,9 +463,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       if (render.current) {
         Render.run(render.current);
       }
-      frameId.current = requestAnimationFrame(updateElements);
       isRunning.current = true;
-    }, [updateElements, canvasSize]);
+      frameId.current = requestAnimationFrame(updateElements);
+    }, [updateElements]);
 
     const stopEngine = useCallback(() => {
       if (!isRunning.current) return;
@@ -437,6 +484,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
     const reset = useCallback(() => {
       stopEngine();
+      hasSettled.current = false;
       bodiesMap.current.forEach(({ element, body, props }) => {
         body.angle = props.angle || 0;
 
@@ -452,6 +500,10 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         );
         body.position.x = x;
         body.position.y = y;
+        
+        // Reset velocities
+        Matter.Body.setVelocity(body, { x: 0, y: 0 });
+        Matter.Body.setAngularVelocity(body, 0);
       });
       updateElements();
       handleResize();
@@ -481,7 +533,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
     useEffect(() => {
       initializeRenderer();
-      return clearRenderer;
+      return () => {
+        clearRenderer();
+      };
     }, [initializeRenderer, clearRenderer]);
 
     return (
