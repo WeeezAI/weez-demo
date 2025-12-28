@@ -1,14 +1,38 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle } from "lucide-react";
+import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle, Clock, ImageIcon, Instagram } from "lucide-react";
 import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
 import { ScratchCard } from "@/components/ScratchCard";
 import dexraflowLogo from "@/assets/dexraflow-logo.png";
 import heroIllustration from "@/assets/weez-hero-illustration.png";
+import { useState, useEffect } from "react";
 
 const Landing = () => {
   const navigate = useNavigate();
-
+  
+  // Countdown timer - 20 days from now
+  const [timeLeft, setTimeLeft] = useState({ days: 20, hours: 0, minutes: 0, seconds: 0 });
+  
+  useEffect(() => {
+    const launchDate = new Date();
+    launchDate.setDate(launchDate.getDate() + 20);
+    
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = launchDate.getTime() - now;
+      
+      if (distance > 0) {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000)
+        });
+      }
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
   const features = [
     {
       icon: <Sparkles className="w-6 h-6" />,
@@ -19,6 +43,16 @@ const Landing = () => {
       icon: <Target className="w-6 h-6" />,
       title: "Smart Targeting",
       description: "Reach your ideal audience with precision targeting powered by machine learning"
+    },
+    {
+      icon: <ImageIcon className="w-6 h-6" />,
+      title: "Create Social Media Creatives",
+      description: "Design stunning social media graphics, posts, and stories with AI assistance"
+    },
+    {
+      icon: <Instagram className="w-6 h-6" />,
+      title: "Upload directly to Instagram",
+      description: "Seamlessly publish your creatives directly to Instagram with one click"
     },
     {
       icon: <TrendingUp className="w-6 h-6" />,
@@ -51,6 +85,39 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
+      {/* Launch Offer Banner */}
+      <div className="relative z-20 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-800 text-white py-3 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30" />
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 relative">
+          <div className="flex items-center gap-2 animate-pulse">
+            <Clock className="w-5 h-5" />
+            <span className="font-bold text-lg">LAUNCH OFFER</span>
+            <span className="bg-white text-purple-700 px-3 py-1 rounded-full text-sm font-bold animate-bounce-subtle">90% OFF</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-purple-200 text-sm">for first 4 months • Ends in:</span>
+            <div className="flex gap-2">
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
+                <span className="text-xl font-bold">{timeLeft.days}</span>
+                <span className="text-xs block text-purple-200">days</span>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
+                <span className="text-xl font-bold">{timeLeft.hours.toString().padStart(2, '0')}</span>
+                <span className="text-xs block text-purple-200">hrs</span>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
+                <span className="text-xl font-bold">{timeLeft.minutes.toString().padStart(2, '0')}</span>
+                <span className="text-xs block text-purple-200">min</span>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
+                <span className="text-xl font-bold">{timeLeft.seconds.toString().padStart(2, '0')}</span>
+                <span className="text-xs block text-purple-200">sec</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Animated Background - Purple orbs with enhanced animations */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse-glow" />
@@ -230,14 +297,25 @@ const Landing = () => {
           >
             {/* Starter Plan */}
             <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
+              <div className="absolute -top-3 right-4">
+                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                  90% OFF
+                </span>
+              </div>
               <div className="mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
                 <p className="text-sm text-gray-500">Best for solo marketers & freelancers</p>
               </div>
               
               <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">$49</span>
-                <span className="text-gray-500"> / month</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-gray-900">$4.90</span>
+                  <span className="text-gray-500"> / month</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-lg text-gray-400 line-through">$49</span>
+                  <span className="text-xs text-green-600 font-medium">for first 4 months</span>
+                </div>
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -277,11 +355,16 @@ const Landing = () => {
 
             {/* Pro Plan - Featured */}
             <div className="relative p-8 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 scale-105 hover:scale-[1.08] transition-all duration-300">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-2">
                 <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 text-sm font-semibold shadow-lg animate-bounce-subtle">
                   <Star className="w-4 h-4 fill-current" />
                   Most Popular
                 </div>
+              </div>
+              <div className="absolute -top-3 right-4">
+                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                  90% OFF
+                </span>
               </div>
               
               <div className="mb-6 pt-2">
@@ -290,8 +373,14 @@ const Landing = () => {
               </div>
               
               <div className="mb-6">
-                <span className="text-4xl font-bold">$149</span>
-                <span className="text-purple-200"> / month</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">$14.90</span>
+                  <span className="text-purple-200"> / month</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-lg text-purple-300 line-through">$149</span>
+                  <span className="text-xs text-green-400 font-medium">for first 4 months</span>
+                </div>
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -331,14 +420,25 @@ const Landing = () => {
 
             {/* Agency Plan */}
             <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
+              <div className="absolute -top-3 right-4">
+                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                  90% OFF
+                </span>
+              </div>
               <div className="mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Agency</h3>
                 <p className="text-sm text-gray-500">Best for agencies managing multiple brands</p>
               </div>
               
               <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">$399</span>
-                <span className="text-gray-500"> / month</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-gray-900">$39.90</span>
+                  <span className="text-gray-500"> / month</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-lg text-gray-400 line-through">$399</span>
+                  <span className="text-xs text-green-600 font-medium">for first 4 months</span>
+                </div>
               </div>
 
               <ul className="space-y-4 mb-8">
