@@ -5,6 +5,7 @@ import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection
 import dexraflowLogo from "@/assets/dexraflow-logo.png";
 import heroIllustration from "@/assets/weez-hero-illustration.png";
 import { useState, useEffect } from "react";
+import { Gravity, MatterBody } from "@/components/ui/gravity";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -235,6 +236,125 @@ const Landing = () => {
               />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Gravity Keywords Section */}
+      <section className="relative z-10 w-full h-[500px] md:h-[600px] bg-gradient-to-b from-white to-purple-50/50 overflow-hidden">
+        <div className="w-full h-full relative">
+          <Gravity gravity={{ x: 0, y: 1 }} className="w-full h-full">
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="15%"
+              y="10%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-purple-500/25">
+                Social Media
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="35%"
+              y="15%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-pink-500/25">
+                Instagram
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="55%"
+              y="8%"
+              angle={10}
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-orange-500/25">
+                Posters
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="75%"
+              y="12%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-blue-500/25">
+                Marketing
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="25%"
+              y="25%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-green-500/25">
+                Impressions
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="50%"
+              y="20%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-red-500/25">
+                Sales
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="70%"
+              y="22%"
+              angle={-5}
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-purple-700/25">
+                Dexraflow
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="85%"
+              y="18%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-teal-500/25">
+                Market Research
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="10%"
+              y="30%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-indigo-500/25">
+                Analytics
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="40%"
+              y="28%"
+              angle={8}
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-fuchsia-500/25">
+                Engagement
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="60%"
+              y="32%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-yellow-500/25">
+                Content
+              </div>
+            </MatterBody>
+            <MatterBody
+              matterBodyOptions={{ friction: 0.5, restitution: 0.2 }}
+              x="80%"
+              y="35%"
+            >
+              <div className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full hover:cursor-grab px-4 sm:px-6 py-2 sm:py-3 font-medium shadow-lg shadow-violet-600/25">
+                Growth
+              </div>
+            </MatterBody>
+          </Gravity>
         </div>
       </section>
 
