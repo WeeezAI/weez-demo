@@ -570,12 +570,12 @@ const Landing = () => {
           <div className="relative mt-8">
             <div className="flex items-center justify-center">
               <h2 
-                className="text-[8rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-black tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-gray-800 to-gray-900 select-none font-agrandir"
+                className="text-[8rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-bold tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-gray-800 to-gray-900 select-none font-poppins"
                 style={{
                   WebkitTextStroke: '2px rgba(139, 92, 246, 0.3)',
                 }}
               >
-                DEXRAFLOW
+                Dexraflow
               </h2>
             </div>
             {/* Gradient overlay for fade effect */}
