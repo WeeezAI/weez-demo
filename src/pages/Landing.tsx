@@ -527,41 +527,67 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 px-6 md:px-12 py-12 border-t border-purple-100 bg-gray-50/50">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
+      <footer className="relative z-10 px-6 md:px-12 py-16 bg-gray-900 overflow-hidden">
+        <div className="max-w-7xl mx-auto relative">
+          {/* Top Section with Links */}
+          <div className="grid md:grid-cols-4 gap-8 mb-16 relative z-10">
             {/* Brand Column */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 md:col-span-1">
               <div className="flex items-center gap-3">
-                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto hover:scale-105 transition-transform duration-300" />
+                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto hover:scale-105 transition-transform duration-300 brightness-0 invert" />
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-400">
                 Weez.AI - Creative OS for Marketing Teams & Brands, Redefining How Marketing Works
               </p>
             </div>
             
             {/* Product Column */}
             <div className="flex flex-col gap-3">
-              <h4 className="font-semibold text-gray-900">Product</h4>
-              <Link to="/auth" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Get Started</Link>
-              <a href="#features" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Features</a>
-              <a href="#pricing" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Pricing</a>
+              <h4 className="font-semibold text-white mb-2">Product</h4>
+              <Link to="/auth" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Get Started</Link>
+              <a href="#features" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Features</a>
+              <a href="#pricing" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Pricing</a>
             </div>
             
             {/* Legal Column */}
             <div className="flex flex-col gap-3">
-              <h4 className="font-semibold text-gray-900">Legal</h4>
-              <Link to="/privacy-policy" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Privacy Policy</Link>
-              <Link to="/terms-conditions" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Terms & Conditions</Link>
-              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-500 hover:text-purple-600 transition-all duration-300 hover:translate-x-1">Contact Support</a>
+              <h4 className="font-semibold text-white mb-2">Legal</h4>
+              <Link to="/privacy-policy" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Privacy Policy</Link>
+              <Link to="/terms-conditions" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Terms & Conditions</Link>
+              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Contact Support</a>
+            </div>
+
+            {/* Social Column */}
+            <div className="flex flex-col gap-3">
+              <h4 className="font-semibold text-white mb-2">Connect</h4>
+              <a href="https://twitter.com/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Twitter / X</a>
+              <a href="https://linkedin.com/company/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">LinkedIn</a>
+              <a href="https://instagram.com/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Instagram</a>
             </div>
           </div>
+
+          {/* Large Brand Name Visual */}
+          <div className="relative mt-8">
+            <div className="flex items-center justify-center">
+              <h2 
+                className="text-[8rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-black tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-gray-800 to-gray-900 select-none font-agrandir"
+                style={{
+                  WebkitTextStroke: '2px rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                DEXRAFLOW
+              </h2>
+            </div>
+            {/* Gradient overlay for fade effect */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent pointer-events-none" />
+          </div>
           
-          <div className="pt-8 border-t border-purple-100 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Bottom Copyright */}
+          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
             <p className="text-sm text-gray-500">
               © 2025 Dexraflow. All rights reserved.
             </p>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-500">
               Weez.AI is a registered trademark of Dexraflow.
             </p>
           </div>
