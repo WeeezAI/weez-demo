@@ -105,9 +105,12 @@ export const MatterBody = ({
   const elementRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(Math.random().toString(36).substring(7));
   const context = useContext(GravityContext);
+  const registeredRef = useRef(false);
 
   useEffect(() => {
-    if (!elementRef.current || !context) return;
+    if (!elementRef.current || !context || registeredRef.current) return;
+    
+    registeredRef.current = true;
     context.registerElement(idRef.current, elementRef.current, {
       children,
       matterBodyOptions,
@@ -119,8 +122,11 @@ export const MatterBody = ({
       ...props,
     });
 
-    return () => context.unregisterElement(idRef.current);
-  }, [context, children, matterBodyOptions, bodyType, isDraggable, x, y, angle, props]);
+    return () => {
+      context.unregisterElement(idRef.current);
+      registeredRef.current = false;
+    };
+  }, [context]);
 
   return (
     <div
@@ -162,13 +168,15 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const hasSettled = useRef(false);
     const settlementCheckInterval = useRef<number | undefined>(undefined);
+    const initializedRef = useRef(false);
 
     const isRunning = useRef(false);
 
     // Register Matter.js body in the physics world
     const registerElement = useCallback(
       (id: string, element: HTMLElement, props: MatterBodyProps) => {
-        if (!canvas.current) return;
+        if (!canvas.current || bodiesMap.current.has(id)) return;
+        
         const width = element.offsetWidth;
         const height = element.offsetHeight;
         const canvasRect = canvas.current!.getBoundingClientRect();
@@ -221,18 +229,20 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
     // Check if all bodies have settled (stopped moving)
     const checkSettlement = useCallback(() => {
+      if (bodiesMap.current.size === 0) return;
+      
       let allSettled = true;
       bodiesMap.current.forEach(({ body }) => {
         const velocity = body.velocity;
         const angularVelocity = body.angularVelocity;
         
         // Check if body is moving (velocity threshold)
-        if (Math.abs(velocity.x) > 0.01 || Math.abs(velocity.y) > 0.01 || Math.abs(angularVelocity) > 0.01) {
+        if (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1 || Math.abs(angularVelocity) > 0.01) {
           allSettled = false;
         }
       });
 
-      if (allSettled && !hasSettled.current && bodiesMap.current.size > 0) {
+      if (allSettled && !hasSettled.current) {
         hasSettled.current = true;
         stopEngine();
         if (settlementCheckInterval.current) {
@@ -259,8 +269,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     }, []);
 
     const initializeRenderer = useCallback(() => {
-      if (!canvas.current) return;
+      if (!canvas.current || initializedRef.current) return;
 
+      initializedRef.current = true;
       const height = canvas.current.offsetHeight;
       const width = canvas.current.offsetWidth;
 
@@ -293,12 +304,12 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       // When user starts dragging, restart physics temporarily
       Events.on(mouseConstraint.current, 'startdrag', () => {
-        hasSettled.current = false;
-        if (!isRunning.current) {
+        if (hasSettled.current) {
+          hasSettled.current = false;
           startEngine();
           // Start checking for settlement again
           if (!settlementCheckInterval.current) {
-            settlementCheckInterval.current = window.setInterval(checkSettlement, 100);
+            settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
           }
         }
       });
@@ -396,16 +407,17 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       runner.current = Runner.create();
       Render.run(render.current);
-      updateElements();
       runner.current.enabled = false;
 
       if (autoStart) {
         runner.current.enabled = true;
         startEngine();
-        // Start checking for settlement
-        settlementCheckInterval.current = window.setInterval(checkSettlement, 100);
+        // Start checking for settlement after a short delay to let bodies register
+        setTimeout(() => {
+          settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
+        }, 500);
       }
-    }, [updateElements, debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement]);
+    }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement]);
 
     // Clear the Matter.js world
     const clearRenderer = useCallback(() => {
@@ -439,6 +451,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       bodiesMap.current.clear();
       hasSettled.current = false;
+      initializedRef.current = false;
     }, []);
 
     const handleResize = useCallback(() => {
@@ -455,16 +468,19 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     }, [clearRenderer, initializeRenderer, resetOnResize]);
 
     const startEngine = useCallback(() => {
+      if (isRunning.current) return;
+      
       if (runner.current) {
         runner.current.enabled = true;
-
         Runner.run(runner.current, engine.current);
       }
       if (render.current) {
         Render.run(render.current);
       }
       isRunning.current = true;
-      frameId.current = requestAnimationFrame(updateElements);
+      if (!frameId.current) {
+        frameId.current = requestAnimationFrame(updateElements);
+      }
     }, [updateElements]);
 
     const stopEngine = useCallback(() => {
@@ -478,6 +494,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       }
       if (frameId.current) {
         cancelAnimationFrame(frameId.current);
+        frameId.current = undefined;
       }
       isRunning.current = false;
     }, []);
