@@ -168,6 +168,8 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const hasSettled = useRef(false);
     const settlementCheckInterval = useRef<number | undefined>(undefined);
+    const settlementStartTimeout = useRef<number | undefined>(undefined);
+    const autoStopTimeout = useRef<number | undefined>(undefined);
     const initializedRef = useRef(false);
 
     const isRunning = useRef(false);
@@ -232,37 +234,44 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     // Check if all bodies have settled (stopped moving) - runs only once
     const checkSettlement = useCallback(() => {
       if (bodiesMap.current.size === 0 || hasSettled.current) return;
-      
+
       let allSettled = true;
       bodiesMap.current.forEach(({ body }) => {
         if (body.isStatic) return;
-        
-        const velocity = body.velocity;
-        const angularVelocity = body.angularVelocity;
-        
-        if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05 || Math.abs(angularVelocity) > 0.005) {
+
+        const { x, y } = body.velocity;
+        const av = body.angularVelocity;
+
+        if (Math.abs(x) > 0.05 || Math.abs(y) > 0.05 || Math.abs(av) > 0.005) {
           allSettled = false;
         }
       });
 
-      if (allSettled) {
-        hasSettled.current = true;
-        
-        // Clear interval immediately
-        if (settlementCheckInterval.current) {
-          clearInterval(settlementCheckInterval.current);
-          settlementCheckInterval.current = undefined;
-        }
-        
-        // Keep bodies where they are but stop the engine
-        if (frameId.current) {
-          cancelAnimationFrame(frameId.current);
-        }
-        if (runner.current) {
-          Runner.stop(runner.current);
-        }
-        isRunning.current = false;
+      if (!allSettled) return;
+
+      // Freeze bodies in-place so nothing keeps "nudging" them
+      bodiesMap.current.forEach(({ body }) => {
+        Matter.Body.setVelocity(body, { x: 0, y: 0 });
+        Matter.Body.setAngularVelocity(body, 0);
+        Matter.Body.setStatic(body, true);
+      });
+
+      hasSettled.current = true;
+
+      if (settlementCheckInterval.current) {
+        clearInterval(settlementCheckInterval.current);
+        settlementCheckInterval.current = undefined;
       }
+      if (settlementStartTimeout.current) {
+        clearTimeout(settlementStartTimeout.current);
+        settlementStartTimeout.current = undefined;
+      }
+      if (autoStopTimeout.current) {
+        clearTimeout(autoStopTimeout.current);
+        autoStopTimeout.current = undefined;
+      }
+
+      stopEngine();
     }, []);
 
     // Keep react elements in sync with the physics world
@@ -290,6 +299,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       Common.setDecomp(decomp);
 
+      engine.current.enableSleeping = true;
       engine.current.gravity.x = gravity.x;
       engine.current.gravity.y = gravity.y;
 
@@ -436,9 +446,30 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       frameId.current = requestAnimationFrame(updateElements);
       
       // Start checking for settlement
-      setTimeout(() => {
+      settlementStartTimeout.current = window.setTimeout(() => {
+        if (hasSettled.current) return;
         settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
       }, 500);
+
+      // Hard stop: ensure the drop happens only once and never restarts
+      autoStopTimeout.current = window.setTimeout(() => {
+        if (hasSettled.current) return;
+
+        bodiesMap.current.forEach(({ body }) => {
+          Matter.Body.setVelocity(body, { x: 0, y: 0 });
+          Matter.Body.setAngularVelocity(body, 0);
+          Matter.Body.setStatic(body, true);
+        });
+
+        hasSettled.current = true;
+
+        if (settlementCheckInterval.current) {
+          clearInterval(settlementCheckInterval.current);
+          settlementCheckInterval.current = undefined;
+        }
+
+        stopEngine();
+      }, 6000);
     }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement, updateElements]);
 
     // Clear the Matter.js world
@@ -450,6 +481,14 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       if (settlementCheckInterval.current) {
         clearInterval(settlementCheckInterval.current);
         settlementCheckInterval.current = undefined;
+      }
+      if (settlementStartTimeout.current) {
+        clearTimeout(settlementStartTimeout.current);
+        settlementStartTimeout.current = undefined;
+      }
+      if (autoStopTimeout.current) {
+        clearTimeout(autoStopTimeout.current);
+        autoStopTimeout.current = undefined;
       }
 
       if (mouseConstraint.current) {
