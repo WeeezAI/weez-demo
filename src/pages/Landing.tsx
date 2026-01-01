@@ -240,9 +240,10 @@ const Landing = () => {
       </section>
 
       {/* Gravity Keywords Section */}
-      <section className="relative z-10 w-full h-[500px] md:h-[600px] bg-gradient-to-b from-white to-purple-50/50 overflow-hidden">
-        <div className="w-full h-full relative">
-          <Gravity gravity={{ x: 0, y: 1 }} autoStart={true} className="w-full h-full">
+      <section className="relative z-10 w-full py-12 md:py-16 bg-[#F8F9FA]">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="relative w-full h-[400px] md:h-[500px] rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <Gravity gravity={{ x: 0, y: 1 }} className="w-full h-full">
             <MatterBody
               matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
               x="20%"
@@ -355,6 +356,7 @@ const Landing = () => {
               </div>
             </MatterBody>
           </Gravity>
+          </div>
         </div>
       </section>
 

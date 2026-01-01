@@ -229,30 +229,39 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       }
     }, []);
 
-    // Check if all bodies have settled (stopped moving)
+    // Check if all bodies have settled (stopped moving) - runs only once
     const checkSettlement = useCallback(() => {
-      if (bodiesMap.current.size === 0) return;
+      if (bodiesMap.current.size === 0 || hasSettled.current) return;
       
       let allSettled = true;
       bodiesMap.current.forEach(({ body }) => {
-        if (body.isStatic) return; // Skip static bodies
+        if (body.isStatic) return;
         
         const velocity = body.velocity;
         const angularVelocity = body.angularVelocity;
         
-        // Check if body is moving (velocity threshold)
-        if (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1 || Math.abs(angularVelocity) > 0.01) {
+        if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05 || Math.abs(angularVelocity) > 0.005) {
           allSettled = false;
         }
       });
 
-      if (allSettled && !hasSettled.current) {
+      if (allSettled) {
         hasSettled.current = true;
-        stopEngine();
+        
+        // Clear interval immediately
         if (settlementCheckInterval.current) {
           clearInterval(settlementCheckInterval.current);
           settlementCheckInterval.current = undefined;
         }
+        
+        // Keep bodies where they are but stop the engine
+        if (frameId.current) {
+          cancelAnimationFrame(frameId.current);
+        }
+        if (runner.current) {
+          Runner.stop(runner.current);
+        }
+        isRunning.current = false;
       }
     }, []);
 
