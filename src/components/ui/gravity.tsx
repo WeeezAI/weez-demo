@@ -191,7 +191,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
           const radius = Math.max(width, height) / 2;
           body = Bodies.circle(x, y, radius, {
             ...props.matterBodyOptions,
-            isStatic: true, // Start as static (at rest)
+            isStatic: false,
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -202,7 +202,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         } else {
           body = Bodies.rectangle(x, y, width, height, {
             ...props.matterBodyOptions,
-            isStatic: true, // Start as static (at rest)
+            isStatic: false,
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -419,18 +419,17 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       runner.current = Runner.create();
       Render.run(render.current);
-      runner.current.enabled = false;
 
-      // Always keep rendering for visual updates
-      updateElements();
-
-      if (autoStart) {
-        runner.current.enabled = true;
-        startEngine();
-        setTimeout(() => {
-          settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
-        }, 500);
-      }
+      // Always start the physics engine
+      runner.current.enabled = true;
+      Runner.run(runner.current, engine.current);
+      isRunning.current = true;
+      frameId.current = requestAnimationFrame(updateElements);
+      
+      // Start checking for settlement
+      setTimeout(() => {
+        settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
+      }, 500);
     }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement, updateElements]);
 
     // Clear the Matter.js world
