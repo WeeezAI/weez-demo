@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -617,8 +618,13 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       };
     }, [initializeRenderer, clearRenderer]);
 
+    const contextValue = useMemo(
+      () => ({ registerElement, unregisterElement }),
+      [registerElement, unregisterElement]
+    );
+
     return (
-      <GravityContext.Provider value={{ registerElement, unregisterElement }}>
+      <GravityContext.Provider value={contextValue}>
         <div
           ref={canvas}
           className={cn(className, "absolute top-0 left-0 w-full h-full")}
