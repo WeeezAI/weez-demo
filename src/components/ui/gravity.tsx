@@ -178,7 +178,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     // Track how many bodies have been registered for stacking
     const bodyCountRef = useRef(0);
 
-    // Register Matter.js body in the physics world - spawn at bottom, already settled
+    // Register Matter.js body in the physics world - spawn at bottom with physics
     const registerElement = useCallback(
       (id: string, element: HTMLElement, props: MatterBodyProps) => {
         if (!canvas.current || bodiesMap.current.has(id)) return;
@@ -191,44 +191,43 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
         // Calculate position at the bottom of the container with some randomness
         const bodyIndex = bodyCountRef.current++;
-        const padding = 20;
+        const padding = 30;
         const floorY = canvasRect.height - height / 2 - padding;
         
         // Distribute bodies across the bottom with some variation
-        const totalBodies = 10; // Expected number of bodies for distribution
+        const totalBodies = 10;
         const segmentWidth = (canvasRect.width - padding * 2) / totalBodies;
         const baseX = padding + segmentWidth / 2 + (bodyIndex % totalBodies) * segmentWidth;
-        const randomOffsetX = (Math.random() - 0.5) * segmentWidth * 0.8;
+        const randomOffsetX = (Math.random() - 0.5) * segmentWidth * 0.6;
         const x = Math.max(padding + width / 2, Math.min(canvasRect.width - padding - width / 2, baseX + randomOffsetX));
         
-        // Stack bodies slightly above each other if there are many
-        const stackOffset = Math.floor(bodyIndex / totalBodies) * (height + 10);
+        // Stack bodies with more vertical spacing to prevent overlap
+        const stackOffset = Math.floor(bodyIndex / totalBodies) * (height + 20);
         const y = floorY - stackOffset;
+
+        // Enhanced physics options for better collision and interaction
+        const physicsOptions = {
+          ...props.matterBodyOptions,
+          friction: 0.8,
+          frictionAir: 0.02,
+          restitution: 0.3,
+          density: 0.002,
+          slop: 0.01, // Reduce overlap
+          isStatic: false, // Start dynamic for proper physics
+          angle: angleRad,
+          render: {
+            fillStyle: debug ? "#888888" : "#00000000",
+            strokeStyle: debug ? "#333333" : "#00000000",
+            lineWidth: debug ? 3 : 0,
+          },
+        };
 
         let body;
         if (props.bodyType === "circle") {
           const radius = Math.max(width, height) / 2;
-          body = Bodies.circle(x, y, radius, {
-            ...props.matterBodyOptions,
-            isStatic: true, // Start as static (already settled)
-            angle: angleRad,
-            render: {
-              fillStyle: debug ? "#888888" : "#00000000",
-              strokeStyle: debug ? "#333333" : "#00000000",
-              lineWidth: debug ? 3 : 0,
-            },
-          });
+          body = Bodies.circle(x, y, radius, physicsOptions);
         } else {
-          body = Bodies.rectangle(x, y, width, height, {
-            ...props.matterBodyOptions,
-            isStatic: true, // Start as static (already settled)
-            angle: angleRad,
-            render: {
-              fillStyle: debug ? "#888888" : "#00000000",
-              strokeStyle: debug ? "#333333" : "#00000000",
-              lineWidth: debug ? 3 : 0,
-            },
-          });
+          body = Bodies.rectangle(x, y, width, height, physicsOptions);
         }
 
         if (body) {
@@ -253,32 +252,29 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       if (bodiesMap.current.size === 0) return;
 
       let allSettled = true;
+      let hasDynamicBodies = false;
+      
       bodiesMap.current.forEach(({ body }) => {
         if (body.isStatic) return;
+        hasDynamicBodies = true;
 
         const { x, y } = body.velocity;
         const av = body.angularVelocity;
 
-        if (Math.abs(x) > 0.05 || Math.abs(y) > 0.05 || Math.abs(av) > 0.005) {
+        if (Math.abs(x) > 0.02 || Math.abs(y) > 0.02 || Math.abs(av) > 0.002) {
           allSettled = false;
         }
       });
 
-      if (!allSettled) return;
+      // If no dynamic bodies or not all settled, keep running
+      if (!hasDynamicBodies || !allSettled) return;
 
-      // Freeze bodies in-place after they settle from user interaction
-      bodiesMap.current.forEach(({ body }) => {
-        Matter.Body.setVelocity(body, { x: 0, y: 0 });
-        Matter.Body.setAngularVelocity(body, 0);
-        Matter.Body.setStatic(body, true);
-      });
-
+      // Don't stop the engine or make bodies static - keep them interactive
+      // Just clear the settlement check interval
       if (settlementCheckInterval.current) {
         clearInterval(settlementCheckInterval.current);
         settlementCheckInterval.current = undefined;
       }
-
-      stopEngine();
     }, []);
 
     // Keep react elements in sync with the physics world
@@ -325,30 +321,29 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       mouseConstraint.current = MouseConstraint.create(engine.current, {
         mouse: mouse,
         constraint: {
-          stiffness: 0.2,
+          stiffness: 0.8, // Higher stiffness for more responsive dragging
+          damping: 0.3,
           render: {
             visible: debug,
           },
         },
       });
 
-      // When user starts dragging, make body dynamic and start physics
+      // When user starts dragging, wake up the body
       Events.on(mouseConstraint.current, 'startdrag', (event) => {
         const draggedBody = event.body;
-        
-        // Make all bodies dynamic when user interacts
-        bodiesMap.current.forEach(({ body }) => {
-          Matter.Body.setStatic(body, false);
-        });
-        
-        hasSettled.current = false;
-        if (!isRunning.current) {
-          startEngine();
+        if (draggedBody) {
+          // Wake up the dragged body
+          Matter.Sleeping.set(draggedBody, false);
         }
-        
-        // Start checking for settlement
-        if (!settlementCheckInterval.current) {
-          settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
+      });
+
+      // When user releases, let gravity take over naturally
+      Events.on(mouseConstraint.current, 'enddrag', (event) => {
+        const draggedBody = event.body;
+        if (draggedBody) {
+          // Ensure body is awake when released
+          Matter.Sleeping.set(draggedBody, false);
         }
       });
 
@@ -446,19 +441,11 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       runner.current = Runner.create();
       Render.run(render.current);
 
-      // Start the physics engine but keep it minimal since bodies start settled
+      // Start the physics engine and keep it running for interactivity
       runner.current.enabled = true;
       Runner.run(runner.current, engine.current);
       isRunning.current = true;
       frameId.current = requestAnimationFrame(updateElements);
-      
-      // Bodies start as static at the bottom, so mark as settled immediately
-      hasSettled.current = true;
-      
-      // Stop the engine after initial positioning since everything is already settled
-      settlementStartTimeout.current = window.setTimeout(() => {
-        stopEngine();
-      }, 100);
     }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement, updateElements]);
 
     // Clear the Matter.js world
