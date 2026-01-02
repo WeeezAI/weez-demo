@@ -175,7 +175,10 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
     const isRunning = useRef(false);
 
-    // Register Matter.js body in the physics world
+    // Track how many bodies have been registered for stacking
+    const bodyCountRef = useRef(0);
+
+    // Register Matter.js body in the physics world - spawn at bottom, already settled
     const registerElement = useCallback(
       (id: string, element: HTMLElement, props: MatterBodyProps) => {
         if (!canvas.current || bodiesMap.current.has(id)) return;
@@ -186,15 +189,28 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
         const angleRad = ((props.angle || 0) * Math.PI) / 180;
 
-        const x = calculatePosition(props.x, canvasRect.width, width);
-        const y = calculatePosition(props.y, canvasRect.height, height);
+        // Calculate position at the bottom of the container with some randomness
+        const bodyIndex = bodyCountRef.current++;
+        const padding = 20;
+        const floorY = canvasRect.height - height / 2 - padding;
+        
+        // Distribute bodies across the bottom with some variation
+        const totalBodies = 10; // Expected number of bodies for distribution
+        const segmentWidth = (canvasRect.width - padding * 2) / totalBodies;
+        const baseX = padding + segmentWidth / 2 + (bodyIndex % totalBodies) * segmentWidth;
+        const randomOffsetX = (Math.random() - 0.5) * segmentWidth * 0.8;
+        const x = Math.max(padding + width / 2, Math.min(canvasRect.width - padding - width / 2, baseX + randomOffsetX));
+        
+        // Stack bodies slightly above each other if there are many
+        const stackOffset = Math.floor(bodyIndex / totalBodies) * (height + 10);
+        const y = floorY - stackOffset;
 
         let body;
         if (props.bodyType === "circle") {
           const radius = Math.max(width, height) / 2;
           body = Bodies.circle(x, y, radius, {
             ...props.matterBodyOptions,
-            isStatic: false,
+            isStatic: true, // Start as static (already settled)
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -205,7 +221,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         } else {
           body = Bodies.rectangle(x, y, width, height, {
             ...props.matterBodyOptions,
-            isStatic: false,
+            isStatic: true, // Start as static (already settled)
             angle: angleRad,
             render: {
               fillStyle: debug ? "#888888" : "#00000000",
@@ -232,9 +248,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       }
     }, []);
 
-    // Check if all bodies have settled (stopped moving) - runs only once
+    // Check if all bodies have settled (stopped moving) after user interaction
     const checkSettlement = useCallback(() => {
-      if (bodiesMap.current.size === 0 || hasSettled.current) return;
+      if (bodiesMap.current.size === 0) return;
 
       let allSettled = true;
       bodiesMap.current.forEach(({ body }) => {
@@ -250,26 +266,16 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       if (!allSettled) return;
 
-      // Freeze bodies in-place so nothing keeps "nudging" them
+      // Freeze bodies in-place after they settle from user interaction
       bodiesMap.current.forEach(({ body }) => {
         Matter.Body.setVelocity(body, { x: 0, y: 0 });
         Matter.Body.setAngularVelocity(body, 0);
         Matter.Body.setStatic(body, true);
       });
 
-      hasSettled.current = true;
-
       if (settlementCheckInterval.current) {
         clearInterval(settlementCheckInterval.current);
         settlementCheckInterval.current = undefined;
-      }
-      if (settlementStartTimeout.current) {
-        clearTimeout(settlementStartTimeout.current);
-        settlementStartTimeout.current = undefined;
-      }
-      if (autoStopTimeout.current) {
-        clearTimeout(autoStopTimeout.current);
-        autoStopTimeout.current = undefined;
       }
 
       stopEngine();
@@ -440,37 +446,19 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       runner.current = Runner.create();
       Render.run(render.current);
 
-      // Always start the physics engine
+      // Start the physics engine but keep it minimal since bodies start settled
       runner.current.enabled = true;
       Runner.run(runner.current, engine.current);
       isRunning.current = true;
       frameId.current = requestAnimationFrame(updateElements);
       
-      // Start checking for settlement
+      // Bodies start as static at the bottom, so mark as settled immediately
+      hasSettled.current = true;
+      
+      // Stop the engine after initial positioning since everything is already settled
       settlementStartTimeout.current = window.setTimeout(() => {
-        if (hasSettled.current) return;
-        settlementCheckInterval.current = window.setInterval(checkSettlement, 200);
-      }, 500);
-
-      // Hard stop: ensure the drop happens only once and never restarts
-      autoStopTimeout.current = window.setTimeout(() => {
-        if (hasSettled.current) return;
-
-        bodiesMap.current.forEach(({ body }) => {
-          Matter.Body.setVelocity(body, { x: 0, y: 0 });
-          Matter.Body.setAngularVelocity(body, 0);
-          Matter.Body.setStatic(body, true);
-        });
-
-        hasSettled.current = true;
-
-        if (settlementCheckInterval.current) {
-          clearInterval(settlementCheckInterval.current);
-          settlementCheckInterval.current = undefined;
-        }
-
         stopEngine();
-      }, 6000);
+      }, 100);
     }, [debug, autoStart, gravity, addTopWall, grabCursor, checkSettlement, updateElements]);
 
     // Clear the Matter.js world
