@@ -133,9 +133,9 @@ export const MatterBody = ({
     <div
       ref={elementRef}
       className={cn(
-        "absolute",
-        className,
-        isDraggable && "pointer-events-none"
+        "absolute z-10 select-none touch-none",
+        isDraggable && "cursor-grab active:cursor-grabbing",
+        className
       )}
     >
       {children}
@@ -302,7 +302,8 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       Common.setDecomp(decomp);
 
-      engine.current.enableSleeping = true;
+      // Keep sleeping OFF so bodies are always draggable/liftable
+      engine.current.enableSleeping = false;
       engine.current.gravity.x = gravity.x;
       engine.current.gravity.y = gravity.y;
 
@@ -317,7 +318,19 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         },
       });
 
-      const mouse = Mouse.create(render.current.canvas);
+      // Make sure the debug canvas never blocks interaction with the HTML keywords
+      render.current.canvas.style.position = "absolute";
+      render.current.canvas.style.top = "0";
+      render.current.canvas.style.left = "0";
+      render.current.canvas.style.width = "100%";
+      render.current.canvas.style.height = "100%";
+      render.current.canvas.style.pointerEvents = "none";
+      render.current.canvas.style.zIndex = "0";
+
+      canvas.current.style.touchAction = "none";
+
+      // IMPORTANT: listen on the container so dragging works even when the mouse is over HTML elements
+      const mouse = Mouse.create(canvas.current);
       mouseConstraint.current = MouseConstraint.create(engine.current, {
         mouse: mouse,
         constraint: {
