@@ -42,6 +42,13 @@ const calculatePosition = (
   return parseFloat(value) || 0;
 };
 
+// Haptic feedback helper
+const triggerHaptic = (type: 'grab' | 'release') => {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    navigator.vibrate(type === 'grab' ? 15 : 8);
+  }
+};
+
 type GravityProps = {
   children: ReactNode;
   debug?: boolean;
@@ -50,6 +57,7 @@ type GravityProps = {
   grabCursor?: boolean;
   addTopWall?: boolean;
   autoStart?: boolean;
+  enableHaptics?: boolean;
   className?: string;
 };
 
@@ -132,9 +140,16 @@ export const MatterBody = ({
       ref={elementRef}
       className={cn(
         "absolute z-10 select-none touch-none",
+        // Larger hit area with padding for mobile
+        "p-2 -m-2",
         isDraggable && "cursor-grab active:cursor-grabbing",
         className
       )}
+      style={{ 
+        // Ensure touch targets are at least 44x44px for accessibility
+        minWidth: '44px',
+        minHeight: '44px',
+      }}
     >
       {children}
     </div>
@@ -151,6 +166,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       resetOnResize = true,
       addTopWall = true,
       autoStart = false,
+      enableHaptics = true,
       className,
       ...props
     },
@@ -338,14 +354,33 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       canvas.current.style.touchAction = "none";
 
-      // Pointer-driven dragging (reliable over HTML elements + mobile)
+      // Pointer-driven dragging with enhanced mobile support
       const getLocalPoint = (e: PointerEvent) => {
         const rect = canvas.current!.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
       };
 
-      const bodiesAtPoint = (point: { x: number; y: number }) => {
+      // Expanded hit detection for mobile - add padding around bodies
+      const bodiesAtPoint = (point: { x: number; y: number }, expandRadius = 0) => {
         const bodies = Array.from(bodiesMap.current.values()).map((v) => v.body);
+        
+        if (expandRadius > 0) {
+          // Check with expanded bounds for mobile
+          return bodies.filter((body) => {
+            const bounds = body.bounds;
+            const expandedBounds = {
+              min: { x: bounds.min.x - expandRadius, y: bounds.min.y - expandRadius },
+              max: { x: bounds.max.x + expandRadius, y: bounds.max.y + expandRadius }
+            };
+            return (
+              point.x >= expandedBounds.min.x &&
+              point.x <= expandedBounds.max.x &&
+              point.y >= expandedBounds.min.y &&
+              point.y <= expandedBounds.max.y
+            );
+          });
+        }
+        
         return Query.point(bodies, point);
       };
 
@@ -355,7 +390,9 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
           if (!canvas.current) return;
 
           const point = getLocalPoint(e);
-          const hits = bodiesAtPoint(point);
+          // Use expanded hit area for touch devices (20px padding)
+          const expandRadius = e.pointerType === "touch" ? 20 : 0;
+          const hits = bodiesAtPoint(point, expandRadius);
           const body = hits[hits.length - 1];
           if (!body) return;
 
@@ -363,21 +400,33 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
           Matter.Body.setStatic(body, false);
           Matter.Sleeping.set(body, false);
 
+          // Haptic feedback on grab
+          if (enableHaptics) {
+            triggerHaptic('grab');
+          }
+
           const constraint = Constraint.create({
             pointA: point,
             bodyB: body,
             pointB: { x: body.position.x - point.x, y: body.position.y - point.y },
-            stiffness: 0.22,
-            damping: 0.12,
+            // Stronger stiffness for more responsive mobile dragging
+            stiffness: e.pointerType === "touch" ? 0.35 : 0.22,
+            damping: e.pointerType === "touch" ? 0.15 : 0.12,
             length: 0,
           });
 
           World.add(engine.current.world, constraint);
           activeDragRef.current = { pointerId: e.pointerId, constraint, body };
 
-          canvas.current.setPointerCapture(e.pointerId);
+          // Strong pointer capture for mobile
+          try {
+            canvas.current.setPointerCapture(e.pointerId);
+          } catch {
+            // Some browsers may not support this
+          }
           if (grabCursor) canvas.current.style.cursor = "grabbing";
           e.preventDefault();
+          e.stopPropagation();
         };
 
         const move = (e: PointerEvent) => {
@@ -405,6 +454,11 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
           const active = activeDragRef.current;
           if (!active || active.pointerId !== e.pointerId) return;
 
+          // Haptic feedback on release
+          if (enableHaptics) {
+            triggerHaptic('release');
+          }
+
           World.remove(engine.current.world, active.constraint);
           activeDragRef.current = null;
 
@@ -415,6 +469,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
             // ignore
           }
           e.preventDefault();
+          e.stopPropagation();
         };
 
         const cancel = (e: PointerEvent) => {
