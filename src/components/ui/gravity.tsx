@@ -16,10 +16,8 @@ import { debounce } from "lodash";
 import Matter, {
   Bodies,
   Common,
+  Constraint,
   Engine,
-  Events,
-  Mouse,
-  MouseConstraint,
   Query,
   Render,
   Runner,
@@ -164,8 +162,19 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     const runner = useRef<Runner | undefined>(undefined);
     const bodiesMap = useRef(new Map<string, PhysicsBody>());
     const frameId = useRef<number | undefined>(undefined);
-    const mouseConstraint = useRef<Matter.MouseConstraint | undefined>(undefined);
-    const mouseDown = useRef(false);
+
+    const pointerHandlersRef = useRef<{
+      down: (e: PointerEvent) => void;
+      move: (e: PointerEvent) => void;
+      up: (e: PointerEvent) => void;
+      cancel: (e: PointerEvent) => void;
+    } | null>(null);
+
+    const activeDragRef = useRef<{
+      pointerId: number;
+      constraint: Matter.Constraint;
+      body: Matter.Body;
+    } | null>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const hasSettled = useRef(false);
     const settlementCheckInterval = useRef<number | undefined>(undefined);
@@ -329,127 +338,174 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
 
       canvas.current.style.touchAction = "none";
 
-      // IMPORTANT: listen on the container so dragging works even when the mouse is over HTML elements
-      const mouse = Mouse.create(canvas.current);
-      mouseConstraint.current = MouseConstraint.create(engine.current, {
-        mouse: mouse,
-        constraint: {
-          stiffness: 0.8, // Higher stiffness for more responsive dragging
-          damping: 0.3,
-          render: {
-            visible: debug,
-          },
-        },
-      });
+      // Pointer-driven dragging (reliable over HTML elements + mobile)
+      const getLocalPoint = (e: PointerEvent) => {
+        const rect = canvas.current!.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      };
 
-      // When user starts dragging, wake up the body
-      Events.on(mouseConstraint.current, 'startdrag', (event) => {
-        const draggedBody = event.body;
-        if (draggedBody) {
-          // Wake up the dragged body
-          Matter.Sleeping.set(draggedBody, false);
-        }
-      });
+      const bodiesAtPoint = (point: { x: number; y: number }) => {
+        const bodies = Array.from(bodiesMap.current.values()).map((v) => v.body);
+        return Query.point(bodies, point);
+      };
 
-      // When user releases, let gravity take over naturally
-      Events.on(mouseConstraint.current, 'enddrag', (event) => {
-        const draggedBody = event.body;
-        if (draggedBody) {
-          // Ensure body is awake when released
-          Matter.Sleeping.set(draggedBody, false);
-        }
-      });
+      if (!pointerHandlersRef.current) {
+        const down = (e: PointerEvent) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          if (!canvas.current) return;
+
+          const point = getLocalPoint(e);
+          const hits = bodiesAtPoint(point);
+          const body = hits[hits.length - 1];
+          if (!body) return;
+
+          // Make sure body is dynamic and awake
+          Matter.Body.setStatic(body, false);
+          Matter.Sleeping.set(body, false);
+
+          const constraint = Constraint.create({
+            pointA: point,
+            bodyB: body,
+            pointB: { x: body.position.x - point.x, y: body.position.y - point.y },
+            stiffness: 0.22,
+            damping: 0.12,
+            length: 0,
+          });
+
+          World.add(engine.current.world, constraint);
+          activeDragRef.current = { pointerId: e.pointerId, constraint, body };
+
+          canvas.current.setPointerCapture(e.pointerId);
+          if (grabCursor) canvas.current.style.cursor = "grabbing";
+          e.preventDefault();
+        };
+
+        const move = (e: PointerEvent) => {
+          if (!canvas.current) return;
+
+          const active = activeDragRef.current;
+          const point = getLocalPoint(e);
+
+          if (active && active.pointerId === e.pointerId) {
+            active.constraint.pointA = point;
+            Matter.Sleeping.set(active.body, false);
+            // Prevent "slingshot" velocities when releasing
+            Matter.Body.setVelocity(active.body, { x: 0, y: 0 });
+            e.preventDefault();
+            return;
+          }
+
+          if (!grabCursor) return;
+          const hovering = bodiesAtPoint(point).length > 0;
+          canvas.current.style.cursor = hovering ? "grab" : "default";
+        };
+
+        const up = (e: PointerEvent) => {
+          if (!canvas.current) return;
+          const active = activeDragRef.current;
+          if (!active || active.pointerId !== e.pointerId) return;
+
+          World.remove(engine.current.world, active.constraint);
+          activeDragRef.current = null;
+
+          if (grabCursor) canvas.current.style.cursor = "default";
+          try {
+            canvas.current.releasePointerCapture(e.pointerId);
+          } catch {
+            // ignore
+          }
+          e.preventDefault();
+        };
+
+        const cancel = (e: PointerEvent) => {
+          up(e);
+        };
+
+        pointerHandlersRef.current = { down, move, up, cancel };
+        canvas.current.addEventListener("pointerdown", down, { passive: false });
+        canvas.current.addEventListener("pointermove", move, { passive: false });
+        canvas.current.addEventListener("pointerup", up, { passive: false });
+        canvas.current.addEventListener("pointercancel", cancel, { passive: false });
+      }
+
+      // Ensure already-registered keyword bodies are present (needed after re-init)
+      const existingBodies = new Set(engine.current.world.bodies);
+      const bodiesToAdd = Array.from(bodiesMap.current.values())
+        .map((v) => v.body)
+        .filter((b) => !existingBodies.has(b));
+      if (bodiesToAdd.length) {
+        World.add(engine.current.world, bodiesToAdd);
+      }
 
       // Add walls with proper boundaries
       const wallThickness = 50;
       const walls = [
         // Floor
-        Bodies.rectangle(width / 2, height + wallThickness / 2, width + wallThickness * 2, wallThickness, {
-          isStatic: true,
-          friction: 1,
-          render: {
-            visible: debug,
-          },
-        }),
+        Bodies.rectangle(
+          width / 2,
+          height + wallThickness / 2,
+          width + wallThickness * 2,
+          wallThickness,
+          {
+            isStatic: true,
+            friction: 1,
+            render: {
+              visible: debug,
+            },
+          }
+        ),
 
         // Right wall
-        Bodies.rectangle(width + wallThickness / 2, height / 2, wallThickness, height + wallThickness * 2, {
-          isStatic: true,
-          friction: 1,
-          render: {
-            visible: debug,
-          },
-        }),
+        Bodies.rectangle(
+          width + wallThickness / 2,
+          height / 2,
+          wallThickness,
+          height + wallThickness * 2,
+          {
+            isStatic: true,
+            friction: 1,
+            render: {
+              visible: debug,
+            },
+          }
+        ),
 
         // Left wall
-        Bodies.rectangle(-wallThickness / 2, height / 2, wallThickness, height + wallThickness * 2, {
-          isStatic: true,
-          friction: 1,
-          render: {
-            visible: debug,
-          },
-        }),
+        Bodies.rectangle(
+          -wallThickness / 2,
+          height / 2,
+          wallThickness,
+          height + wallThickness * 2,
+          {
+            isStatic: true,
+            friction: 1,
+            render: {
+              visible: debug,
+            },
+          }
+        ),
       ];
 
       // Top wall
-      const topWall = Bodies.rectangle(width / 2, -wallThickness / 2, width + wallThickness * 2, wallThickness, {
-        isStatic: true,
-        friction: 1,
-        render: {
-          visible: debug,
-        },
-      });
+      const topWall = Bodies.rectangle(
+        width / 2,
+        -wallThickness / 2,
+        width + wallThickness * 2,
+        wallThickness,
+        {
+          isStatic: true,
+          friction: 1,
+          render: {
+            visible: debug,
+          },
+        }
+      );
 
       if (addTopWall) {
         walls.push(topWall);
       }
 
-      const touchingMouse = () =>
-        Query.point(
-          engine.current.world.bodies,
-          mouseConstraint.current?.mouse.position || { x: 0, y: 0 }
-        ).length > 0;
-
-      if (grabCursor) {
-        Events.on(engine.current, "beforeUpdate", () => {
-          if (canvas.current) {
-            if (!mouseDown.current && !touchingMouse()) {
-              canvas.current.style.cursor = "default";
-            } else if (touchingMouse()) {
-              canvas.current.style.cursor = mouseDown.current
-                ? "grabbing"
-                : "grab";
-            }
-          }
-        });
-
-        canvas.current.addEventListener("mousedown", () => {
-          mouseDown.current = true;
-
-          if (canvas.current) {
-            if (touchingMouse()) {
-              canvas.current.style.cursor = "grabbing";
-            } else {
-              canvas.current.style.cursor = "default";
-            }
-          }
-        });
-        canvas.current.addEventListener("mouseup", () => {
-          mouseDown.current = false;
-
-          if (canvas.current) {
-            if (touchingMouse()) {
-              canvas.current.style.cursor = "grab";
-            } else {
-              canvas.current.style.cursor = "default";
-            }
-          }
-        });
-      }
-
-      World.add(engine.current.world, [mouseConstraint.current, ...walls]);
-
-      render.current.mouse = mouse;
+      World.add(engine.current.world, walls);
 
       runner.current = Runner.create();
       Render.run(render.current);
@@ -480,12 +536,21 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         autoStopTimeout.current = undefined;
       }
 
-      if (mouseConstraint.current) {
-        World.remove(engine.current.world, mouseConstraint.current);
+      if (activeDragRef.current) {
+        World.remove(engine.current.world, activeDragRef.current.constraint);
+        activeDragRef.current = null;
+      }
+
+      if (pointerHandlersRef.current && canvas.current) {
+        const { down, move, up, cancel } = pointerHandlersRef.current;
+        canvas.current.removeEventListener("pointerdown", down);
+        canvas.current.removeEventListener("pointermove", move);
+        canvas.current.removeEventListener("pointerup", up);
+        canvas.current.removeEventListener("pointercancel", cancel);
+        pointerHandlersRef.current = null;
       }
 
       if (render.current) {
-        Mouse.clearSourceEvents(render.current.mouse);
         Render.stop(render.current);
         render.current.canvas.remove();
       }
@@ -499,7 +564,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         Engine.clear(engine.current);
       }
 
-      bodiesMap.current.clear();
+      // Keep bodiesMap so we can re-add bodies after a re-init (e.g., resize)
       hasSettled.current = false;
       initializedRef.current = false;
     }, []);
@@ -550,32 +615,19 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
     }, []);
 
     const reset = useCallback(() => {
-      stopEngine();
       hasSettled.current = false;
-      bodiesMap.current.forEach(({ element, body, props }) => {
-        body.angle = props.angle || 0;
 
-        const x = calculatePosition(
-          props.x,
-          canvasSize.width,
-          element.offsetWidth
-        );
-        const y = calculatePosition(
-          props.y,
-          canvasSize.height,
-          element.offsetHeight
-        );
-        body.position.x = x;
-        body.position.y = y;
-        
-        // Reset velocities and make static again
+      // Put everything back into a free, dynamic state
+      bodiesMap.current.forEach(({ body }) => {
         Matter.Body.setVelocity(body, { x: 0, y: 0 });
         Matter.Body.setAngularVelocity(body, 0);
-        Matter.Body.setStatic(body, true);
+        Matter.Body.setStatic(body, false);
+        Matter.Sleeping.set(body, false);
       });
-      updateElements();
-      handleResize();
-    }, [stopEngine, canvasSize, updateElements, handleResize]);
+
+      // Ensure the simulation is running
+      startEngine();
+    }, [startEngine]);
 
     useImperativeHandle(
       ref,
