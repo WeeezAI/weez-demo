@@ -1,6 +1,6 @@
 // src/services/authApi.ts
 const AUTH_BASE_URL =
-  "https://dexraflow-auth-backend-c3hbhvcffbg6fbdh.canadacentral-01.azurewebsites.net";
+  "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
 
 export interface LoginPayload {
   email: string;
