@@ -1,6 +1,6 @@
 // src/services/metadataAPI.ts
 
-const METADATA_BACKEND = "http://localhost:8000";
+const METADATA_BACKEND = "https://dexraflow-generate-metadata-c5b3cyagb3b7dchz.eastus2-01.azurewebsites.net";
 
 // =====================================================
 // TYPE DEFINITIONS
