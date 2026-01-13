@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Plus, ChevronDown, ChevronRight, BookOpen, Users, ArrowLeft, Clock } from "lucide-react";
+import { MessageCircle, Plus, ChevronDown, ChevronRight, BookOpen, Users, ArrowLeft, Clock, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -29,6 +29,7 @@ const ConversationSidebar = ({
 }: ConversationSidebarProps) => {
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const { exitSpace, user } = useAuth();
@@ -158,6 +159,36 @@ const ConversationSidebar = ({
               
               <CollapsibleContent className="mt-2 pl-6">
                 <KnowledgeBase />
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Analytics Section */}
+            <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
+              <CollapsibleTrigger className="flex items-center space-x-2 w-full p-2 hover:bg-muted rounded-md transition-colors">
+                {analyticsOpen ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Analytics</span>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-2">
+                <div className="pl-6 space-y-3">
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Total Assets</div>
+                    <div className="text-lg font-semibold text-foreground">--</div>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Conversations</div>
+                    <div className="text-lg font-semibold text-foreground">{conversations.length}</div>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Team Members</div>
+                    <div className="text-lg font-semibold text-foreground">{demoUsers.length}</div>
+                  </div>
+                </div>
               </CollapsibleContent>
             </Collapsible>
 

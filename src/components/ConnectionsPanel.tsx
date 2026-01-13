@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { Cable, Check } from "lucide-react";
+import { Cable, Check, Share2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import googleDriveIcon from "@/assets/google-drive-icon.png";
-import dropboxIcon from "@/assets/dropbox-icon.png";
-import onedriveIcon from "@/assets/onedrive-icon.png";
-import slackIcon from "@/assets/slack-icon.png";
-import notionIcon from "@/assets/notion-icon.png";
+import instagramIcon from "@/assets/instagram-icon.jpeg";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { platformAPI } from "@/services/platformAPI";
@@ -41,37 +38,16 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       description: "Creative assets, documents",
       color: "text-yellow-600",
     },
+  ]);
+
+  const [socialConnectors, setSocialConnectors] = useState<Connector[]>([
     {
-      name: "Dropbox",
-      providerKey: "dropbox",
-      iconImage: dropboxIcon,
+      name: "Instagram",
+      providerKey: "instagram",
+      iconImage: instagramIcon,
       connected: false,
-      description: "File sharing, collaboration",
-      color: "text-blue-500",
-    },
-    {
-      name: "OneDrive",
-      providerKey: "onedrive",
-      iconImage: onedriveIcon,
-      connected: false,
-      description: "Microsoft Office files",
-      color: "text-blue-600",
-    },
-    {
-      name: "Slack",
-      providerKey: "slack",
-      iconImage: slackIcon,
-      connected: false,
-      description: "Team communication",
-      color: "text-purple-600",
-    },
-    {
-      name: "Notion",
-      providerKey: "notion",
-      iconImage: notionIcon,
-      connected: false,
-      description: "Documentation",
-      color: "text-foreground",
+      description: "Share posts & stories",
+      color: "text-pink-500",
     },
   ]);
 
@@ -199,56 +175,111 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="px-1 py-6 space-y-3">
-            {connectors.map((connector) => (
-              <Card
-                key={connector.name}
-                onClick={() =>
-                  !connector.connected && handleConnect(connector)
-                }
-                className="p-3 hover:bg-muted cursor-pointer transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center">
-                    <img
-                      src={connector.iconImage}
-                      alt={connector.name}
-                      className="w-5 h-5"
-                    />
+          <div className="px-1 py-6 space-y-6">
+            {/* Link Your Tools - Google Drive only */}
+            <div className="space-y-3">
+              {connectors.map((connector) => (
+                <Card
+                  key={connector.name}
+                  onClick={() =>
+                    !connector.connected && handleConnect(connector)
+                  }
+                  className="p-3 hover:bg-muted cursor-pointer transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center">
+                      <img
+                        src={connector.iconImage}
+                        alt={connector.name}
+                        className="w-5 h-5"
+                      />
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{connector.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {connector.description}
+                      </div>
+                    </div>
+
+                    {connector.connected ? (
+                      <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Connected
+                      </div>
+                    ) : (
+                      <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
+                        Connect
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{connector.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {connector.description}
-                    </div>
-                  </div>
+                  {connector.connected &&
+                    connector.providerKey === "google" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openFolderSelection();
+                        }}
+                        className="mt-2 text-xs text-blue-600 hover:underline"
+                      >
+                        Select folders →
+                      </button>
+                    )}
+                </Card>
+              ))}
+            </div>
 
-                  {connector.connected ? (
-                    <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Connected
-                    </div>
-                  ) : (
-                    <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
-                      Connect
-                    </div>
-                  )}
-                </div>
+            {/* Connect Socials Section */}
+            <div className="border-t border-border pt-6">
+              <div className="px-5 mb-3">
+                <h3 className="text-foreground font-semibold flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-muted-foreground" />
+                  Connect Socials
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Connect your social accounts to publish content
+                </p>
+              </div>
 
-                {connector.connected &&
-                  connector.providerKey === "google" && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openFolderSelection();
-                      }}
-                      className="mt-2 text-xs text-blue-600 hover:underline"
-                    >
-                      Select folders →
-                    </button>
-                  )}
-              </Card>
-            ))}
+              <div className="space-y-3">
+                {socialConnectors.map((connector) => (
+                  <Card
+                    key={connector.name}
+                    onClick={() =>
+                      !connector.connected && handleConnect(connector)
+                    }
+                    className="p-3 hover:bg-muted cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                        <img
+                          src={connector.iconImage}
+                          alt={connector.name}
+                          className="w-5 h-5 object-contain"
+                        />
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{connector.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {connector.description}
+                        </div>
+                      </div>
+
+                      {connector.connected ? (
+                        <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Connected
+                        </div>
+                      ) : (
+                        <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
+                          Connect
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
           </div>
         </ScrollArea>
       </div>
