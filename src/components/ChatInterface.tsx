@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SuggestionBubbles from "./SuggestionBubbles";
+import ContentIdeas from "./ContentIdeas";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -576,6 +577,13 @@ Please try again or contact support if the issue persists.`,
       <ScrollArea className="flex-1">
         <div className="flex flex-col min-h-full">
           <div className="flex-1 py-6">
+            {/* Show Content Ideas when no messages */}
+            {messages.length === 0 ? (
+              <ContentIdeas 
+                onGenerateClick={(prompt) => handleSendMessage(prompt)}
+                disabled={isLoading}
+              />
+            ) : (
             <div className="max-w-4xl mx-auto px-4 space-y-6">
               {messages.map((msg) => (
                 <div
@@ -768,6 +776,7 @@ Please try again or contact support if the issue persists.`,
               ))}
               <div ref={messagesEndRef} />
             </div>
+            )}
           </div>
         </div>
       </ScrollArea>
