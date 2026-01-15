@@ -166,120 +166,52 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen">
         <div className="p-6 border-b border-border">
           <h3 className="text-foreground font-semibold flex items-center gap-2">
-            <Cable className="w-4 h-4 text-muted-foreground" />
-            Link your tools
+            <Share2 className="w-4 h-4 text-muted-foreground" />
+            Connect Socials
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Connect platforms to sync your creative & marketing assets
+            Connect your social accounts to publish content
           </p>
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="px-1 py-6 space-y-6">
-            {/* Link Your Tools - Google Drive only */}
-            <div className="space-y-3">
-              {connectors.map((connector) => (
-                <Card
-                  key={connector.name}
-                  onClick={() =>
-                    !connector.connected && handleConnect(connector)
-                  }
-                  className="p-3 hover:bg-muted cursor-pointer transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center">
-                      <img
-                        src={connector.iconImage}
-                        alt={connector.name}
-                        className="w-5 h-5"
-                      />
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{connector.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {connector.description}
-                      </div>
-                    </div>
-
-                    {connector.connected ? (
-                      <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
-                        <Check className="w-3 h-3" /> Connected
-                      </div>
-                    ) : (
-                      <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
-                        Connect
-                      </div>
-                    )}
+          <div className="px-4 py-6 space-y-3">
+            {socialConnectors.map((connector) => (
+              <Card
+                key={connector.name}
+                onClick={() =>
+                  !connector.connected && handleConnect(connector)
+                }
+                className="p-3 hover:bg-muted cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                    <img
+                      src={connector.iconImage}
+                      alt={connector.name}
+                      className="w-5 h-5 object-contain"
+                    />
                   </div>
 
-                  {connector.connected &&
-                    connector.providerKey === "google" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openFolderSelection();
-                        }}
-                        className="mt-2 text-xs text-blue-600 hover:underline"
-                      >
-                        Select folders →
-                      </button>
-                    )}
-                </Card>
-              ))}
-            </div>
-
-            {/* Connect Socials Section */}
-            <div className="border-t border-border pt-6">
-              <div className="px-5 mb-3">
-                <h3 className="text-foreground font-semibold flex items-center gap-2">
-                  <Share2 className="w-4 h-4 text-muted-foreground" />
-                  Connect Socials
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Connect your social accounts to publish content
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {socialConnectors.map((connector) => (
-                  <Card
-                    key={connector.name}
-                    onClick={() =>
-                      !connector.connected && handleConnect(connector)
-                    }
-                    className="p-3 hover:bg-muted cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                        <img
-                          src={connector.iconImage}
-                          alt={connector.name}
-                          className="w-5 h-5 object-contain"
-                        />
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{connector.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {connector.description}
-                        </div>
-                      </div>
-
-                      {connector.connected ? (
-                        <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Connected
-                        </div>
-                      ) : (
-                        <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
-                          Connect
-                        </div>
-                      )}
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{connector.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {connector.description}
                     </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
+                  </div>
+
+                  {connector.connected ? (
+                    <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Connected
+                    </div>
+                  ) : (
+                    <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
+                      Connect
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
           </div>
         </ScrollArea>
       </div>
