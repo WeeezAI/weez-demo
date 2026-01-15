@@ -10,6 +10,8 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Spaces from "./pages/Spaces";
 import Chat from "./pages/Chat";
+import Gallery from "./pages/Gallery";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -45,6 +47,8 @@ const App = () => (
 
             {/* Chat interface per space */}
             <Route path="/chat/:spaceId" element={<Chat />} />
+            <Route path="/gallery/:spaceId" element={<Gallery />} />
+            <Route path="/analytics/:spaceId" element={<Analytics />} />
             <Route path="/platform/success" element={<PlatformCallback />} />
 
             {/* Legal pages */}
