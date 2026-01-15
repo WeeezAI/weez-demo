@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Users, ArrowLeft, BarChart3, ChevronRight } from "lucide-react";
+import { Sparkles, Users, ArrowLeft, BarChart3, ChevronRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -48,6 +48,18 @@ const ConversationSidebar = ({
       <div className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="px-4 py-4 space-y-2">
+            {/* One Click Post - Clickable Navigation */}
+            <button
+              onClick={() => navigate(`/one-click-post/${spaceId}`)}
+              className="flex items-center justify-between w-full p-3 hover:bg-muted rounded-md transition-colors group"
+            >
+              <div className="flex items-center space-x-2">
+                <Zap className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-foreground">One Click Post</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
+
             {/* Creative Gallery - Clickable Navigation */}
             <button
               onClick={() => navigate(`/gallery/${spaceId}`)}
