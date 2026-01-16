@@ -16,6 +16,7 @@ import OneClickPost from "./pages/OneClickPost";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+import DataDeletion from "./pages/DataDeletion";
 
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
@@ -56,6 +57,7 @@ const App = () => (
             {/* Legal pages */}
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-conditions" element={<TermsConditions />} />
+            <Route path="/data-deletion" element={<DataDeletion />} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
