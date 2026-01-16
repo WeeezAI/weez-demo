@@ -676,6 +676,7 @@ const Landing = () => {
               <h4 className="font-semibold text-white mb-2">Legal</h4>
               <Link to="/privacy-policy" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Privacy Policy</Link>
               <Link to="/terms-conditions" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Terms & Conditions</Link>
+              <Link to="/data-deletion" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Data Deletion</Link>
               <a href="mailto:support@dexraflow.com" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Contact Support</a>
             </div>
 
