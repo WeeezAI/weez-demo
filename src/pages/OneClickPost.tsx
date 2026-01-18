@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Zap, TrendingUp, Users, Sparkles, ChevronRight } from "lucide-react";
+import { Zap, TrendingUp, Users, Sparkles, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import ConversationSidebar from "@/components/ConversationSidebar";
+import WeezHeader from "@/components/WeezHeader";
 
 interface ContentIdea {
   id: string;
@@ -85,101 +87,105 @@ const OneClickPost = () => {
   }
 
   const handleGenerate = (prompt: string) => {
-    // Navigate to chat with the prompt as a query parameter
     navigate(`/chat/${spaceId}?prompt=${encodeURIComponent(prompt)}`);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/chat/${spaceId}`)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Chat
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Zap className="w-6 h-6" />
-              One Click Post
-            </h1>
-            <p className="text-sm text-muted-foreground">{currentSpace.name}</p>
-          </div>
-        </div>
+    <div className="h-screen flex bg-background text-foreground w-full overflow-hidden">
+      {/* Left Sidebar */}
+      <ConversationSidebar 
+        onNewChat={() => navigate(`/chat/${spaceId}`)}
+        spaceId={spaceId || ""}
+      />
 
-        {/* Description */}
-        <div className="text-center mb-10">
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            AI-Powered Content Ideas
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Select a content idea below and generate professional social media content with just one click. 
-            Each suggestion is optimized for engagement and tailored for your brand.
-          </p>
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full min-w-0">
+        <WeezHeader spaceName={currentSpace.name} />
+        
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Zap className="w-6 h-6" />
+                One Click Post
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                AI-powered content ideas optimized for engagement
+              </p>
+            </div>
 
-        {/* Content Ideas Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {contentIdeas.map((idea) => (
-            <Card 
-              key={idea.id} 
-              className="group hover:border-primary/40 transition-all duration-200 hover:shadow-lg"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                      {idea.icon}
-                    </div>
-                    <CardTitle className="text-lg">{idea.title}</CardTitle>
-                  </div>
-                  {idea.badge && (
-                    <Badge variant={idea.badgeVariant} className="shrink-0 text-xs">
-                      {idea.badge}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Why this works</p>
-                  <p className="text-sm text-foreground">{idea.whyItWorks}</p>
-                </div>
-                
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Expected Outcome</p>
-                  <p className="text-sm text-foreground">{idea.expectedOutcome}</p>
-                </div>
+            {/* Description */}
+            <div className="text-center mb-10">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                AI-Powered Content Ideas
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Select a content idea below and generate professional social media content with just one click. 
+                Each suggestion is optimized for engagement and tailored for your brand.
+              </p>
+            </div>
 
-                <Button 
-                  onClick={() => handleGenerate(idea.prompt)}
-                  className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                  size="lg"
+            {/* Content Ideas Grid */}
+            <div className="grid gap-6 md:grid-cols-2">
+              {contentIdeas.map((idea) => (
+                <Card 
+                  key={idea.id} 
+                  className="group hover:border-primary/40 transition-all duration-200 hover:shadow-lg"
                 >
-                  <Zap className="w-4 h-4 mr-2" />
-                  One-Click Generate
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                          {idea.icon}
+                        </div>
+                        <CardTitle className="text-lg">{idea.title}</CardTitle>
+                      </div>
+                      {idea.badge && (
+                        <Badge variant={idea.badgeVariant} className="shrink-0 text-xs">
+                          {idea.badge}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Why this works</p>
+                      <p className="text-sm text-foreground">{idea.whyItWorks}</p>
+                    </div>
+                    
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Expected Outcome</p>
+                      <p className="text-sm text-foreground">{idea.expectedOutcome}</p>
+                    </div>
 
-        {/* Additional Info */}
-        <div className="mt-12 text-center">
-          <Card className="p-6 bg-muted/30 border-dashed">
-            <h3 className="font-semibold text-foreground mb-2">Want Custom Content Ideas?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Go to the chat and describe your specific content needs. Our AI will create personalized suggestions just for you.
-            </p>
-            <Button variant="outline" onClick={() => navigate(`/chat/${spaceId}`)}>
-              Open Chat
-            </Button>
-          </Card>
+                    <Button 
+                      onClick={() => handleGenerate(idea.prompt)}
+                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                      size="lg"
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      One-Click Generate
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Additional Info */}
+            <div className="mt-12 text-center">
+              <Card className="p-6 bg-muted/30 border-dashed">
+                <h3 className="font-semibold text-foreground mb-2">Want Custom Content Ideas?</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Go to the chat and describe your specific content needs. Our AI will create personalized suggestions just for you.
+                </p>
+                <Button variant="outline" onClick={() => navigate(`/chat/${spaceId}`)}>
+                  Open Chat
+                </Button>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
