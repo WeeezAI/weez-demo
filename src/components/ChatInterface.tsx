@@ -784,10 +784,6 @@ Please try again or contact support if the issue persists.`,
       {/* INPUT */}
       <div className="border-t p-4 relative">
         <div className="max-w-4xl mx-auto space-y-3">
-          <SuggestionBubbles
-            onSuggestionClick={(s) => handleSendMessage(s)}
-            disabled={isLoading}
-          />
 
           <div className="flex space-x-3">
             <Button variant="outline" size="icon">

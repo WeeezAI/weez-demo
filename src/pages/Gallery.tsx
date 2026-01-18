@@ -34,49 +34,49 @@ const Gallery = () => {
     selectSpace(found);
   }, [spaces, spaceId]);
 
-  // Demo placeholder images
+  // Demo SaaS startup posters
   useEffect(() => {
     setImages([
       {
         id: "1",
-        imageUrl: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop",
-        title: "Flash Sale Campaign",
-        expectedOutcome: "Boost engagement by 40% with urgency-driven messaging and eye-catching visuals.",
+        imageUrl: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop",
+        title: "AI-Powered Analytics Launch",
+        expectedOutcome: "Drive 200+ sign-ups with compelling product visualization and clear value proposition.",
         createdAt: "2 hours ago",
       },
       {
         id: "2",
-        imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=400&fit=crop",
-        title: "Product Launch Teaser",
-        expectedOutcome: "Generate 500+ pre-orders through strategic reveal sequence.",
+        imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=400&fit=crop",
+        title: "Dashboard Feature Announcement",
+        expectedOutcome: "Increase feature adoption by 35% with intuitive UI showcase.",
         createdAt: "Yesterday",
       },
       {
         id: "3",
         imageUrl: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=400&fit=crop",
-        title: "Team Introduction Post",
-        expectedOutcome: "Increase brand trust with authentic behind-the-scenes content.",
+        title: "Remote Team Collaboration",
+        expectedOutcome: "Build community trust with authentic team culture content.",
         createdAt: "2 days ago",
       },
       {
         id: "4",
-        imageUrl: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400&h=400&fit=crop",
-        title: "Hiring Announcement",
-        expectedOutcome: "Attract top talent with compelling employer branding visuals.",
+        imageUrl: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400&h=400&fit=crop",
+        title: "Product Hunt Launch Day",
+        expectedOutcome: "Secure top 5 Product Hunt ranking with engaging launch visuals.",
         createdAt: "3 days ago",
       },
       {
         id: "5",
-        imageUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop",
-        title: "Customer Testimonial",
-        expectedOutcome: "Build social proof and drive conversions with authentic reviews.",
+        imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=400&fit=crop",
+        title: "Growth Metrics Report",
+        expectedOutcome: "Attract investor interest with impressive traction visualization.",
         createdAt: "1 week ago",
       },
       {
         id: "6",
-        imageUrl: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=400&fit=crop",
-        title: "Weekly Tips Series",
-        expectedOutcome: "Position brand as industry thought leader with valuable content.",
+        imageUrl: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400&h=400&fit=crop",
+        title: "API Integration Guide",
+        expectedOutcome: "Boost developer adoption with clear technical documentation visuals.",
         createdAt: "1 week ago",
       },
     ]);
