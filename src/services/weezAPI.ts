@@ -1,6 +1,6 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "https://awfully-pumped-fowl.ngrok-free.app";
+const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
