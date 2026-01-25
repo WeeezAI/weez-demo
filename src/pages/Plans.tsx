@@ -12,7 +12,7 @@ import { weezAPI } from "@/services/weezAPI"; // Assuming weezAPI is where we ad
 
 const Plans = () => {
     const navigate = useNavigate();
-    const { user, refreshUser } = useAuth(); // Assuming refreshUser exists to update local state
+    const { user } = useAuth(); // Assuming refreshUser exists to update local state
     const { toast } = useToast();
 
     const [redeemCode, setRedeemCode] = useState("");
@@ -23,7 +23,7 @@ const Plans = () => {
         setIsRedeeming(true);
         try {
             // New endpoint in auth service
-            const response = await fetch("http://localhost:8002/subscription/redeem", {
+            const response = await fetch("https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net/subscription/redeem", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -44,9 +44,8 @@ const Plans = () => {
                 className: "bg-emerald-500 text-white border-none"
             });
 
-            // Clear input and refresh user state
+            // Clear input - user data will refresh on next page load
             setRedeemCode("");
-            if (refreshUser) await refreshUser();
 
         } catch (error: any) {
             toast({

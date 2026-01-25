@@ -24,7 +24,7 @@ const HelpCenterModal = ({ isOpen, onClose }: HelpCenterModalProps) => {
 
         setIsSending(true);
         try {
-            const response = await fetch("http://localhost:8002/support/query", {
+            const response = await fetch("https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net/support/query", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
