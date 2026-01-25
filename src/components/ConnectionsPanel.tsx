@@ -11,6 +11,7 @@ import { platformAPI } from "@/services/platformAPI";
 import { metadataAPI } from "@/services/metadataAPI";
 import FolderSelectionModal from "./connections/FolderSelectionModal";
 import { toast } from "sonner";
+import { weezAPI } from "@/services/weezAPI";
 
 interface ConnectionsPanelProps {
   onConnectorSync: (platform: string) => void;
@@ -58,16 +59,31 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
     if (!currentSpace || !token) return;
 
     try {
+      // 1. Load generic platform connections
       const list = await platformAPI.getConnections(currentSpace.id, token);
       const connectedPlatforms = list.map((c: any) =>
         c.platform?.toLowerCase()
       );
 
+      // 2. Load dedicated Weez Instagram status
+      const igStatus = await weezAPI.getInstagramStatus(currentSpace.id);
+
+      // Update generic connectors
       setConnectors((prev) =>
         prev.map((c) => ({
           ...c,
           connected: connectedPlatforms.includes(c.providerKey),
         }))
+      );
+
+      // Update social connectors (Instagram)
+      setSocialConnectors((prev) =>
+        prev.map((c) => {
+          if (c.providerKey === "instagram") {
+            return { ...c, connected: igStatus.connected || connectedPlatforms.includes("instagram") };
+          }
+          return c;
+        })
       );
     } catch (err) {
       console.error("Failed to load connections:", err);
@@ -84,6 +100,15 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const handleConnect = async (connector: Connector) => {
     if (!currentSpace || !token) return;
 
+    // Specific logic for Instagram (Weez Pipeline)
+    if (connector.providerKey === "instagram") {
+      const authUrl = weezAPI.getInstagramAuthUrl(currentSpace.id);
+      console.log("🚀 Redirecting to Weez Instagram OAuth:", authUrl);
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Generic logic for other platforms
     try {
       const resp = await platformAPI.getAuthUrl(
         currentSpace.id,
@@ -166,52 +191,22 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       <div className="hidden md:flex w-72 lg:w-80 bg-background border-l border-border flex-col h-screen">
         <div className="p-6 border-b border-border">
           <h3 className="text-foreground font-semibold flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-muted-foreground" />
-            Connect Socials
+            <Database className="w-4 h-4 text-muted-foreground" />
+            Strategic Assets
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Connect your social accounts to publish content
+            Connected brand repositories and repositories.
           </p>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="px-4 py-6 space-y-3">
-            {socialConnectors.map((connector) => (
-              <Card
-                key={connector.name}
-                onClick={() =>
-                  !connector.connected && handleConnect(connector)
-                }
-                className="p-3 hover:bg-muted cursor-pointer transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                    <img
-                      src={connector.iconImage}
-                      alt={connector.name}
-                      className="w-5 h-5 object-contain"
-                    />
-                  </div>
+            {/* Social connectors removed as they are managed via the Campaign Hub / Spaces grid */}
 
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{connector.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {connector.description}
-                    </div>
-                  </div>
-
-                  {connector.connected ? (
-                    <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Connected
-                    </div>
-                  ) : (
-                    <div className="px-2 py-1 text-weez-accent bg-weez-accent/10 rounded-full text-xs">
-                      Connect
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
+            <div className="flex flex-col items-center justify-center p-8 text-center gap-4 opacity-20 mt-10">
+              <Zap className="w-10 h-10" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Active Intelligence Shell</span>
+            </div>
           </div>
         </ScrollArea>
       </div>

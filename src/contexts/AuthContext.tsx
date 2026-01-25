@@ -13,6 +13,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  plan_type: string;
 }
 
 interface Space {
@@ -38,8 +39,9 @@ interface AuthContextType {
 
   createSpace: (name: string) => Promise<{ success: boolean; error?: string }>;
   deleteSpace: (space_id: string) => Promise<{ success: boolean; error?: string }>;
+  renameSpace: (space_id: string, name: string) => Promise<{ success: boolean; error?: string }>;
   refreshSpaces: () => Promise<void>; // Manual refresh function
-
+  isFetchingSpaces: boolean;
   selectedSpace: Space | null;
 }
 
@@ -52,13 +54,17 @@ const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [spaces, setSpaces] = useState<Space[]>([]);
-  const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
+  const [currentSpace, setCurrentSpace] = useState<Space | null>(() => {
+    const saved = localStorage.getItem("weez_current_space");
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token")
   );
 
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [isFetchingSpaces, setIsFetchingSpaces] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Load cached spaces from localStorage
@@ -68,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
         const now = Date.now();
-        
+
         // Check if cache is still valid
         if (now - timestamp < CACHE_EXPIRY_MS) {
           setSpaces(data || []);
@@ -108,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    setIsFetchingSpaces(true);
     try {
       const data = await spaceApi.getSpaces(token);
       setSpaces(data || []);
@@ -116,6 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load spaces", err);
       // If API fails, try to use cached data
       loadCachedSpaces();
+    } finally {
+      setIsFetchingSpaces(false);
     }
   };
 
@@ -133,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: data.user.user_id,
         email: data.user.email,
         name: `${data.user.first_name} ${data.user.last_name}`,
+        plan_type: data.user.plan_type,
       };
 
       localStorage.setItem("token", data.access_token);
@@ -161,6 +171,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("weez_user");
+    localStorage.removeItem("weez_current_space");
     localStorage.removeItem(SPACES_CACHE_KEY);
     setToken(null);
     setUser(null);
@@ -170,8 +181,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Select space
-  const selectSpace = (space: Space) => setCurrentSpace(space);
-  const exitSpace = () => setCurrentSpace(null);
+  const selectSpace = (space: Space) => {
+    setCurrentSpace(space);
+    localStorage.setItem("weez_current_space", JSON.stringify(space));
+  };
+
+  const exitSpace = () => {
+    setCurrentSpace(null);
+    localStorage.removeItem("weez_current_space");
+  };
 
   // CREATE SPACE
   const createSpace = async (name: string) => {
@@ -191,7 +209,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await spaceApi.deleteSpace(space_id, token);
       await fetchSpaces(true); // Force refresh after deleting
-      if (currentSpace?.id === space_id) setCurrentSpace(null);
+      if (currentSpace?.id === space_id) {
+        setCurrentSpace(null);
+        localStorage.removeItem("weez_current_space");
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
+    }
+  };
+
+  // RENAME SPACE
+  const renameSpace = async (space_id: string, name: string) => {
+    if (!token) return { success: false, error: "Not authenticated" };
+    try {
+      await spaceApi.updateSpace(space_id, name, token);
+      await fetchSpaces(true); // Force refresh after renaming
+
+      // Update current space if it's the one being renamed
+      if (currentSpace?.id === space_id) {
+        const updatedSpace = { ...currentSpace, name };
+        setCurrentSpace(updatedSpace);
+        localStorage.setItem("weez_current_space", JSON.stringify(updatedSpace));
+      }
+
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message };
@@ -238,8 +279,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         createSpace,
         deleteSpace,
+        renameSpace,
         refreshSpaces,
-
+        isFetchingSpaces,
         selectedSpace: currentSpace,
       }}
     >

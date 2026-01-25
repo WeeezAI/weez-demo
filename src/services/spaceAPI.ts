@@ -1,7 +1,5 @@
 // src/services/spaceApi.ts
-
-const AUTH_BASE_URL =
-  "https://dexraflow-auth-backend-c3hbhvcffbg6fbdh.canadacentral-01.azurewebsites.net";
+const AUTH_BASE_URL = "http://localhost:8002";
 
 export const spaceApi = {
   // -----------------------------
@@ -15,6 +13,7 @@ export const spaceApi = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Failed to load spaces");
 
+    // The new server returns { spaces: [...] }
     return data.spaces;
   },
 
@@ -34,6 +33,7 @@ export const spaceApi = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Failed to create space");
 
+    // The new server returns { message, space: { id, name, ... } }
     return data.space;
   },
 

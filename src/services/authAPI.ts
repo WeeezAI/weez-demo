@@ -1,6 +1,5 @@
 // src/services/authApi.ts
-const AUTH_BASE_URL =
-  "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
+const AUTH_BASE_URL = "http://localhost:8002";
 
 export interface LoginPayload {
   email: string;
@@ -15,11 +14,11 @@ export interface RegisterPayload {
 
 export const authApi = {
   // -----------------------------
-  // LOGIN  (backend expects x-www-form-urlencoded)
+  // LOGIN (FastAPI expects x-www-form-urlencoded as per OAuth2PasswordRequestForm)
   // -----------------------------
   async login(payload: LoginPayload) {
     const form = new URLSearchParams();
-    form.append("username", payload.email);
+    form.append("username", payload.email); // Substituted for 'username'
     form.append("password", payload.password);
 
     const res = await fetch(`${AUTH_BASE_URL}/auth/login`, {
@@ -35,11 +34,11 @@ export const authApi = {
       throw new Error(data.detail || "Invalid email or password");
     }
 
-    return data; // { access_token, user }
+    return data; // { access_token, token_type, user: { user_id, email, first_name, last_name } }
   },
 
   // -----------------------------
-  // REGISTER  (backend expects first_name, last_name)
+  // REGISTER (Backend expects first_name, last_name, email, password)
   // -----------------------------
   async register(payload: RegisterPayload) {
     const [first_name, ...rest] = payload.name.split(" ");
@@ -57,43 +56,24 @@ export const authApi = {
     });
 
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.detail || "Registration failed");
 
-    return data;
+    return data; // { message: "Verification email sent..." }
   },
 
   // -----------------------------
-  // GET ALL SPACES  
-  // (backend route: GET /spaces/)
+  // VERIFY EMAIL
   // -----------------------------
-  async getMySpaces(token: string) {
-    const res = await fetch(`${AUTH_BASE_URL}/spaces/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Failed to load spaces");
-
-    return data; // { spaces: [...] }
-  },
-
-  // -----------------------------
-  // CREATE SPACE  (backend: POST /spaces/create)
-  // -----------------------------
-  async createSpace(name: string, token: string) {
-    const res = await fetch(`${AUTH_BASE_URL}/spaces/create`, {
+  async verifyEmail(token: string) {
+    const res = await fetch(`${AUTH_BASE_URL}/auth/verify-email`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Failed to create space");
+    if (!res.ok) throw new Error(data.detail || "Email verification failed");
 
     return data;
-  },
+  }
 };

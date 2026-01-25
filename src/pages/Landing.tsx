@@ -1,394 +1,220 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate, Link } from "react-router-dom";
-import { Sparkles, Zap, Target, TrendingUp, Users, MessageSquare, ArrowRight, CheckCircle2, Star, Check, AlertTriangle, Clock, ImageIcon, Instagram } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Sparkles, ArrowRight, Instagram, BrainCircuit, Search, Zap, LayoutGrid, Palette, BarChart3, Clock, Rocket, MessageSquare } from "lucide-react";
 import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
-import dexraflowLogo from "@/assets/dexraflow-logo.png";
-import heroIllustration from "@/assets/weez-hero-illustration.png";
-import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Gravity, MatterBody } from "@/components/ui/gravity";
+import AuroraHero from "@/components/AuroraHero";
 
 const Landing = () => {
   const navigate = useNavigate();
-  
-  // Countdown timer - 20 days from now
-  const [timeLeft, setTimeLeft] = useState({ days: 20, hours: 0, minutes: 0, seconds: 0 });
-  
-  useEffect(() => {
-    const launchDate = new Date();
-    launchDate.setDate(launchDate.getDate() + 20);
-    
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = launchDate.getTime() - now;
-      
-      if (distance > 0) {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000)
-        });
-      }
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, []);
+
   const features = [
     {
-      icon: <Sparkles className="w-6 h-6" />,
-      title: "AI-Powered Campaigns",
-      description: "Generate high-converting marketing campaigns with advanced AI algorithms"
-    },
-    {
-      icon: <Target className="w-6 h-6" />,
-      title: "Smart Targeting",
-      description: "Reach your ideal audience with precision targeting powered by machine learning"
-    },
-    {
-      icon: <ImageIcon className="w-6 h-6" />,
-      title: "Create Social Media Creatives",
-      description: "Design stunning social media graphics, posts, and stories with AI assistance"
+      icon: <BrainCircuit className="w-6 h-6" />,
+      title: "Smart Content Ideas",
+      description: "Get endless post ideas tailored to your brand's voice and industry trends automatically."
     },
     {
       icon: <Instagram className="w-6 h-6" />,
-      title: "Upload directly to Instagram",
-      description: "Seamlessly publish your creatives directly to Instagram with one click"
+      title: "One-Click Publishing",
+      description: "Connect your Instagram and post generated content instantly without leaving the platform."
     },
     {
-      icon: <TrendingUp className="w-6 h-6" />,
-      title: "Performance Analytics",
-      description: "Real-time insights and predictive analytics to optimize your ROI"
+      icon: <Palette className="w-6 h-6" />,
+      title: "On-Brand Visuals",
+      description: "Generate professional images and graphics that perfectly match your brand's style guide."
     },
     {
-      icon: <MessageSquare className="w-6 h-6" />,
-      title: "Content Generation",
-      description: "Create compelling copy, visuals, and videos in seconds"
+      icon: <LayoutGrid className="w-6 h-6" />,
+      title: "Workspace Management",
+      description: "Organize different brands or projects in separate, secure workspaces."
     },
     {
-      icon: <Users className="w-6 h-6" />,
-      title: "Audience Insights",
-      description: "Deep understanding of your customers through AI-driven analysis"
+      icon: <BarChart3 className="w-6 h-6" />,
+      title: "Simple Analytics",
+      description: "Track what's working with clear, actionable insights on your top performing content."
     },
     {
-      icon: <Zap className="w-6 h-6" />,
-      title: "Automation",
-      description: "Automate repetitive tasks and focus on strategic growth"
+      icon: <Clock className="w-6 h-6" />,
+      title: "Time Saving",
+      description: "Reduce hours of content planning into minutes of automated generation."
     }
   ];
 
-  const benefits = [
-    "10x faster campaign creation",
-    "50% reduction in marketing costs",
-    "3x higher conversion rates",
-    "24/7 AI-powered optimization"
-  ];
-
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
-      {/* Launch Offer Banner */}
-      <div className="relative z-20 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-800 text-white py-3 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30" />
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 relative">
-          <div className="flex items-center gap-2 animate-pulse">
-            <Clock className="w-5 h-5" />
-            <span className="font-bold text-lg">LAUNCH OFFER</span>
-            <span className="bg-white text-purple-700 px-3 py-1 rounded-full text-sm font-bold animate-bounce-subtle">90% OFF</span>
+    <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans selection:bg-primary/10">
+
+      {/* Zen Navigation */}
+      <header className="fixed top-0 w-full z-50 backdrop-blur-xl bg-white/70 border-b border-border/40 transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-black tracking-tight uppercase">WEEZ AI</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-purple-200 text-sm">for first 4 months • Ends in:</span>
-            <div className="flex gap-2">
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
-                <span className="text-xl font-bold">{timeLeft.days}</span>
-                <span className="text-xs block text-purple-200">days</span>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
-                <span className="text-xl font-bold">{timeLeft.hours.toString().padStart(2, '0')}</span>
-                <span className="text-xs block text-purple-200">hrs</span>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
-                <span className="text-xl font-bold">{timeLeft.minutes.toString().padStart(2, '0')}</span>
-                <span className="text-xs block text-purple-200">min</span>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-center min-w-[48px]">
-                <span className="text-xl font-bold">{timeLeft.seconds.toString().padStart(2, '0')}</span>
-                <span className="text-xs block text-purple-200">sec</span>
-              </div>
+
+          <div className="flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
+              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+            </nav>
+            <div className="h-4 w-px bg-border hidden md:block" />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/auth')}
+                className="font-bold hover:bg-secondary rounded-xl"
+              >
+                Log In
+              </Button>
+              <Button
+                onClick={() => navigate('/auth')}
+                className="h-11 px-6 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-95"
+              >
+                Get Started
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Animated Background - Purple orbs with enhanced animations */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-purple-400/10 rounded-full blur-[80px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
-      </div>
-
-      {/* Header - Animated on load */}
-      <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6 animate-fade-in-down">
-        <div className="flex items-center">
-          <img src={dexraflowLogo} alt="Dexraflow" className="h-20 md:h-28 w-auto hover:scale-105 transition-transform duration-300" />
-        </div>
-        <nav className="hidden md:flex items-center gap-6">
-          <a href="#uniqueness" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Uniqueness</a>
-          <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Pricing</a>
-          <Link to="/privacy-policy" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Privacy Policy</Link>
-          <Link to="/terms-conditions" className="text-sm text-gray-600 hover:text-purple-600 transition-all duration-300 hover:-translate-y-0.5">Terms & Conditions</Link>
-        </nav>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/auth')}
-            className="text-gray-600 hover:text-gray-900 hover:scale-105 transition-all duration-300"
-          >
-            Sign In
-          </Button>
-          <Button 
-            onClick={() => navigate('/auth')}
-            className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
-          >
-            Get Started
-          </Button>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 px-6 md:px-12 pt-8 md:pt-12 pb-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            {/* Left Content */}
-            <div className="text-center lg:text-left">
-              <div 
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 border border-purple-200 mb-8 opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '100ms' }}
-              >
-                <Sparkles className="w-4 h-4 text-purple-600 animate-bounce-subtle" />
-                <span className="text-sm text-purple-700 font-medium">AI-Powered Marketing Revolution</span>
-              </div>
-              
-              <h1 
-                className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-agrandir opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '200ms' }}
-              >
-                <span className="text-gray-900">Introducing Weez.AI</span>
-                <br />
-                <span className="bg-gradient-to-r from-purple-600 via-violet-500 to-gray-900 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
-                  The Future of Digital Marketing
-                </span>
-              </h1>
-              
-              <p 
-                className="text-lg md:text-xl text-gray-600 max-w-xl mb-8 text-center lg:text-center mx-auto lg:mx-0 opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '300ms' }}
-              >
-                Transform your marketing with AI that understands your brand, audience, and goals. 
-                Create campaigns that convert, content that captivates, and strategies that scale.
-              </p>
-              
-              <div 
-                className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-8 opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '400ms' }}
-              >
-                <Button 
-                  size="lg" 
-                  onClick={() => navigate('/auth')}
-                  className="bg-gradient-to-r from-purple-600 to-gray-900 hover:from-purple-700 hover:to-black text-white px-8 py-6 text-lg group shadow-xl shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
-                >
-                  Start Free Trial
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="px-8 py-6 text-lg border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-105 transition-all duration-300"
-                >
-                  Watch Demo
-                </Button>
-              </div>
+      <section className="pt-40 pb-32 px-6 relative overflow-hidden">
+        {/* Living Background */}
+        <AuroraHero />
 
-              {/* Benefits - Staggered animation */}
-              <div 
-                className="flex flex-wrap items-center justify-center lg:justify-start gap-4 opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '500ms' }}
-              >
-                {benefits.map((benefit, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors duration-300"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="max-w-5xl mx-auto text-center relative z-10 space-y-8">
+          <AnimatedSection animation="fade-up">
+            <Badge className="bg-secondary text-primary border-primary/10 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+              <Sparkles className="w-3.5 h-3.5 mr-2" />
+              The Autonomous Marketing Workforce
+            </Badge>
+          </AnimatedSection>
 
-            {/* Right Hero Illustration */}
-            <div 
-              className="hidden lg:flex justify-end items-start opacity-0 animate-fade-in-right pr-4"
-              style={{ animationDelay: '400ms' }}
-            >
-              <img
-                src={heroIllustration}
-                alt="Marketing collage showcasing creative designs"
-                className="w-full max-w-lg shadow-2xl shadow-purple-500/20 rounded-2xl"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+          <AnimatedSection animation="fade-up" delay={100}>
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-foreground leading-[0.95]">
+              Marketing that <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">Runs Itself.</span>
+            </h1>
+          </AnimatedSection>
 
-      {/* Gravity Keywords Section */}
-      <section className="relative z-10 w-full py-12 md:py-16 bg-[#F8F9FA]">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="relative w-full h-[400px] md:h-[500px] rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <Gravity gravity={{ x: 0, y: 1 }} resetOnResize={false} className="w-full h-full">
-              <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="20%"
-              y="10%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-purple-500/25">
-                Social Media
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="40%"
-              y="15%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-pink-500/25">
-                Instagram
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="55%"
-              y="8%"
-              angle={10}
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-orange-500/25">
-                Posters
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="70%"
-              y="12%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-blue-500/25">
-                Marketing
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="30%"
-              y="25%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-green-500/25">
-                Impressions
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="50%"
-              y="20%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-red-500/25">
-                Sales
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="65%"
-              y="22%"
-              angle={-5}
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-purple-700/25">
-                Dexraflow
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="75%"
-              y="18%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-teal-500/25">
-                Research
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="15%"
-              y="30%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-indigo-500/25">
-                Analytics
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="45%"
-              y="28%"
-              angle={8}
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-fuchsia-500/25">
-                Engagement
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="60%"
-              y="32%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-yellow-500/25">
-                Content
-              </div>
-            </MatterBody>
-            <MatterBody
-              matterBodyOptions={{ friction: 0.5, restitution: 0.3 }}
-              x="75%"
-              y="35%"
-            >
-              <div className="text-sm sm:text-base md:text-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full hover:cursor-grab px-3 sm:px-5 py-2 font-medium shadow-lg shadow-violet-600/25">
-                Growth
-              </div>
-            </MatterBody>
-          </Gravity>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid - Uniqueness Section */}
-      <section id="uniqueness" className="relative z-10 px-6 md:px-12 py-20 bg-gradient-to-b from-purple-50/50 to-white">
-        <div className="max-w-6xl mx-auto">
-          <AnimatedSection animation="fade-up" className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
-              Everything You Need to
-              <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent"> Dominate </span>
-              Digital Marketing
-            </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Our AI-powered platform provides all the tools you need to create, optimize, and scale your marketing efforts.
+          <AnimatedSection animation="fade-up" delay={200}>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-medium">
+              Weez AI learns your brand, generates premium content, and manages your social presence automatically. Stop micromanaging and start scaling.
             </p>
           </AnimatedSection>
 
-          <StaggeredChildren 
-            animation="fade-up" 
-            staggerDelay={100} 
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {features.map((feature, index) => (
-              <div 
-                key={index}
-                className="group p-6 rounded-2xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2"
+          <AnimatedSection animation="fade-up" delay={300} className="pt-8">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                size="lg"
+                onClick={() => navigate('/auth')}
+                className="h-16 px-10 rounded-[2rem] bg-foreground text-background text-lg font-bold shadow-2xl hover:bg-foreground/90 transition-all active:scale-95 min-w-[200px]"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100 flex items-center justify-center text-purple-600 mb-4 group-hover:scale-110 group-hover:from-purple-600 group-hover:to-gray-900 group-hover:text-white transition-all duration-300">
-                  {feature.icon}
+                Start for Free
+              </Button>
+              <Button
+                variant="outline"
+                className="h-16 px-10 rounded-[2rem] border-2 bg-transparent text-lg font-bold hover:bg-secondary transition-all min-w-[200px]"
+              >
+                How it Works
+              </Button>
+            </div>
+            <p className="mt-6 text-sm text-muted-foreground font-medium">
+              No credit card required · Cancel anytime
+            </p>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Floating UI Demo */}
+      <section className="pb-32 px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <AnimatedSection animation="fade-up" delay={400}>
+            <div className="relative rounded-[3rem] overflow-hidden border border-borderShadow shadow-[0_100px_200px_-50px_rgba(0,0,0,0.1)] bg-[#FCFCFC]">
+              <div className="absolute inset-0 bg-grid-black/[0.02] -z-10" />
+              <div className="p-12 md:p-20 relative h-[600px] flex items-center justify-center overflow-hidden">
+                {/* Floating Element 1 - Left */}
+                <div className="absolute left-[10%] top-[20%] p-6 bg-white rounded-[2rem] shadow-xl border border-black/5 w-64 animate-float">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600">
+                      <Instagram className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-muted-foreground uppercase">Schedule</div>
+                      <div className="text-sm font-black">Post Published</div>
+                    </div>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-green-500 rounded-full" />
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2 text-gray-900">{feature.title}</h3>
-                <p className="text-gray-600 text-sm">{feature.description}</p>
+
+                {/* Floating Element 2 - Right */}
+                <div className="absolute right-[10%] bottom-[30%] p-6 bg-white rounded-[2rem] shadow-xl border border-black/5 w-72 animate-float-delayed">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-muted-foreground uppercase">Generation</div>
+                      <div className="text-sm font-black">3 New Ideas Ready</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-12 w-full bg-slate-100 rounded-xl" />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Center Main UI Representation */}
+                <div className="relative z-10 bg-white rounded-[2.5rem] shadow-2xl border border-black/5 p-8 w-full max-w-xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-2xl font-black">Content Calendar</h3>
+                    <Badge variant="outline" className="rounded-full">October</Badge>
+                  </div>
+                  <div className="grid grid-cols-7 gap-4 text-center mb-4">
+                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => (
+                      <div key={d} className="text-xs font-bold text-muted-foreground">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-4">
+                    {[...Array(14)].map((_, i) => (
+                      <div key={i} className={`aspect-square rounded-2xl flex items-center justify-center text-sm font-medium transition-colors ${i === 3 || i === 8 || i === 12 ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-secondary/50 text-muted-foreground'}`}>
+                        {i === 3 || i === 8 || i === 12 ? <Check className="w-4 h-4" /> : i + 1}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="py-32 px-6 bg-secondary/30" id="features">
+        <div className="max-w-[1200px] mx-auto space-y-24">
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">
+              Everything Included.
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Weez AI replaces disconnected tools with one unified creative operating system.
+            </p>
+          </div>
+
+          <StaggeredChildren staggerDelay={100} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((f, i) => (
+              <div key={i} className="group p-8 rounded-[2.5rem] bg-white border border-transparent hover:border-primary/10 hover:shadow-xl transition-all duration-500">
+                <div className="w-14 h-14 rounded-2xl bg-primary/5 text-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  {f.icon}
+                </div>
+                <h3 className="text-xl font-bold mb-3 tracking-tight">{f.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </StaggeredChildren>
@@ -396,328 +222,133 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="relative z-10 px-6 md:px-12 py-24">
-        <div className="max-w-7xl mx-auto">
-          <AnimatedSection animation="fade-up" className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-agrandir">
-              Simple, Transparent
-              <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent"> Pricing</span>
-            </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Choose the plan that fits your needs. Scale as you grow.
-            </p>
-          </AnimatedSection>
+      <section className="py-32 px-6" id="pricing">
+        <div className="max-w-[1200px] mx-auto space-y-20">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight">Simple Pricing.</h2>
+            <p className="text-lg text-muted-foreground">Start for free, scale when you're ready.</p>
+          </div>
 
-          {/* Pricing Cards */}
-          <StaggeredChildren 
-            animation="fade-up" 
-            staggerDelay={150}
-            className="grid md:grid-cols-3 gap-8 mb-16"
-          >
-            {/* Starter Plan */}
-            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
-              <div className="absolute -top-3 right-4">
-                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                  90% OFF
-                </span>
-              </div>
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
-                <p className="text-sm text-gray-500">Best for solo marketers & freelancers</p>
-              </div>
-              
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">$4.90</span>
-                  <span className="text-gray-500"> / month</span>
+          <div className="grid md:grid-cols-3 gap-8 items-center">
+            {/* Free */}
+            <div className="p-10 rounded-[3rem] border border-border bg-white hover:shadow-lg transition-all">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-black">Free</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-black">$0</span>
+                  <span className="text-muted-foreground font-medium">/mo</span>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg text-gray-400 line-through">$49</span>
-                  <span className="text-xs text-green-600 font-medium">for first 4 months</span>
-                </div>
+                <p className="text-sm text-muted-foreground font-medium">Perfect for trying out the platform.</p>
+                <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Get Started</Button>
+                <ul className="space-y-4 pt-4">
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 1 Brand Workspace</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 10 AI Generations</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Basic Analytics</li>
+                </ul>
               </div>
-
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">AI Chat with assets (files, images, videos)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Proposal Generator (limited usage)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Creative Mode (basic)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Monthly usage limits (fair use)</span>
-                </li>
-              </ul>
-
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-6">
-                <div className="flex items-center gap-2 text-amber-700 text-sm">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <span>Deep Research not included</span>
-                </div>
-              </div>
-
-              <Button 
-                onClick={() => navigate('/auth')}
-                variant="outline"
-                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-[1.02] transition-all duration-300"
-              >
-                Get Started
-              </Button>
             </div>
 
-            {/* Pro Plan - Featured */}
-            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 scale-105 hover:scale-[1.08] transition-all duration-300">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-2">
-                <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 text-sm font-semibold shadow-lg animate-bounce-subtle">
-                  <Star className="w-4 h-4 fill-current" />
-                  Most Popular
+            {/* Pro - Featured */}
+            <div className="relative p-10 rounded-[3.5rem] bg-[#1a1a1a] text-white shadow-2xl scale-105 z-10">
+              <div className="absolute top-6 right-8">
+                <Badge className="bg-primary hover:bg-primary border-none text-white px-3 py-1">POPULAR</Badge>
+              </div>
+              <div className="space-y-6">
+                <h3 className="text-2xl font-black">Monthly</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-black">$29</span>
+                  <span className="text-white/60 font-medium">/mo</span>
                 </div>
+                <p className="text-sm text-white/60 font-medium">For growing brands and creators.</p>
+                <Button onClick={() => navigate('/auth')} className="w-full h-14 rounded-2xl bg-white text-black hover:bg-white/90 font-bold">Start Free Trial</Button>
+                <ul className="space-y-4 pt-4 text-white/80">
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Unlimited Workspaces</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Unlimited Generations</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Advanced SEO Tools</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Priority Support</li>
+                </ul>
               </div>
-              <div className="absolute -top-3 right-4">
-                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                  90% OFF
-                </span>
-              </div>
-              
-              <div className="mb-6 pt-2">
-                <h3 className="text-xl font-bold mb-2">Pro</h3>
-                <p className="text-sm text-purple-200">Best for small to mid-size agencies</p>
-              </div>
-              
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">$14.90</span>
-                  <span className="text-purple-200"> / month</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg text-purple-300 line-through">$149</span>
-                  <span className="text-xs text-green-400 font-medium">for first 4 months</span>
-                </div>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">AI Chat with full asset intelligence</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">Proposal Generator (unlimited)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">Deep Research Mode</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">Creative Mode (advanced)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">Higher context memory</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-purple-100 text-sm">Faster AI generations</span>
-                </li>
-              </ul>
-
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="w-full py-6 bg-white text-purple-700 hover:bg-purple-50 hover:scale-[1.02] transition-all duration-300"
-              >
-                Get Started
-              </Button>
             </div>
 
-            {/* Agency Plan */}
-            <div className="relative p-8 rounded-3xl bg-white border border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-2">
-              <div className="absolute -top-3 right-4">
-                <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                  90% OFF
-                </span>
-              </div>
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Agency</h3>
-                <p className="text-sm text-gray-500">Best for agencies managing multiple brands</p>
-              </div>
-              
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">$39.90</span>
-                  <span className="text-gray-500"> / month</span>
+            {/* Yearly */}
+            <div className="p-10 rounded-[3rem] border border-border bg-white hover:shadow-lg transition-all">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-black">Yearly</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-black">$299</span>
+                  <span className="text-muted-foreground font-medium">/yr</span>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg text-gray-400 line-through">$399</span>
-                  <span className="text-xs text-green-600 font-medium">for first 4 months</span>
-                </div>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Everything in Pro</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Multiple brand workspaces</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Client-specific AI memory</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Priority inference</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Early access to automation features</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm">Higher usage & generation limits</span>
-                </li>
-              </ul>
-
-              <Button 
-                onClick={() => navigate('/auth')}
-                variant="outline"
-                className="w-full py-6 border-purple-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:scale-[1.02] transition-all duration-300"
-              >
-                Get Started
-              </Button>
-            </div>
-          </StaggeredChildren>
-
-          {/* Add-ons Section */}
-          <AnimatedSection animation="fade-up" delay={200} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 font-agrandir mb-2">Optional Add-ons</h3>
-              <p className="text-gray-500">Add flexibility and scale without bloating your plan</p>
-            </div>
-            
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <p className="text-sm font-medium text-gray-900 mb-1">Extra Deep Research Credits</p>
-                <p className="text-lg font-bold text-purple-600">$29 / pack</p>
-              </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <p className="text-sm font-medium text-gray-900 mb-1">Extra Creative Generations</p>
-                <p className="text-lg font-bold text-purple-600">$49</p>
-              </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <p className="text-sm font-medium text-gray-900 mb-1">White-label Access</p>
-                <p className="text-lg font-bold text-purple-600">$199 / month</p>
-                <p className="text-xs text-gray-400 mt-1">Coming soon</p>
-              </div>
-              <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 text-center hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <p className="text-sm font-medium text-gray-900 mb-1">Custom Onboarding & Setup</p>
-                <p className="text-lg font-bold text-purple-600">$499 – $1,499</p>
+                <p className="text-sm text-muted-foreground font-medium">Best value for long-term growth.</p>
+                <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Choose Yearly</Button>
+                <ul className="space-y-4 pt-4">
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Everything in Monthly</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 2 Months Free</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Early Access features</li>
+                </ul>
               </div>
             </div>
-          </AnimatedSection>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="relative z-10 px-6 md:px-12 py-24">
-        <AnimatedSection animation="scale" className="max-w-4xl mx-auto text-center">
-          <div className="p-12 rounded-3xl bg-gradient-to-br from-purple-600 via-violet-600 to-gray-900 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-500">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-agrandir">
-              Ready to Transform Your Marketing?
-            </h2>
-            <p className="text-purple-100 text-lg mb-8 max-w-2xl mx-auto">
-              Join thousands of businesses already using Weez.AI to revolutionize their digital marketing.
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto bg-primary rounded-[4rem] text-center p-12 md:p-24 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+          <div className="relative z-10 space-y-8">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight">Ready to automate?</h2>
+            <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
+              Join thousands of brands using Weez AI to scale their content without the burnout.
             </p>
-            <Button 
-              size="lg" 
+            <Button
               onClick={() => navigate('/auth')}
-              className="bg-white text-purple-700 hover:bg-purple-50 px-10 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+              size="lg"
+              className="h-20 px-12 rounded-[2rem] bg-white text-primary text-lg font-black uppercase tracking-widest hover:bg-white/90 shadow-xl"
             >
-              Get Started for Free
+              Get Started Now
             </Button>
           </div>
-        </AnimatedSection>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 px-6 md:px-12 py-16 bg-gray-900 overflow-hidden">
-        <div className="max-w-7xl mx-auto relative">
-          {/* Top Section with Links */}
-          <div className="grid md:grid-cols-4 gap-8 mb-16 relative z-10">
-            {/* Brand Column */}
-            <div className="flex flex-col gap-4 md:col-span-1">
-              <div className="flex items-center gap-3">
-                <img src={dexraflowLogo} alt="Dexraflow" className="h-10 w-auto hover:scale-105 transition-transform duration-300 brightness-0 invert" />
-              </div>
-              <p className="text-sm text-gray-400">
-                Weez.AI - Creative OS for Marketing Teams & Brands, Redefining How Marketing Works
-              </p>
+      {/* Minimal Footer */}
+      <footer className="py-20 px-6 border-t border-border/40">
+        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-background" />
             </div>
-            
-            {/* Product Column */}
-            <div className="flex flex-col gap-3">
-              <h4 className="font-semibold text-white mb-2">Product</h4>
-              <Link to="/auth" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Get Started</Link>
-              <a href="#features" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Features</a>
-              <a href="#pricing" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Pricing</a>
-            </div>
-            
-            {/* Legal Column */}
-            <div className="flex flex-col gap-3">
-              <h4 className="font-semibold text-white mb-2">Legal</h4>
-              <Link to="/privacy-policy" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Privacy Policy</Link>
-              <Link to="/terms-conditions" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Terms & Conditions</Link>
-              <Link to="/data-deletion" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Data Deletion</Link>
-              <a href="mailto:support@dexraflow.com" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Contact Support</a>
-            </div>
-
-            {/* Social Column */}
-            <div className="flex flex-col gap-3">
-              <h4 className="font-semibold text-white mb-2">Connect</h4>
-              <a href="https://twitter.com/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Twitter / X</a>
-              <a href="https://linkedin.com/company/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">LinkedIn</a>
-              <a href="https://instagram.com/dexraflow" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-purple-400 transition-all duration-300 hover:translate-x-1">Instagram</a>
-            </div>
+            <span className="font-bold tracking-tight">WEEZ INC.</span>
           </div>
-
-          {/* Large Brand Name Visual */}
-          <div className="relative mt-8">
-            <div className="flex items-center justify-center">
-              <h2 
-                className="text-[4rem] sm:text-[6rem] md:text-[8rem] lg:text-[10rem] xl:text-[12rem] font-bold tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-gray-800 to-gray-900 select-none font-poppins"
-                style={{
-                  WebkitTextStroke: '2px rgba(139, 92, 246, 0.3)',
-                }}
-              >
-                Dexraflow
-              </h2>
-            </div>
-            {/* Gradient overlay for fade effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent pointer-events-none" />
+          <div className="flex gap-8 text-sm font-medium">
+            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
+            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
           </div>
-          
-          {/* Bottom Copyright */}
-          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
-            <p className="text-sm text-gray-500">
-              © 2025 Dexraflow. All rights reserved.
-            </p>
-            <p className="text-sm text-gray-500">
-              Weez.AI is a registered trademark of Dexraflow.
-            </p>
+          <div className="text-sm font-medium">
+            © 2024 Weez AI. All rights reserved.
           </div>
         </div>
       </footer>
+
     </div>
   );
 };
+
+// Helper for checkmarks
+const Check = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
 
 export default Landing;

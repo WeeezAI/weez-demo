@@ -18,6 +18,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
 import DataDeletion from "./pages/DataDeletion";
 
+import Plans from "./pages/Plans";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
 import VerificationFailed from "./pages/VerificationFailed";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-conditions" element={<TermsConditions />} />
             <Route path="/data-deletion" element={<DataDeletion />} />
+            <Route path="/plans" element={<Plans />} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

@@ -1,184 +1,166 @@
 @tailwind base;
+
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(200%);
+  }
+}
+
+@keyframes progress-flow {
+  0% {
+    width: 0%;
+  }
+
+  50% {
+    width: 70%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
+}
+
+.animate-progress-flow {
+  animation: progress-flow 10s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Light theme - White + Purple + Black palette */
-    --background: 0 0% 100%;             /* Pure White */
-    --foreground: 240 10% 10%;           /* Near Black */
-    --card: 0 0% 100%;                   /* White */
-    --card-foreground: 240 10% 10%;      /* Near Black */
-    --popover: 0 0% 100%;                /* White */
-    --popover-foreground: 240 10% 10%;   /* Near Black */
-    --primary: 270 70% 50%;              /* Vibrant Purple */
-    --primary-foreground: 0 0% 100%;     /* White text on primary */
-    --secondary: 270 30% 96%;            /* Light Purple tint */
-    --secondary-foreground: 240 10% 10%; /* Near Black */
-    --muted: 270 20% 95%;                /* Very light purple-grey */
-    --muted-foreground: 240 5% 40%;      /* Dark grey */
-    --accent: 270 50% 60%;               /* Medium Purple */
-    --accent-foreground: 0 0% 100%;      /* White text on accent */
-    --destructive: 0 84% 60%;            /* Red for destructive actions */
-    --destructive-foreground: 0 0% 100%; /* White text on destructive */
-    --border: 270 20% 90%;               /* Light purple-grey border */
-    --input: 0 0% 100%;                  /* White */
-    --ring: 270 70% 50%;                 /* Purple ring */
+    /* Violet Zen Palette - Deep, Premium, Ethereal */
+    --background: 270 20% 99%;
+    --foreground: 270 40% 5%;
 
-    /* Custom Weez.AI Purple/Black colors */
-    --weez-purple: 270 70% 50%;          /* Main Purple */
-    --weez-purple-light: 270 80% 65%;    /* Light Purple */
-    --weez-purple-dark: 270 60% 35%;     /* Dark Purple */
-    --weez-black: 240 10% 10%;           /* Near Black */
-    --weez-surface: 0 0% 100%;           /* White */
-    --weez-text: 240 10% 10%;            /* Near Black */
-    --weez-card: 0 0% 100%;              /* White */
-    --weez-accent: 270 50% 60%;          /* Medium Purple */
-    --weez-accent-hover: 270 60% 45%;    /* Darker Purple on hover */
-    
-    /* Purple gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(270 70% 50%), hsl(270 80% 65%));
-    --gradient-purple-black: linear-gradient(135deg, hsl(270 70% 50%), hsl(240 10% 15%));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(270 20% 97%));
+    --card: 0 0% 100%;
+    --card-foreground: 270 40% 5%;
 
-    /* Shadows with purple tint */
-    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-button: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-glow: 0 0 20px hsl(270 70% 50% / 0.3);
-    --shadow-purple: 0 4px 20px hsl(270 70% 50% / 0.2);
+    --popover: 0 0% 100%;
+    --popover-foreground: 270 40% 5%;
 
-    --radius: 0.5rem;
+    /* Primary: Royal Midnight Purple */
+    --primary: 270 60% 10%;
+    --primary-foreground: 270 20% 98%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 10%;
-    --sidebar-primary: 270 70% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 30% 96%;
-    --sidebar-accent-foreground: 240 10% 10%;
-    --sidebar-border: 270 20% 90%;
-    --sidebar-ring: 270 70% 50%;
+    /* Secondary: Ethereal Lavender Wash */
+    --secondary: 270 30% 96%;
+    --secondary-foreground: 270 60% 20%;
+
+    --muted: 270 20% 95%;
+    --muted-foreground: 270 15% 45%;
+
+    /* Accent: Electric Violet Spark */
+    --accent: 270 80% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 270 20% 92%;
+    --input: 270 20% 92%;
+    --ring: 270 60% 15%;
+
+    --radius: 1.25rem;
+
+    /* Glassmorphism Classes */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(139, 92, 246, 0.1);
   }
 
   .dark {
-    /* Dark theme inherits from root - already dark-first */
+    /* Deep Void Purple */
+    --background: 270 50% 2%;
+    --foreground: 270 10% 98%;
+
+    --card: 270 50% 4%;
+    --card-foreground: 270 10% 98%;
+
+    --primary: 270 10% 98%;
+    --primary-foreground: 270 60% 5%;
+
+    --secondary: 270 40% 8%;
+    --secondary-foreground: 270 10% 98%;
+
+    --muted: 270 40% 8%;
+    --muted-foreground: 270 10% 65%;
+
+    --border: 270 40% 12%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border selection:bg-accent/20 selection:text-foreground;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
-  /* Markdown Typography Improvements */
-  .prose {
-    @apply text-foreground;
-  }
-  
-  .prose h1, .prose h2, .prose h3 {
-    @apply text-foreground font-semibold;
-  }
-  
-  .prose p {
-    @apply text-muted-foreground leading-relaxed mb-3;
-  }
-  
-  .prose ul, .prose ol {
-    @apply text-muted-foreground space-y-1;
-  }
-  
-  .prose li {
-    @apply leading-relaxed;
-  }
-  
-  .prose strong {
-    @apply text-foreground font-semibold;
+  /* Minimalist Scrollbar - Violet Tinted */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
 
-  /* Progress animations */
-  @keyframes progress-fill {
-    from { width: 0%; }
-    to { width: 100%; }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-accent/10 rounded-full hover:bg-accent/20 transition-colors;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-xl border border-accent/10 shadow-[0_8px_32px_rgba(139, 92, 246, 0.04)];
   }
 
-  .progress-bar {
-    animation: progress-fill 1.5s ease-out forwards;
+  .zen-button {
+    @apply h-11 px-6 rounded-2xl font-semibold transition-all duration-300 active:scale-95;
   }
 
-  .shimmer {
-    animation: shimmer 2s infinite;
-  }
-
-  /* Rainbow border animation */
-  @keyframes rainbow-border {
-    0% { border-color: hsl(0, 100%, 60%); }
-    14% { border-color: hsl(30, 100%, 60%); }
-    28% { border-color: hsl(60, 100%, 60%); }
-    42% { border-color: hsl(120, 100%, 60%); }
-    57% { border-color: hsl(180, 100%, 60%); }
-    71% { border-color: hsl(240, 100%, 60%); }
-    85% { border-color: hsl(300, 100%, 60%); }
-    100% { border-color: hsl(360, 100%, 60%); }
-  }
-
-  .rainbow-border-hover {
-    @apply border-2 border-transparent;
-    transition: all 0.3s ease;
-  }
-
-  .rainbow-border-hover:hover {
-    animation: rainbow-border 2s linear infinite;
-  }
-
-  /* Suggestion bubble animations */
-  .suggestion-bubble {
-    @apply transition-all duration-200 hover:scale-105 hover:shadow-button;
-  }
-
-  /* Message animations */
-  .message-enter {
-    @apply animate-fade-in;
-  }
-
-  /* Progress step animations */
-  .progress-step {
-    @apply transition-all duration-300;
-  }
-
-  .progress-step.active {
-    @apply text-weez-blue;
-  }
-
-  .progress-step.completed {
-    @apply text-weez-blue-light;
-  }
-
-  /* Loading animations */
-  @keyframes breath {
-    0%, 100% {
-      opacity: 0.4;
-      transform: scale(0.95);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .animate-breath {
-    animation: breath 2s ease-in-out infinite;
+  .neo-blur {
+    @apply backdrop-blur-2xl bg-background/50 border-b border-border/40 sticky top-0 z-50;
   }
 }
