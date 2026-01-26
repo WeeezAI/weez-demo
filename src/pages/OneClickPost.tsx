@@ -367,7 +367,7 @@ const OneClickPost = () => {
             </div>
 
             {/* Data Side: Orchestration Center */}
-            <div className="flex-1 p-14 flex flex-col justify-between bg-[#FDFBFF] relative border-l border-border/40">
+            <div className="flex-1 p-14 flex flex-col justify-between bg-[#FDFBFF] relative border-l border-border/40 overflow-y-auto">
               <div className="space-y-12">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
