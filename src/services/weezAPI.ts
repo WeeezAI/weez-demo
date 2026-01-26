@@ -31,9 +31,11 @@ export interface CreativeResponse {
 }
 
 const fetchWithBypass = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem("token");
   const headers = {
     ...options.headers,
     "ngrok-skip-browser-warning": "69420",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
   return fetch(url, { ...options, headers });
 };
