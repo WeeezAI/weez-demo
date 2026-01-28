@@ -80,9 +80,9 @@ const TermsConditions = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4">Data Handling</h2>
+            <h2 className="text-2xl font-semibold mb-4">Data Handling & AI</h2>
             <p className="text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">We do not retain your uploaded data.</strong> Files are processed in real-time and are not stored after processing. For full details, please review our{" "}
+              <strong className="text-foreground">We do not retain your uploaded data.</strong> Files are processed in real-time and are not stored after processing. Furthermore, <strong className="text-foreground">we do not use your data to train our AI models</strong>. For full details, please review our{" "}
               <Link to="/privacy-policy" className="text-primary hover:underline">
                 Privacy Policy
               </Link>

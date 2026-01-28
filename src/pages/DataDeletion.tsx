@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Mail, Clock, Shield, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import HelpCenterModal from "@/components/HelpCenterModal";
 
 const DataDeletion = () => {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -32,37 +36,31 @@ const DataDeletion = () => {
             </div>
             <h2 className="text-2xl font-semibold">How to Request Data Deletion</h2>
           </div>
-          
+
           <p className="text-muted-foreground mb-6 leading-relaxed">
-            If you would like to delete your account and all associated data from Weez.AI, 
-            please send an email to our support team with the following details:
+            If you would like to delete your account and all associated data from Weez.AI,
+            please contact us through our Help Center.
           </p>
 
           <div className="bg-background rounded-xl p-6 border border-border mb-6">
             <div className="space-y-4">
               <div>
-                <span className="text-sm text-muted-foreground">Email to:</span>
-                <a 
-                  href="mailto:support@dexraflow.com?subject=Data%20Deletion%20-%20Weez.AI" 
-                  className="block text-primary font-semibold text-lg hover:underline"
-                >
-                  support@dexraflow.com
-                </a>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Subject Line:</span>
-                <p className="font-semibold text-lg text-foreground">Data Deletion - Weez.AI</p>
+                <span className="text-sm text-muted-foreground">Action:</span>
+                <p className="font-semibold text-lg text-foreground">Submit a "Data Deletion" request via Help Center</p>
               </div>
             </div>
           </div>
 
-          <a 
-            href="mailto:support@dexraflow.com?subject=Data%20Deletion%20-%20Weez.AI"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+          <Button
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors w-full md:w-auto"
+            onClick={() => setIsHelpOpen(true)}
           >
             <Mail className="h-4 w-4" />
-            Send Deletion Request
-          </a>
+            Open Help Center
+          </Button>
+          <p className="text-xs text-muted-foreground mt-4">
+            *If you cannot access the Help Center, you may also email us directly at <a href="mailto:support@dexraflow.com" className="text-primary hover:underline">support@dexraflow.com</a>.
+          </p>
         </div>
 
         {/* Info Cards */}
@@ -125,6 +123,8 @@ const DataDeletion = () => {
           </p>
         </div>
       </div>
+
+      <HelpCenterModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 };

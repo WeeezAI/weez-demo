@@ -321,9 +321,9 @@ const Landing = () => {
             <span className="font-bold tracking-tight">WEEZ INC.</span>
           </div>
           <div className="flex gap-8 text-sm font-medium">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+            <span onClick={() => navigate('/privacy-policy')} className="cursor-pointer hover:text-foreground transition-colors">Privacy</span>
+            <span onClick={() => navigate('/terms-conditions')} className="cursor-pointer hover:text-foreground transition-colors">Terms</span>
+            <span onClick={() => navigate('/data-deletion')} className="cursor-pointer hover:text-foreground transition-colors">Delete Account</span>
           </div>
           <div className="text-sm font-medium">
             © 2024 Weez AI. All rights reserved.

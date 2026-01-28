@@ -38,9 +38,16 @@ const PrivacyPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4">Data Retention</h2>
+            <h2 className="text-2xl font-semibold mb-4">Data Retention & AI Training</h2>
+            <p className="text-muted-foreground leading-relaxed mb-4">
+              <strong className="text-foreground">We do not store your uploaded data, nor do we use it to train our AI models.</strong> Your uploaded files and documents are processed in real-time and are not stored on our servers after processing. We believe your data belongs to you, and we have no interest in keeping it beyond what's necessary to provide our services.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">Brand Information Security</h2>
             <p className="text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">We do not retain your data.</strong> Your uploaded files and documents are processed in real-time and are not stored on our servers after processing. We believe your data belongs to you, and we have no interest in keeping it beyond what's necessary to provide our services.
+              We understand the importance of your brand's identity. Any information related to your brand (such as brand voice, assets, and guidelines) that you choose to save is stored very securely using industry-standard encryption. This allows us to provide personalized content generation without compromising your intellectual property.
             </p>
           </section>
 
