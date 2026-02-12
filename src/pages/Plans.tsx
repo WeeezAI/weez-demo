@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Check, Zap, Rocket, Cpu, Shield, Globe, Gift, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,109 @@ const Plans = () => {
 
     const [redeemCode, setRedeemCode] = useState("");
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const [apiPlans, setApiPlans] = useState<any[]>([]);
+    const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+
+    // Load available plans
+    useEffect(() => {
+        const loadPlans = async () => {
+            try {
+                const data = await weezAPI.getPlans();
+                setApiPlans(data);
+            } catch (error) {
+                console.error("Failed to load plans", error);
+            } finally {
+                setIsLoadingPlans(false);
+            }
+        };
+        loadPlans();
+    }, []);
+
+    const handlePayment = async (plan: any) => {
+        if (plan.tier === 'free') return; // No payment for free tier
+
+        // Find corresponding API plan
+        const apiPlan = apiPlans.find(p => {
+            if (plan.tier === 'premium-monthly' && p.billing_cycle === 'monthly') return true;
+            if (plan.tier === 'premium-yearly' && p.billing_cycle === 'yearly') return true;
+            return false;
+        });
+
+        if (!apiPlan) {
+            toast({
+                title: "Plan Unavailable",
+                description: "This plan is currently not available for subscription.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            // 1. Create Order
+            const order = await weezAPI.createPaymentOrder(apiPlan.id);
+
+            // 2. Open Razorpay
+            const options = {
+                key: order.key_id,
+                amount: order.amount,
+                currency: order.currency,
+                name: "Weez AI",
+                description: `Subscription to ${plan.name}`,
+                image: logo, // Use imported logo
+                order_id: order.razorpay_order_id,
+                handler: async function (response: any) {
+                    try {
+                        // 3. Verify Payment
+                        await weezAPI.verifyPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+
+                        toast({
+                            title: "Subscription Activated",
+                            description: `You are now subscribed to ${plan.name}!`,
+                            className: "bg-emerald-500 text-white border-none"
+                        });
+
+                        // Refresh user data (assuming AuthContext has a refresh method, or just reload)
+                        window.location.reload();
+
+                    } catch (err: any) {
+                        toast({
+                            title: "activiation failed",
+                            description: err.message,
+                            variant: "destructive"
+                        });
+                    }
+                },
+                prefill: {
+                    name: user?.name,
+                    email: user?.email,
+                },
+                theme: {
+                    color: "#7c3aed" // Primary color
+                }
+            };
+
+            const rzp = new (window as any).Razorpay(options);
+            rzp.on('payment.failed', function (response: any) {
+                toast({
+                    title: "Payment Failed",
+                    description: response.error.description,
+                    variant: "destructive"
+                });
+            });
+            rzp.open();
+
+        } catch (error: any) {
+            toast({
+                title: "Initialization Failed",
+                description: error.message,
+                variant: "destructive"
+            });
+        }
+    };
 
     const handleRedeem = async () => {
         if (!redeemCode.trim()) return;
@@ -200,6 +303,7 @@ const Plans = () => {
                                             : "bg-secondary text-foreground hover:bg-foreground hover:text-white"
                                     )}
                                     disabled={user?.plan_type === plan.tier}
+                                    onClick={() => handlePayment(plan)}
                                 >
                                     {user?.plan_type === plan.tier ? "Current Level" : plan.cta}
                                 </Button>

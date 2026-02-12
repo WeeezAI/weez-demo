@@ -235,4 +235,49 @@ export const weezAPI = {
       return [];
     }
   },
+
+  // --- Payment Endpoints ---
+
+  getPlans: async () => {
+    // Auth service URL might be different from WEEZ_BASE_URL if microservices
+    // Using the AUTH URL from usage in Plans.tsx (or configuring it)
+    const AUTH_URL = "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
+
+    // For local testing if configured:
+    // const AUTH_URL = "http://localhost:8000/auth"; 
+
+    const response = await fetchWithBypass(`${AUTH_URL}/payments/plans`);
+    if (!response.ok) throw new Error("Failed to fetch plans");
+    return await response.json();
+  },
+
+  createPaymentOrder: async (planId: string) => {
+    const AUTH_URL = "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
+    const response = await fetchWithBypass(`${AUTH_URL}/payments/create-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan_id: planId }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Order creation failed" }));
+      throw new Error(err.detail);
+    }
+    return await response.json();
+  },
+
+  verifyPayment: async (paymentDetails: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+    const AUTH_URL = "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
+    const response = await fetchWithBypass(`${AUTH_URL}/payments/verify-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(paymentDetails),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Verification failed" }));
+      throw new Error(err.detail);
+    }
+    return await response.json();
+  }
 };
