@@ -276,7 +276,7 @@ const OneClickPost = () => {
             </div>
 
             {/* Tactical Discovery Grid */}
-            <div className="space-y-10">
+            <div className="space-y-10" data-tutorial-id="generate-section">
               <div className="flex items-center gap-4">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-40">Ideas</h2>
                 <div className="h-px flex-1 bg-border/50" />
@@ -293,6 +293,7 @@ const OneClickPost = () => {
                   {ideas.map((idea, idx) => (
                     <Card
                       key={idx}
+                      {...(idx === 0 ? { 'data-tutorial-id': 'idea-card' } : {})}
                       className="group cursor-pointer border-none bg-white hover:bg-white hover:shadow-[0_40px_80px_rgba(0,0,0,0.06)] rounded-[3rem] transition-all duration-500 flex flex-col overflow-hidden relative"
                       onClick={() => handleGenerate(idea)}
                     >
@@ -440,6 +441,7 @@ const OneClickPost = () => {
               <div className="space-y-8 pt-12">
                 {!isGenerating && !hasPosted && (
                   <Button
+                    data-tutorial-id="publish-button"
                     onClick={handleApproveAndPost}
                     disabled={isPosting}
                     className="w-full h-24 rounded-[2.5rem] bg-foreground text-white text-xl font-black uppercase tracking-[0.3em] hover:bg-primary transition-all active:scale-95 shadow-[0_40px_80px_rgba(0,0,0,0.15)] group relative overflow-hidden"

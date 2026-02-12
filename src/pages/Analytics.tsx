@@ -39,7 +39,7 @@ const Analytics = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <WeezHeader spaceName={currentSpace.name} />
 
-        <div className="flex-1 p-6 overflow-y-auto bg-muted/20">
+        <div className="flex-1 p-6 overflow-y-auto bg-muted/20" data-tutorial-id="analytics-section">
           <div className="max-w-6xl mx-auto">
             <AnalyticsDashboard />
           </div>

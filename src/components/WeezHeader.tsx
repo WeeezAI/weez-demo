@@ -64,6 +64,7 @@ const WeezHeader = ({ spaceName }: WeezHeaderProps) => {
               </div>
             ) : (
               <Button
+                data-tutorial-id="connect-instagram-button"
                 onClick={handleConnect}
                 variant="outline"
                 className="h-11 px-6 rounded-xl border-pink-500/20 bg-pink-500/5 text-pink-600 text-[10px] font-black uppercase tracking-widest hover:bg-pink-500 hover:text-white transition-all gap-3 active:scale-95 shadow-sm"

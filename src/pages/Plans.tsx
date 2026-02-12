@@ -40,7 +40,11 @@ const Plans = () => {
         if (plan.tier === 'free') return; // No payment for free tier
 
         // Find corresponding API plan
+        // Find corresponding API plan
         const apiPlan = apiPlans.find(p => {
+            // Ensure we don't select a free plan (price = 0) for a paid tier
+            if (p.price === 0) return false;
+
             if (plan.tier === 'premium-monthly' && p.billing_cycle === 'monthly') return true;
             if (plan.tier === 'premium-yearly' && p.billing_cycle === 'yearly') return true;
             return false;
@@ -162,55 +166,58 @@ const Plans = () => {
         }
     };
 
-    const plans = [
-        {
-            name: "Free Tier",
-            price: "$0",
-            period: "forever",
-            description: "Essential tactical intelligence for creators.",
-            features: [
-                "1 Brand Workspace",
-                "10 Strategic Post Artifacts",
-                "Standard AI Creative Engine",
-                "Basic Analytics Trace",
-            ],
-            cta: "Current Plan",
-            highlight: false,
-            tier: "free"
-        },
-        {
-            name: "Premium Monthly",
-            price: "$29",
-            period: "per month",
-            description: "High-velocity production for scaling brands.",
-            features: [
-                "Unrestricted Workspaces",
-                "Infinite Artifact Generation",
-                "Advanced AI Design Studio",
-                "Deep Analytical Intelligence",
-                "Priority Handshake Engine",
-            ],
-            cta: "Activate Scale",
-            highlight: true,
-            tier: "premium-monthly"
-        },
-        {
-            name: "Premium Yearly",
-            price: "$299",
-            period: "per year",
-            description: "The ultimate marketing workforce for professionals.",
-            features: [
-                "Everything in Monthly",
-                "2 Months Free Included",
-                "White-Glove Onboarding",
-                "Early Access to Lab Tools",
-                "Dedicated Brand Memory Path",
-            ],
-            cta: "Execute Mastery",
-            highlight: false,
-            tier: "premium-yearly"
+    // Helper to format features from JSON or default
+    const getFeatures = (plan: any) => {
+        if (plan.features) {
+            // If features is already an object/array
+            if (Array.isArray(plan.features)) return plan.features;
+            if (typeof plan.features === 'object') {
+                // If it's an object (key-value), convert to array of strings for display
+                // Or maybe the backend sends a list? checking backend...
+                // Backend sends features_json which is a dict.
+                // Let's just return the keys where value is true or string
+                return Object.entries(plan.features)
+                    .filter(([_, value]) => value === true || typeof value === 'string')
+                    .map(([key, value]) => {
+                        if (value === true) return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        return `${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${value}`;
+                    });
+            }
         }
-    ];
+        // Fallback or if plan.features is null
+        return [];
+    };
+
+    const getCurrencySymbol = (currency: string) => {
+        if (currency === 'INR') return '₹';
+        if (currency === 'EUR') return '€';
+        if (currency === 'GBP') return '£';
+        return '$';
+    };
+
+    // Plans to display (sorted by price)
+    const displayPlans = apiPlans.sort((a, b) => a.price - b.price).map(plan => {
+        const isFree = plan.price === 0;
+        const isMonthly = plan.billing_cycle === 'monthly';
+        const isYearly = plan.billing_cycle === 'yearly';
+
+        // Determine highlighting - typically middle plan or 'Monthly' paid plan
+        // Adjust logic as preferred. Here highlighting the first paid monthly plan.
+        const highlight = !isFree && isMonthly;
+
+        return {
+            ...plan,
+            // UI specific fields
+            period: isFree ? 'forever' : (isMonthly ? 'per month' : 'per year'),
+            tier: isFree ? 'free' : (isMonthly ? 'premium-monthly' : 'premium-yearly'),
+            highlight: highlight,
+            cta: isFree ? 'Current Plan' : (isYearly ? 'Execute Mastery' : 'Activate Scale'),
+            // Icons based on tier
+            iconType: isFree ? 'zap' : (isYearly ? 'cpu' : 'rocket'),
+            // Features
+            uiFeatures: getFeatures(plan)
+        };
+    });
 
     return (
         <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans selection:bg-primary/10">
@@ -238,86 +245,94 @@ const Plans = () => {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-12 relative z-10">
-                    {plans.map((plan) => (
-                        <Card
-                            key={plan.name}
-                            className={cn(
-                                "group relative border-none rounded-[4rem] p-12 flex flex-col justify-between transition-all duration-700 overflow-hidden min-h-[700px]",
-                                plan.highlight
-                                    ? "bg-foreground text-background shadow-[0_80px_160px_rgba(0,0,0,0.1)] scale-105 z-10"
-                                    : "bg-white hover:shadow-[0_60px_120px_rgba(0,0,0,0.05)]"
-                            )}
-                        >
-                            {plan.highlight && (
-                                <div className="absolute top-10 right-10">
-                                    <div className="px-5 py-2 bg-primary rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-primary/40 animate-pulse">
-                                        Strategic Choice
+                {isLoadingPlans ? (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader2 className="w-10 h-10 animate-spin text-primary/40" />
+                    </div>
+                ) : (
+                    <div className="grid md:grid-cols-3 gap-12 relative z-10">
+                        {displayPlans.map((plan) => (
+                            <Card
+                                key={plan.id}
+                                className={cn(
+                                    "group relative border-none rounded-[4rem] p-12 flex flex-col justify-between transition-all duration-700 overflow-hidden min-h-[700px]",
+                                    plan.highlight
+                                        ? "bg-foreground text-background shadow-[0_80px_160px_rgba(0,0,0,0.1)] scale-105 z-10"
+                                        : "bg-white hover:shadow-[0_60px_120px_rgba(0,0,0,0.05)]"
+                                )}
+                            >
+                                {plan.highlight && (
+                                    <div className="absolute top-10 right-10">
+                                        <div className="px-5 py-2 bg-primary rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-primary/40 animate-pulse">
+                                            Strategic Choice
+                                        </div>
                                     </div>
+                                )}
+
+                                {/* Plan Identity */}
+                                <div className="space-y-12">
+                                    <div className="space-y-4">
+                                        <h3 className={cn("text-3xl font-black tracking-tight uppercase", plan.highlight ? "text-white" : "text-foreground")}>
+                                            {plan.name}
+                                        </h3>
+                                        <p className={cn("text-sm font-medium leading-relaxed opacity-60", plan.highlight ? "text-white/60" : "text-muted-foreground")}>
+                                            {plan.description}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-7xl font-black tracking-tighter leading-none">
+                                            {getCurrencySymbol(plan.currency)}{plan.price}
+                                        </span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">{plan.period}</span>
+                                    </div>
+
+                                    <div className="h-px w-full bg-border/20" />
+
+                                    {/* Features Grid */}
+                                    <ul className="space-y-6">
+                                        {plan.uiFeatures.map((feature: string, idx: number) => (
+                                            <li key={idx} className="flex items-center gap-4 group/feature">
+                                                <div className={cn(
+                                                    "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
+                                                    plan.highlight ? "bg-white/10 text-white" : "bg-primary/5 text-primary"
+                                                )}>
+                                                    <Check className="w-3 h-3" />
+                                                </div>
+                                                <span className={cn("text-sm font-bold opacity-80", plan.highlight ? "text-white" : "text-foreground")}>
+                                                    {feature}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                            )}
 
-                            {/* Plan Identity */}
-                            <div className="space-y-12">
-                                <div className="space-y-4">
-                                    <h3 className={cn("text-3xl font-black tracking-tight uppercase", plan.highlight ? "text-white" : "text-foreground")}>
-                                        {plan.name}
-                                    </h3>
-                                    <p className={cn("text-sm font-medium leading-relaxed opacity-60", plan.highlight ? "text-white/60" : "text-muted-foreground")}>
-                                        {plan.description}
-                                    </p>
+                                {/* Tactical Call to Action */}
+                                <div className="mt-20 pt-12">
+                                    <Button
+                                        className={cn(
+                                            "w-full h-20 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 active:scale-95 shadow-2xl",
+                                            plan.highlight
+                                                ? "bg-primary text-white hover:bg-accent shadow-primary/20"
+                                                : "bg-secondary text-foreground hover:bg-foreground hover:text-white"
+                                        )}
+                                        disabled={user?.plan_type === plan.tier}
+                                        onClick={() => handlePayment(plan)}
+                                    >
+                                        {user?.plan_type === plan.tier ? "Current Level" : plan.cta}
+                                    </Button>
                                 </div>
 
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-7xl font-black tracking-tighter leading-none">{plan.price}</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">{plan.period}</span>
+                                {/* Background Ornament */}
+                                <div className="absolute -bottom-10 -right-10 opacity-5 pointer-events-none rotate-12">
+                                    {plan.iconType === "zap" && <Zap className="w-64 h-64" />}
+                                    {plan.iconType === "rocket" && <Rocket className="w-64 h-64" />}
+                                    {plan.iconType === "cpu" && <Cpu className="w-64 h-64" />}
                                 </div>
-
-                                <div className="h-px w-full bg-border/20" />
-
-                                {/* Features Grid */}
-                                <ul className="space-y-6">
-                                    {plan.features.map((feature) => (
-                                        <li key={feature} className="flex items-center gap-4 group/feature">
-                                            <div className={cn(
-                                                "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
-                                                plan.highlight ? "bg-white/10 text-white" : "bg-primary/5 text-primary"
-                                            )}>
-                                                <Check className="w-3 h-3" />
-                                            </div>
-                                            <span className={cn("text-sm font-bold opacity-80", plan.highlight ? "text-white" : "text-foreground")}>
-                                                {feature}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            {/* Tactical Call to Action */}
-                            <div className="mt-20 pt-12">
-                                <Button
-                                    className={cn(
-                                        "w-full h-20 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 active:scale-95 shadow-2xl",
-                                        plan.highlight
-                                            ? "bg-primary text-white hover:bg-accent shadow-primary/20"
-                                            : "bg-secondary text-foreground hover:bg-foreground hover:text-white"
-                                    )}
-                                    disabled={user?.plan_type === plan.tier}
-                                    onClick={() => handlePayment(plan)}
-                                >
-                                    {user?.plan_type === plan.tier ? "Current Level" : plan.cta}
-                                </Button>
-                            </div>
-
-                            {/* Background Ornament */}
-                            <div className="absolute -bottom-10 -right-10 opacity-5 pointer-events-none rotate-12">
-                                {plan.tier === "free" && <Zap className="w-64 h-64" />}
-                                {plan.tier === "premium-monthly" && <Rocket className="w-64 h-64" />}
-                                {plan.tier === "premium-yearly" && <Cpu className="w-64 h-64" />}
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
 
                 {/* PROMOTION REDEMPTION HUB */}
                 <div className="mt-32 max-w-2xl mx-auto">

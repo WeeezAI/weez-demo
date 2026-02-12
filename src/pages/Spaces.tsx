@@ -232,6 +232,7 @@ const Spaces = () => {
               Select or create a new project to start creating content for your brand.
             </p>
             <Button
+              data-tutorial-id="create-space-button"
               variant="outline"
               className="h-16 px-10 rounded-2xl border-border bg-white text-xs font-black uppercase tracking-[0.2em] gap-3 shadow-xl shadow-black/[0.02] hover:bg-secondary active:scale-95 transition-all"
               onClick={handleNewSpaceClick}

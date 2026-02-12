@@ -106,7 +106,7 @@ const Gallery = () => {
       <div className="flex-1 flex flex-col h-full min-w-0 bg-[#FDFBFF]">
         <WeezHeader spaceName={currentSpace.name} />
 
-        <div className="flex-1 overflow-auto p-10 scrollbar-hide">
+        <div className="flex-1 overflow-auto p-10 scrollbar-hide" data-tutorial-id="gallery-section">
           <div className="max-w-[1400px] mx-auto space-y-16 pb-20">
 
             {/* Minimal Gallery Header */}

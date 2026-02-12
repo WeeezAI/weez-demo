@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider } from "./contexts/AuthContext";
+import { TutorialProvider } from "./contexts/TutorialContext";
+import { TutorialSpotlight } from "./components/tutorial/TutorialSpotlight";
+import { TutorialTooltip } from "./components/tutorial/TutorialTooltip";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -33,39 +36,42 @@ const App = () => (
         <Sonner />
 
         <BrowserRouter>
-          <Routes>
-            {/* Landing Page */}
-            <Route path="/" element={<Landing />} />
+          <TutorialProvider>
+            <TutorialSpotlight />
+            <TutorialTooltip />
+            <Routes>
+              {/* Landing Page */}
+              <Route path="/" element={<Landing />} />
 
-            {/* Auth */}
-            <Route path="/auth" element={<Auth />} />
+              {/* Auth */}
+              <Route path="/auth" element={<Auth />} />
 
-            {/* Email verification routes */}
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/verification-success" element={<VerificationSuccess />} />
-            <Route path="/verification-failed" element={<VerificationFailed />} />
+              {/* Email verification routes */}
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/verification-success" element={<VerificationSuccess />} />
+              <Route path="/verification-failed" element={<VerificationFailed />} />
 
-            {/* Spaces list */}
-            <Route path="/spaces" element={<Spaces />} />
+              {/* Spaces list */}
+              <Route path="/spaces" element={<Spaces />} />
 
-            {/* Chat interface per space */}
-            <Route path="/chat/:spaceId" element={<Chat />} />
-            <Route path="/gallery/:spaceId" element={<Gallery />} />
-            <Route path="/analytics/:spaceId" element={<Analytics />} />
-            <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
-            <Route path="/platform/success" element={<PlatformCallback />} />
+              {/* Chat interface per space */}
+              <Route path="/chat/:spaceId" element={<Chat />} />
+              <Route path="/gallery/:spaceId" element={<Gallery />} />
+              <Route path="/analytics/:spaceId" element={<Analytics />} />
+              <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
+              <Route path="/platform/success" element={<PlatformCallback />} />
 
-            {/* Legal pages */}
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-conditions" element={<TermsConditions />} />
-            <Route path="/data-deletion" element={<DataDeletion />} />
-            <Route path="/plans" element={<Plans />} />
+              {/* Legal pages */}
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-conditions" element={<TermsConditions />} />
+              <Route path="/data-deletion" element={<DataDeletion />} />
+              <Route path="/plans" element={<Plans />} />
 
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TutorialProvider>
         </BrowserRouter>
-
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
