@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus } from "lucide-react";
+import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,7 @@ const OneClickPost = () => {
   const [generatedCreative, setGeneratedCreative] = useState<CreativeResponse | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [instagramAccount, setInstagramAccount] = useState<any>(null);
   const [hasPosted, setHasPosted] = useState(false);
 
   // Editable fields for the modal
@@ -60,6 +61,7 @@ const OneClickPost = () => {
     if (spaceId) {
       fetchIdeas();
       fetchPostCount();
+      weezAPI.getInstagramStatus(spaceId).then(setInstagramAccount);
     }
   }, [spaceId]);
 
@@ -211,6 +213,17 @@ const OneClickPost = () => {
             {/* Minimal Hero Header */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-10">
               <div className="space-y-4">
+                {instagramAccount?.username && (
+                  <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 mb-2">
+                    <div className="p-2 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-600/20 border border-pink-500/10 text-pink-500 shadow-lg shadow-pink-500/5">
+                      <Instagram className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Connected Identity</span>
+                      <span className="text-lg font-black tracking-tight bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">@{instagramAccount.username}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
                   <Sparkles className="w-3.5 h-3.5 text-primary" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary">Ideas Engine</span>

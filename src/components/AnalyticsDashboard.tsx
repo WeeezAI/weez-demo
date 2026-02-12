@@ -163,8 +163,21 @@ const AnalyticsDashboard = () => {
     return (
         <div className="space-y-12 pb-32 max-w-[1400px] mx-auto px-4 md:px-0">
 
+            {/* Account Identity */}
+            {account?.username && (
+                <div className="flex items-center gap-4 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-600/20 border border-pink-500/10 text-pink-500 shadow-lg shadow-pink-500/5">
+                        <Instagram className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Connected Identity</p>
+                        <h2 className="text-2xl font-black tracking-tighter bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">@{account.username}</h2>
+                    </div>
+                </div>
+            )}
+
             {/* Zen Stats Overview */}
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 pt-10">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 pt-4">
                 {stats.map((stat, idx) => (
                     <Card key={idx} className="group border-none bg-white hover:shadow-[0_40px_80px_rgba(0,0,0,0.06)] rounded-[2.5rem] transition-all duration-700 overflow-hidden text-left p-8">
                         <div className="flex flex-col h-full justify-between gap-10">
