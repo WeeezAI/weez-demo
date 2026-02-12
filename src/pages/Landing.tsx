@@ -5,6 +5,7 @@ import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection
 import { Badge } from "@/components/ui/badge";
 import { Gravity, MatterBody } from "@/components/ui/gravity";
 import AuroraHero from "@/components/AuroraHero";
+import logo from "@/assets/weez-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -45,14 +46,13 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans selection:bg-primary/10">
 
+
+
       {/* Zen Navigation */}
       <header className="fixed top-0 w-full z-50 backdrop-blur-xl bg-white/70 border-b border-border/40 transition-all duration-300">
         <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-black tracking-tight uppercase">WEEZ AI</span>
+            <img src={logo} alt="Weez AI" className="h-8 w-auto" />
           </div>
 
           <div className="flex items-center gap-6">

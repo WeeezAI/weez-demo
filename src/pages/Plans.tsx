@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast"; // Ensure this hook exists or use sonner if preferred
 import { cn } from "@/lib/utils";
-import { weezAPI } from "@/services/weezAPI"; // Assuming weezAPI is where we add the call, or direct fetch
+import { weezAPI } from "@/services/weezAPI";
+import logo from "@/assets/weez-logo.png";
 
 const Plans = () => {
     const navigate = useNavigate();
@@ -113,10 +114,7 @@ const Plans = () => {
             {/* Minimal Header */}
             <header className="h-24 flex items-center justify-between px-10 border-b border-border/40 backdrop-blur-3xl bg-white/60 sticky top-0 z-50">
                 <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate("/spaces")}>
-                    <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-xl shadow-primary/10">
-                        <Sparkles className="w-5 h-5 text-white fill-white/20" />
-                    </div>
-                    <span className="text-lg font-black tracking-tighter uppercase">Weez AI</span>
+                    <img src={logo} alt="Weez AI" className="h-8 weez-logo" />
                 </div>
                 <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100" onClick={() => navigate("/spaces")}>
                     Cancel Return

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/weez-logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -78,12 +79,12 @@ const Auth = () => {
       {/* Left: Tactical Form Section */}
       <div className="w-full lg:w-[45%] flex flex-col justify-between p-10 md:p-14 relative z-10">
 
+
+
         {/* Header */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-xl shadow-primary/20">
-            <Sparkles className="w-5 h-5 text-white fill-white/20" />
-          </div>
-          <span className="text-sm font-black tracking-tighter uppercase">Weez.AI // CORE</span>
+          <img src={logo} alt="Weez AI" className="h-8 w-auto" />
+          <span className="text-sm font-black tracking-tighter uppercase text-muted-foreground/50">// CORE</span>
         </div>
 
         {/* Main Form */}
@@ -137,7 +138,7 @@ const Auth = () => {
             </div>
 
             <div className="space-y-3 group">
-              <Label htmlFor="password" class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-focus-within:text-primary transition-colors">Password</Label>
+              <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-focus-within:text-primary transition-colors">Password</Label>
               <div className="relative">
                 <Input
                   id="password"

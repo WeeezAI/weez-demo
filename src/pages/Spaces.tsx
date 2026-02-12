@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import HelpCenterModal from "@/components/HelpCenterModal";
+import logo from "@/assets/weez-logo.png";
 
 const Spaces = () => {
   const { user, spaces, selectSpace, logout, isAuthenticated, loadingAuth, createSpace, isFetchingSpaces } = useAuth();
@@ -146,15 +147,14 @@ const Spaces = () => {
   return (
     <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans">
 
+
+
       {/* Zen Header */}
       <header className="sticky top-0 z-50 backdrop-blur-3xl bg-white/60 border-b border-border/40">
         <div className="max-w-[1400px] mx-auto px-10 h-24 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/20 transition-transform hover:scale-105 active:scale-95 duration-500">
-              <Sparkles className="w-6 h-6 text-white fill-white/20" />
-            </div>
+            <img src={logo} alt="Weez AI" className="h-10 w-auto" />
             <div className="flex flex-col">
-              <h1 className="text-xl font-black tracking-tighter leading-none">WEEZ AI</h1>
               <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-50 mt-1.5">The Autonomous Marketing Workforce</span>
             </div>
           </div>

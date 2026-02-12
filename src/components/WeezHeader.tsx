@@ -4,6 +4,7 @@ import { Sparkles, BrainCircuit, Instagram, CheckCircle2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { weezAPI } from "@/services/weezAPI";
+import logo from "@/assets/weez-logo.png";
 
 interface WeezHeaderProps {
   spaceName?: string;
@@ -40,13 +41,12 @@ const WeezHeader = ({ spaceName }: WeezHeaderProps) => {
         {/* Left: Identity */}
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4 group cursor-pointer">
-            <div className="relative w-11 h-11 flex items-center justify-center bg-primary rounded-2xl shadow-xl shadow-primary/10 transition-transform duration-500 group-hover:scale-105 group-active:scale-95">
-              <Sparkles className="w-6 h-6 text-primary-foreground fill-primary-foreground/20" />
-            </div>
+            <img
+              src={logo}
+              alt="Weez AI"
+              className="h-8 weez-logo transition-transform duration-500 group-hover:scale-105 group-active:scale-95"
+            />
             <div className="flex flex-col">
-              <h1 className="text-lg font-black tracking-tighter text-foreground leading-none">
-                WEEZ AI
-              </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider opacity-50">{spaceName || "Dashboard"}</span>
               </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/weez-logo.png";
 
 interface ConversationSidebarProps {
   onNewChat: () => void;
@@ -122,14 +123,13 @@ const ConversationSidebar = ({
         </ScrollArea>
       </div>
 
+
+
       {/* Footer Identity */}
       <div className="p-8 border-t border-border/40 bg-background/20">
-        <div className="flex items-center gap-3 opacity-40 grayscale hover:grayscale-0 transition-all cursor-crosshair">
-          <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-            <Zap className="w-4 h-4 text-background fill-background/20" />
-          </div>
+        <div className="flex items-center gap-3 opacity-40 grayscale hover:grayscale-0 transition-all cursor-pointer">
+          <img src={logo} alt="Weez AI" className="h-6 w-auto" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-black tracking-widest leading-none">WEEZ AI</span>
             <span className="text-[8px] font-bold mt-1">v2.4.0</span>
           </div>
         </div>
