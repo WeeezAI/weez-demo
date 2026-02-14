@@ -202,7 +202,7 @@ const Auth = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
         >
-          <source src="https://secretimages.blob.core.windows.net/images/Untitled%20design%20(2).mp4" type="video/mp4" />
+          <source src="https://secretimages.blob.core.windows.net/images/Untitled%20design%20(2)%20(1).mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
