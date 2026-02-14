@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Eye, EyeOff, ArrowRight, Loader2, Play } from "lucide-react";
+import { Sparkles, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,17 +194,20 @@ const Auth = () => {
 
       {/* Right: Visual Cinematic Section */}
       <div className="hidden lg:flex flex-1 bg-black relative m-4 rounded-[3rem] overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-
-        {/* Animated Grid Overlay */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
+        {/* Looping Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="https://secretimages.blob.core.windows.net/images/Untitled%20design%20(2).mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
         <div className="relative z-10 w-full h-full flex flex-col justify-end p-20">
           <div className="space-y-8">
-            <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/10">
-              <Play className="w-8 h-8 text-white fill-white" />
-            </div>
             <div className="space-y-4 max-w-xl">
               <h2 className="text-5xl font-black tracking-tighter text-white leading-tight">
                 Autonomous <br />
