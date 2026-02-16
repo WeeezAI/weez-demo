@@ -105,7 +105,8 @@ export const weezAPI = {
   generateFromIdea: async (
     brandId: string,
     idea: ContentIdea,
-    aspectRatio: string = "1:1"
+    aspectRatio: string = "1:1",
+    imageModel: string = "imagen4"
   ): Promise<CreativeResponse> => {
     const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/generate-from-idea`, {
       method: "POST",
@@ -114,6 +115,7 @@ export const weezAPI = {
         brand_id: brandId,
         idea,
         aspect_ratio: aspectRatio,
+        image_model: imageModel,
       }),
     });
     if (!response.ok) {
@@ -129,7 +131,8 @@ export const weezAPI = {
   generateFromPrompt: async (
     brandId: string,
     userPrompt: string,
-    aspectRatio: string = "1:1"
+    aspectRatio: string = "1:1",
+    imageModel: string = "imagen4"
   ): Promise<CreativeResponse> => {
     const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/generate-from-prompt`, {
       method: "POST",
@@ -138,6 +141,7 @@ export const weezAPI = {
         brand_id: brandId,
         user_prompt: userPrompt,
         aspect_ratio: aspectRatio,
+        image_model: imageModel,
       }),
     });
     if (!response.ok) {

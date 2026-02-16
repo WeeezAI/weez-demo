@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus, Instagram } from "lucide-react";
+import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus, Instagram, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ const OneClickPost = () => {
   const [isPosting, setIsPosting] = useState(false);
   const [instagramAccount, setInstagramAccount] = useState<any>(null);
   const [hasPosted, setHasPosted] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<"imagen4" | "gpt-image">("imagen4");
 
   // Editable fields for the modal
   const [editableCaption, setEditableCaption] = useState("");
@@ -121,7 +122,7 @@ const OneClickPost = () => {
 
     try {
       const brandId = spaceId || "test-brand-123";
-      const result = await weezAPI.generateFromIdea(brandId, idea);
+      const result = await weezAPI.generateFromIdea(brandId, idea, "1:1", selectedModel);
       setGeneratedCreative(result);
       setEditableCaption(result.caption);
       setEditableHashtags(result.hashtags);
@@ -147,7 +148,7 @@ const OneClickPost = () => {
 
     try {
       const brandId = spaceId || "test-brand-123";
-      const result = await weezAPI.generateFromPrompt(brandId, userPrompt);
+      const result = await weezAPI.generateFromPrompt(brandId, userPrompt, "1:1", selectedModel);
       setGeneratedCreative(result);
       setEditableCaption(result.caption);
       setEditableHashtags(result.hashtags);
@@ -273,6 +274,37 @@ const OneClickPost = () => {
                   </form>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Model Selector */}
+            <div className="flex items-center gap-4">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-40">Model</h2>
+              <div className="flex gap-2 bg-white rounded-2xl p-1.5 border border-border/50 shadow-sm">
+                <button
+                  onClick={() => setSelectedModel("imagen4")}
+                  className={cn(
+                    "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                    selectedModel === "imagen4"
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20"
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                  <Image className="w-3.5 h-3.5" />
+                  Imagen 4
+                </button>
+                <button
+                  onClick={() => setSelectedModel("gpt-image")}
+                  className={cn(
+                    "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                    selectedModel === "gpt-image"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20"
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  GPT-Image
+                </button>
+              </div>
             </div>
 
             {/* Tactical Discovery Grid */}
