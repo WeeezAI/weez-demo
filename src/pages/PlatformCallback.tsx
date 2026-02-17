@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, BrainCircuit, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { weezAPI } from "@/services/weezAPI";
+import { EducationalLoader } from "@/components/EducationalLoader";
 
 const PlatformCallback = () => {
   const navigate = useNavigate();
@@ -46,28 +47,7 @@ const PlatformCallback = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       <div className="max-w-md w-full text-center space-y-8">
         {isAnalyzing ? (
-          <div className="space-y-6 animate-in fade-in zoom-in duration-500">
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
-                  <BrainCircuit className="w-12 h-12 text-primary animate-pulse" />
-                </div>
-                <div className="absolute -top-2 -right-2">
-                  <Sparkles className="w-6 h-6 text-yellow-500 animate-bounce" />
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight">Analyzing Your Brand...</h1>
-              <p className="text-muted-foreground">
-                We're synthesizing your Instagram profiles, color schemas, and market winning patterns to build your deep-brand memory.
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs font-mono text-primary/70 tracking-widest uppercase">Executing Neural Pipeline</p>
-            </div>
-          </div>
+          <EducationalLoader />
         ) : isSuccess ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-center">
