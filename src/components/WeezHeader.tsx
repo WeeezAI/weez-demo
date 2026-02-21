@@ -6,6 +6,8 @@ import { Button } from "./ui/button";
 import { weezAPI } from "@/services/weezAPI";
 import logo from "@/assets/weez-logo.png";
 
+import InstagramConnectModal from "./InstagramConnectModal";
+
 interface WeezHeaderProps {
   spaceName?: string;
 }
@@ -13,6 +15,7 @@ interface WeezHeaderProps {
 const WeezHeader = ({ spaceName }: WeezHeaderProps) => {
   const { spaceId } = useParams();
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
 
   useEffect(() => {
     if (spaceId) {
@@ -31,7 +34,7 @@ const WeezHeader = ({ spaceName }: WeezHeaderProps) => {
 
   const handleConnect = () => {
     if (spaceId) {
-      window.location.href = weezAPI.getInstagramAuthUrl(spaceId);
+      setIsConnectModalOpen(true);
     }
   };
 
@@ -77,6 +80,11 @@ const WeezHeader = ({ spaceName }: WeezHeaderProps) => {
 
         </div>
       </div>
+      <InstagramConnectModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        spaceId={spaceId || ""}
+      />
     </header>
   );
 };

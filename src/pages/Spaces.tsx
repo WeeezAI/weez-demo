@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import HelpCenterModal from "@/components/HelpCenterModal";
+import InstagramConnectModal from "@/components/InstagramConnectModal";
 import logo from "@/assets/weez-logo.png";
 
 const Spaces = () => {
@@ -49,6 +50,9 @@ const Spaces = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { renameSpace, deleteSpace: removeSpace } = useAuth();
+
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [connectSpaceId, setConnectSpaceId] = useState("");
 
   useEffect(() => {
     if (connected) {
@@ -310,8 +314,8 @@ const Spaces = () => {
                       className="w-12 h-12 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:border-primary group/action transition-all"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const authUrl = weezAPI.getInstagramAuthUrl(space.id);
-                        window.location.href = authUrl;
+                        setConnectSpaceId(space.id);
+                        setIsConnectModalOpen(true);
                       }}
                       title="Sync Signal"
                     >
@@ -496,6 +500,11 @@ const Spaces = () => {
       </Dialog>
 
       <HelpCenterModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <InstagramConnectModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        spaceId={connectSpaceId}
+      />
     </div>
   );
 };
