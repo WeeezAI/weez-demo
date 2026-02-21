@@ -48,7 +48,7 @@ export const weezAPI = {
     const backendRedirectUri = `${WEEZ_BASE_URL}/instagram/callback`;
     return `https://www.facebook.com/v21.0/dialog/oauth?client_id=1904435020191340&redirect_uri=${encodeURIComponent(
       backendRedirectUri
-    )}&scope=instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement&response_type=code&state=${brandId}`;
+    )}&scope=instagram_basic,instagram_content_publish,pages_show_list&response_type=code&state=${brandId}`;
   },
 
   /**
