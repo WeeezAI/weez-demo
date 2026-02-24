@@ -347,10 +347,53 @@ const OneClickPost = () => {
               </div>
 
               {loadingIdeas ? (
-                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="aspect-[4/5] bg-white rounded-[2.5rem] border-2 border-dashed animate-pulse" />
-                  ))}
+                <div className="min-h-[400px] flex flex-col items-center justify-center p-20 bg-white/50 backdrop-blur-xl rounded-[3rem] border-2 border-dashed border-primary/20 relative overflow-hidden group">
+                  {/* Background Accents */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-pulse" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent animate-pulse duration-[4s]" />
+
+                  {/* Central Radar Animation */}
+                  <div className="relative mb-12">
+                    <div className="w-32 h-32 border-4 border-primary/10 rounded-full animate-ping opacity-20" />
+                    <div className="absolute inset-0 w-32 h-32 border-2 border-primary/20 rounded-full animate-spin duration-[3s]" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-16 h-16 bg-primary rounded-2xl rotate-45 animate-pulse shadow-2xl shadow-primary/40 flex items-center justify-center">
+                        <BrainCircuit className="w-8 h-8 text-white -rotate-45" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Messages with "Spy" Theme */}
+                  <div className="space-y-4 text-center relative z-10">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-xl font-black uppercase tracking-[0.3em] text-foreground animate-in fade-in slide-in-from-bottom-2">
+                        Intelligence_Gathering
+                      </h3>
+                      <div className="flex justify-center gap-1.5">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${i * 200}ms` }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="px-6 py-2 bg-secondary rounded-full inline-block">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                        <span className="inline-block animate-pulse">📡</span> Intercepting Market Signals...
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Aesthetic Log Lines */}
+                  <div className="absolute bottom-10 left-10 opacity-20 space-y-1 pointer-events-none">
+                    <p className="text-[8px] font-mono uppercase tracking-tighter">FETCHING_COMPETITOR_STRATEGIES...</p>
+                    <p className="text-[8px] font-mono uppercase tracking-tighter">DECRYPTING_CONSUMER_TRENDS...</p>
+                    <p className="text-[8px] font-mono uppercase tracking-tighter">BYPASSING_CREATIVE_BLOCK...</p>
+                  </div>
+                  <div className="absolute bottom-10 right-10 opacity-20 space-y-1 pointer-events-none text-right">
+                    <p className="text-[8px] font-mono uppercase tracking-tighter text-emerald-500">SIGNALS_VIBRANT</p>
+                    <p className="text-[8px] font-mono uppercase tracking-tighter text-emerald-500">TUNNEL_SECURE</p>
+                    <p className="text-[8px] font-mono uppercase tracking-tighter text-emerald-500">DIRECTIVE_READY</p>
+                  </div>
                 </div>
               ) : (
                 <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
@@ -362,15 +405,29 @@ const OneClickPost = () => {
                       onClick={() => handleGenerate(idea)}
                     >
                       <div className="p-8 pb-0 flex items-center justify-between">
-                        <div className="w-10 h-10 rounded-2xl bg-secondary flex items-center justify-center group-hover:bg-primary transition-colors duration-500">
-                          <Target className="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors duration-500" />
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-secondary flex items-center justify-center group-hover:bg-primary transition-colors duration-500">
+                            <Target className="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors duration-500" />
+                          </div>
+                          {idea.is_recommended && (
+                            <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              Recommended
+                            </Badge>
+                          )}
                         </div>
                         <Badge variant="secondary" className="bg-secondary text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border-none">
                           {idea.content_type}
                         </Badge>
                       </div>
 
-                      <CardHeader className="p-8 pt-6 pb-4">
+                      <CardHeader className="p-8 pt-6 pb-2">
+                        {idea.impact && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp className="w-3 h-3 text-emerald-500" />
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{idea.impact}</span>
+                          </div>
+                        )}
                         <CardTitle className="text-2xl font-black leading-[1.1] tracking-tight group-hover:text-primary transition-colors duration-500">
                           {idea.headline}.
                         </CardTitle>

@@ -15,10 +15,17 @@ export interface BrandMemoryFacts {
 
 export interface ContentIdea {
   content_type: string;
+  template_id: string;
   angle: string;
   headline: string;
+  description?: string;
   visual_focus: string;
+  placeholders?: Record<string, string>;
+  template_layout?: any;
+  image_prompt?: string;
   expected_outcome: string;
+  impact?: string;
+  is_recommended?: boolean;
 }
 
 export interface CreativeResponse {

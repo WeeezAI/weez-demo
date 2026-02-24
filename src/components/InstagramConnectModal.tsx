@@ -1,7 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Instagram, Facebook, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Instagram, Facebook, ArrowRight, CheckCircle2, AlertCircle, Check } from "lucide-react";
 import { weezAPI } from "@/services/weezAPI";
+import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface InstagramConnectModalProps {
     isOpen: boolean;
@@ -10,8 +12,10 @@ interface InstagramConnectModalProps {
 }
 
 const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectModalProps) => {
+    const [isConfirmed, setIsConfirmed] = useState(false);
+
     const handleContinue = () => {
-        if (spaceId) {
+        if (spaceId && isConfirmed) {
             window.location.href = weezAPI.getInstagramAuthUrl(spaceId);
         }
     };
@@ -34,62 +38,46 @@ const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectMod
 
                 {/* Steps */}
                 <div className="p-12 pt-4 space-y-10">
-                    {/* Step 1 */}
-                    <div className="relative pl-14 group">
-                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-black text-xs text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all">
-                            01
+                    {/* Checklist */}
+                    <div className="relative pl-14 pt-4">
+                        <div className="absolute left-0 top-4 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <AlertCircle className="w-5 h-5 text-primary" />
                         </div>
-                        <div className="space-y-4">
-                            <h4 className="text-xl font-black uppercase tracking-tight">Convert to Professional Identity</h4>
-                            <div className="p-6 rounded-2xl bg-secondary/30 border border-border/40 space-y-3">
-                                <p className="text-sm font-bold text-muted-foreground">Inside Instagram app:</p>
-                                <div className="flex items-center gap-3 text-sm font-black text-foreground">
-                                    <span>Settings</span>
-                                    <ArrowRight className="w-3 h-3 opacity-30" />
-                                    <span>Account</span>
-                                    <ArrowRight className="w-3 h-3 opacity-30" />
-                                    <span className="text-pink-600">Switch to Professional</span>
-                                </div>
+                        <div className="space-y-6">
+                            <h4 className="text-xl font-black uppercase tracking-tight">Pre-Connection Checklist</h4>
+                            <div className="space-y-3">
+                                {[
+                                    "Your Instagram must be a Business Account (not Personal).",
+                                    "Your Instagram must be linked to a Facebook Page.",
+                                    "You must have Full Control access to that Facebook Page.",
+                                    "The Facebook Page must be published (not in draft).",
+                                    "Ensure you are assigned Full Control inside Business Manager if the Page was created by another account."
+                                ].map((item, i) => (
+                                    <div key={i} className="flex gap-3 items-start">
+                                        <div className="mt-1 w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                            <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                        </div>
+                                        <p className="text-sm font-medium text-muted-foreground leading-snug">{item}</p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
 
-                    {/* Step 2 */}
-                    <div className="relative pl-14 group">
-                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-black text-xs text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all">
-                            02
-                        </div>
-                        <div className="space-y-4">
-                            <h4 className="text-xl font-black uppercase tracking-tight">Handshake with Facebook Page</h4>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="p-6 rounded-2xl bg-secondary/30 border border-border/40 space-y-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Instagram className="w-3.5 h-3.5 text-pink-500" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Via Instagram</span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-black leading-tight">
-                                        <span>Settings</span>
-                                        <ArrowRight className="w-3 h-3 opacity-30" />
-                                        <span>Business</span>
-                                        <ArrowRight className="w-3 h-3 opacity-30" />
-                                        <span className="text-pink-600">Connect to Facebook Page</span>
-                                    </div>
-                                </div>
-                                <div className="p-6 rounded-2xl bg-secondary/30 border border-border/40 space-y-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Facebook className="w-3.5 h-3.5 text-blue-600" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Via Facebook</span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-black leading-tight">
-                                        <span>Settings</span>
-                                        <ArrowRight className="w-3 h-3 opacity-30" />
-                                        <span>Linked Accounts</span>
-                                        <ArrowRight className="w-3 h-3 opacity-30" />
-                                        <span className="text-blue-600">Instagram</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Confirmation Checkbox */}
+                    <div className="flex items-start gap-4 p-6 rounded-[2rem] bg-pink-500/5 border border-pink-500/10">
+                        <Checkbox
+                            id="confirm-reqs"
+                            checked={isConfirmed}
+                            onCheckedChange={(checked) => setIsConfirmed(checked as boolean)}
+                            className="mt-1 border-pink-500/20 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+                        />
+                        <label
+                            htmlFor="confirm-reqs"
+                            className="text-sm font-bold text-pink-700/70 leading-relaxed cursor-pointer select-none"
+                        >
+                            I confirm my Instagram and Facebook Page meet the above requirements.
+                        </label>
                     </div>
                 </div>
 
@@ -97,7 +85,8 @@ const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectMod
                 <div className="p-12 pt-0">
                     <Button
                         onClick={handleContinue}
-                        className="w-full h-20 rounded-[1.5rem] bg-foreground text-white hover:bg-primary transition-all text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 flex gap-4"
+                        disabled={!isConfirmed}
+                        className="w-full h-20 rounded-[1.5rem] bg-foreground text-white hover:bg-primary disabled:opacity-30 disabled:grayscale transition-all text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 flex gap-4"
                     >
                         Continue to Connect
                         <CheckCircle2 className="w-5 h-5" />
@@ -110,7 +99,7 @@ const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectMod
                     </button>
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };
 
