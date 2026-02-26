@@ -1,6 +1,7 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = "http://localhost:8000"
+{/*"https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";*/ }
 
 export interface BrandMemoryFacts {
   brand_name?: string;
@@ -187,6 +188,32 @@ export const weezAPI = {
       }),
     });
     if (!response.ok) throw new Error("Failed to post to Instagram");
+    return await response.json();
+  },
+
+  /**
+   * Edits an existing generated poster using gpt-image-1.5
+   */
+  editPoster: async (
+    brandId: string,
+    blobName: string,
+    editPrompt: string,
+    aspectRatio: string = "1:1"
+  ): Promise<{ image_url: string; blob_name: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brand_id: brandId,
+        blob_name: blobName,
+        edit_prompt: editPrompt,
+        aspect_ratio: aspectRatio,
+      }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Edit failed" }));
+      throw new Error(err.detail || "Failed to edit creative");
+    }
     return await response.json();
   },
 
