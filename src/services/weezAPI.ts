@@ -1,6 +1,6 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = "http://localhost:8000"//"https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
@@ -314,6 +314,25 @@ export const weezAPI = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Verification failed" }));
       throw new Error(err.detail);
+    }
+    return await response.json();
+  },
+
+  /**
+   * Transcribes an audio blob using the backend STT endpoint
+   */
+  transcribeAudio: async (audioBlob: Blob): Promise<{ text: string }> => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.webm");
+
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/stt/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Transcription failed" }));
+      throw new Error(err.detail || "Failed to transcribe audio");
     }
     return await response.json();
   }

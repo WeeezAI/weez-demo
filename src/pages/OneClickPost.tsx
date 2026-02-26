@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus, Instagram, Image } from "lucide-react";
+import { Zap, TrendingUp, Sparkles, ChevronRight, Loader2, CheckCircle2, MessageSquare, Send, Activity, Target, BrainCircuit, Plus, Instagram, Image, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import ConversationSidebar from "@/components/ConversationSidebar";
@@ -37,13 +38,17 @@ const OneClickPost = () => {
   const [isPosting, setIsPosting] = useState(false);
   const [instagramAccount, setInstagramAccount] = useState<any>(null);
   const [hasPosted, setHasPosted] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<"imagen4" | "gpt-image" | "flux-pro">("imagen4");
+  const [selectedModel, setSelectedModel] = useState<"imagen4" | "gpt-image" | "flux-pro" | "flux-flex">("imagen4");
 
   // Editable fields for the modal
   const [editableCaption, setEditableCaption] = useState("");
   const [editableHashtags, setEditableHashtags] = useState<string[]>([]);
   const [editPrompt, setEditPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTarget, setRecordingTarget] = useState<"userPrompt" | "caption" | "editPrompt" | null>(null);
+  const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   useEffect(() => {
     if (loadingAuth) return;
@@ -104,6 +109,56 @@ const OneClickPost = () => {
     }
   };
 
+  const startRecording = async (target: "userPrompt" | "caption" | "editPrompt") => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: "audio/webm" });
+        setIsTranscribing(true);
+        try {
+          const result = await weezAPI.transcribeAudio(audioBlob);
+          const text = result.text;
+
+          if (target === "userPrompt") setUserPrompt((prev) => (prev ? `${prev} ${text}` : text));
+          else if (target === "caption") setEditableCaption((prev) => (prev ? `${prev} ${text}` : text));
+          else if (target === "editPrompt") setEditPrompt((prev) => (prev ? `${prev} ${text}` : text));
+
+          toast.success("Transcription complete");
+        } catch (err) {
+          console.error("Transcription error:", err);
+          toast.error("Voice transcription failed");
+        } finally {
+          setIsTranscribing(false);
+          setRecordingTarget(null);
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      setRecorder(mediaRecorder);
+      setIsRecording(true);
+      setRecordingTarget(target);
+    } catch (err) {
+      console.error("Recording error:", err);
+      toast.error("Microphone access denied or unavailable");
+    }
+  };
+
+  const stopRecording = () => {
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+      setIsRecording(false);
+      setRecorder(null);
+    }
+  };
+
   const checkLimit = () => {
     if (user?.plan_type === "free" && postCount >= 10) {
       toast.error("Artifact Limit Reached", {
@@ -137,7 +192,7 @@ const OneClickPost = () => {
     }
   };
 
-  const handleCustomSubmit = async (e: React.FormEvent) => {
+  const handleCustomGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userPrompt.trim()) return;
     if (!checkLimit()) return;
@@ -275,24 +330,55 @@ const OneClickPost = () => {
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000" />
               <Card className="relative border-none bg-white/80 backdrop-blur-3xl shadow-2xl rounded-[2rem] overflow-hidden">
                 <CardContent className="p-2">
-                  <form onSubmit={handleCustomSubmit} className="flex items-center gap-2">
+                  <form onSubmit={handleCustomGenerate} className="flex items-center gap-2">
                     <div className="flex-1 relative">
-                      <MessageSquare className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground opacity-40" />
-                      <Input
-                        placeholder="What do you want to create?"
-                        value={userPrompt}
-                        onChange={(e) => setUserPrompt(e.target.value)}
-                        className="h-20 pl-16 pr-10 bg-transparent border-none text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:ring-0 shadow-none"
-                      />
+                      <div className="relative">
+                        <Textarea
+                          value={userPrompt}
+                          onChange={(e) => setUserPrompt(e.target.value)}
+                          placeholder="e.g., A futuristic ad for a new skincare line"
+                          className="w-full min-h-[120px] pr-24 px-8 py-8 rounded-[2.5rem] bg-white border-violet-100 shadow-sm focus:ring-violet-500/20 focus:border-violet-300 placeholder:text-muted-foreground/60 transition-all resize-none relative z-10 text-lg leading-relaxed whitespace-pre-wrap"
+                          disabled={isCustomGenerating || isRecording || isTranscribing}
+                        />
+                        <div className="absolute right-4 bottom-4 flex items-center gap-2 z-20">
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              isRecording && recordingTarget === "userPrompt" ? stopRecording() : startRecording("userPrompt");
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-12 w-12 rounded-2xl transition-all duration-300",
+                              isRecording && recordingTarget === "userPrompt"
+                                ? "bg-red-50 text-red-600 hover:bg-red-100 animate-pulse"
+                                : "hover:bg-violet-50 text-violet-600"
+                            )}
+                            disabled={isCustomGenerating || (isTranscribing && recordingTarget === "userPrompt")}
+                          >
+                            {isTranscribing && recordingTarget === "userPrompt" ? (
+                              <Loader2 className="w-6 h-6 animate-spin" />
+                            ) : isRecording && recordingTarget === "userPrompt" ? (
+                              <Square className="w-6 h-6 fill-current" />
+                            ) : (
+                              <Mic className="w-6 h-6" />
+                            )}
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={!userPrompt.trim() || isCustomGenerating || isRecording || isTranscribing}
+                            className="h-10 w-10 rounded-xl bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-200"
+                            size="icon"
+                          >
+                            {isCustomGenerating ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <Button
-                      type="submit"
-                      disabled={!userPrompt.trim() || isCustomGenerating}
-                      className="h-16 px-10 rounded-[1.5rem] bg-primary text-white font-black uppercase tracking-widest text-xs hover:shadow-xl shadow-primary/20 transition-all active:scale-95 flex gap-3"
-                    >
-                      {isCustomGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      Create
-                    </Button>
                   </form>
                 </CardContent>
               </Card>
@@ -382,6 +468,33 @@ const OneClickPost = () => {
                       FLUX.2-pro
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5">📸 Photoreal</div>
+                  </div>
+                </button>
+
+                {/* FLUX.2-flex */}
+                <button
+                  onClick={() => setSelectedModel("flux-flex")}
+                  className={cn(
+                    "flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300",
+                    selectedModel === "flux-flex"
+                      ? "bg-gradient-to-br from-rose-50 to-orange-50 border-rose-300 shadow-lg shadow-rose-500/10 ring-2 ring-rose-400/30"
+                      : "bg-white border-border/50 hover:border-rose-200 hover:bg-rose-50/30"
+                  )}
+                >
+                  <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                    <Sparkles className={cn(
+                      "w-5 h-5 transition-colors",
+                      selectedModel === "flux-flex" ? "text-rose-600 fill-rose-600" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div className="text-left">
+                    <div className={cn(
+                      "text-[11px] font-black uppercase tracking-wider",
+                      selectedModel === "flux-flex" ? "text-rose-700" : "text-foreground"
+                    )}>
+                      FLUX.2-flex
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-0.5">✨ High Detail</div>
                   </div>
                 </button>
               </div>
@@ -575,10 +688,32 @@ const OneClickPost = () => {
                       <textarea
                         value={editableCaption}
                         onChange={(e) => setEditableCaption(e.target.value)}
-                        disabled={isGenerating || isPosting}
+                        disabled={isGenerating || isPosting || isRecording || isTranscribing}
                         className="w-full min-h-[160px] p-8 rounded-[2rem] bg-white border-2 border-transparent focus:border-primary/10 text-lg font-bold text-foreground leading-relaxed placeholder:text-muted-foreground/20 transition-all resize-none shadow-inner relative z-10"
                         placeholder="Write your caption..."
                       />
+                      <div className="absolute right-4 bottom-4 z-20">
+                        <Button
+                          onClick={() => isRecording && recordingTarget === "caption" ? stopRecording() : startRecording("caption")}
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-10 w-10 rounded-xl transition-all duration-300",
+                            isRecording && recordingTarget === "caption"
+                              ? "bg-red-50 text-red-600 hover:bg-red-100 animate-pulse"
+                              : "bg-secondary/50 hover:bg-primary/10 text-primary border border-primary/5"
+                          )}
+                          disabled={isGenerating || isPosting || (isTranscribing && recordingTarget === "caption")}
+                        >
+                          {isTranscribing && recordingTarget === "caption" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : isRecording && recordingTarget === "caption" ? (
+                            <Square className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Mic className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -614,16 +749,40 @@ const OneClickPost = () => {
                       <Sparkles className="w-4 h-4 text-primary animate-pulse" />
                     </div>
                     <div className="flex gap-3">
-                      <Input
-                        placeholder="e.g. 'Make the background darker' or 'Add more blue'"
-                        value={editPrompt}
-                        onChange={(e) => setEditPrompt(e.target.value)}
-                        disabled={isEditing || isPosting}
-                        className="h-14 rounded-2xl bg-white border-border text-xs font-bold px-6 focus-visible:ring-primary/20 transition-all"
-                      />
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="e.g. 'Make the background darker' or 'Add more blue'"
+                          value={editPrompt}
+                          onChange={(e) => setEditPrompt(e.target.value)}
+                          disabled={isEditing || isPosting || isRecording || isTranscribing}
+                          className="h-14 rounded-2xl bg-white border-border text-xs font-bold px-6 pr-14 focus-visible:ring-primary/20 transition-all"
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <Button
+                            onClick={() => isRecording && recordingTarget === "editPrompt" ? stopRecording() : startRecording("editPrompt")}
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-10 w-10 rounded-xl transition-all duration-300",
+                              isRecording && recordingTarget === "editPrompt"
+                                ? "bg-red-50 text-red-600 hover:bg-red-100 animate-pulse"
+                                : "hover:bg-secondary text-muted-foreground"
+                            )}
+                            disabled={isEditing || isPosting || (isTranscribing && recordingTarget === "editPrompt")}
+                          >
+                            {isTranscribing && recordingTarget === "editPrompt" ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : isRecording && recordingTarget === "editPrompt" ? (
+                              <Square className="w-4 h-4 fill-current" />
+                            ) : (
+                              <Mic className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                       <Button
                         onClick={handleEdit}
-                        disabled={!editPrompt.trim() || isEditing || isPosting}
+                        disabled={!editPrompt.trim() || isEditing || isPosting || isRecording || isTranscribing}
                         className="h-14 px-8 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all active:scale-95 flex gap-2"
                       >
                         {isEditing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
