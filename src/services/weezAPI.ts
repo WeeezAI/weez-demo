@@ -1,6 +1,6 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "http://localhost:8000"//"https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
