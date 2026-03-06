@@ -67,9 +67,27 @@ const TermsConditions = () => {
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
               <li>Subscriptions are billed monthly</li>
               <li>You may cancel at any time; access continues until the end of the billing period</li>
-              <li>Refunds are handled on a case-by-case basis</li>
+              <li>Refunds are handled on a case-by-case basis (see Refund Policy below)</li>
               <li>We reserve the right to change pricing with 30 days notice</li>
             </ul>
+          </section>
+
+          <section className="bg-muted/30 border border-border rounded-xl p-6">
+            <h2 className="text-2xl font-semibold mb-4">Refund Policy</h2>
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>
+                We want you to be completely satisfied with Weez.AI. Our refund policy is designed to be fair and transparent:
+              </p>
+              <ul className="list-disc list-inside space-y-2">
+                <li><strong className="text-foreground">7-Day Money-Back Guarantee:</strong> New subscribers are eligible for a full refund within the first 7 days of their initial subscription if they are not satisfied with the service.</li>
+                <li><strong className="text-foreground">Case-by-Case Reviews:</strong> Outside of the initial 7-day window, refund requests are evaluated individually based on service availability and technical issues.</li>
+                <li><strong className="text-foreground">Partial Billing Cycles:</strong> We do not provide prorated refunds for partial billing cycles after the 7-day guarantee period.</li>
+                <li><strong className="text-foreground">How to Request:</strong> To request a refund, please email <a href="mailto:support@dexraflow.com" className="text-primary hover:underline font-medium">support@dexraflow.com</a> with your account details and reason for the request.</li>
+              </ul>
+              <p className="text-sm italic">
+                Refunds will be processed back to the original payment method within 5-10 business days after approval.
+              </p>
+            </div>
           </section>
 
           <section>
