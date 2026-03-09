@@ -1,11 +1,89 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight, Instagram, BrainCircuit, Search, Zap, LayoutGrid, Palette, BarChart3, Clock, Rocket, MessageSquare } from "lucide-react";
+import { Sparkles as SparklesIcon, ArrowRight, Instagram, BrainCircuit, Search, Zap, LayoutGrid, Palette, BarChart3, Clock, Rocket, MessageSquare, Check as CheckIcon, Menu } from "lucide-react";
 import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
 import { Badge } from "@/components/ui/badge";
 import { Gravity, MatterBody } from "@/components/ui/gravity";
 import AuroraHero from "@/components/AuroraHero";
 import logo from "@/assets/weez-logo.png";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+const comparisonRows = [
+  {
+    feature: "Content Strategy",
+    traditional: "Manual planning required",
+    ai: "Only suggests ideas",
+    agencies: "Strategy created by human team",
+    weez: "AI automatically creates a full campaign strategy",
+  },
+  {
+    feature: "Content Creation",
+    traditional: "Manual design required",
+    ai: "Generates captions or text",
+    agencies: "Human designers create posts",
+    weez: "AI generates complete posters automatically",
+  },
+  {
+    feature: "Content Planning",
+    traditional: "Manual scheduling calendar",
+    ai: "Not included",
+    agencies: "Planned by human team",
+    weez: "AI builds a full 30-day content calendar",
+  },
+  {
+    feature: "Automatic Posting",
+    traditional: "Only scheduling tools",
+    ai: "Not available",
+    agencies: "Posted by account managers",
+    weez: "Fully automated publishing system",
+  },
+  {
+    feature: "Comment Replies",
+    traditional: "Manual replies",
+    ai: "Not supported",
+    agencies: "Human social media managers reply",
+    weez: "AI automatically responds to comments",
+  },
+  {
+    feature: "Performance Monitoring",
+    traditional: "Basic analytics dashboards",
+    ai: "Not available",
+    agencies: "Manual performance reports",
+    weez: "AI tracks and analyzes performance automatically",
+  },
+  {
+    feature: "Strategy Optimization",
+    traditional: "Manual adjustments required",
+    ai: "No optimization system",
+    agencies: "Humans adjust campaigns",
+    weez: "AI continuously improves marketing strategy",
+  },
+  {
+    feature: "Marketing Execution",
+    traditional: "Requires human management",
+    ai: "Only assists with content",
+    agencies: "Done by hired teams",
+    weez: "Fully autonomous marketing execution",
+  },
+  {
+    feature: "Cost",
+    traditional: "Monthly subscription tools",
+    ai: "Monthly subscription tools",
+    agencies: "Very expensive (thousands per month)",
+    weez: "Fraction of agency cost",
+  },
+  {
+    feature: "Human Effort Required",
+    traditional: "High effort required",
+    ai: "Moderate effort required",
+    agencies: "Low effort but expensive",
+    weez: "Minimal human involvement required",
+  }
+];
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -55,26 +133,50 @@ const Landing = () => {
             <img src={logo} alt="Weez AI" className="h-8 w-auto" />
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
               <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
             </nav>
             <div className="h-4 w-px bg-border hidden md:block" />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 onClick={() => navigate('/auth')}
-                className="font-bold hover:bg-secondary rounded-xl"
+                className="hidden sm:flex font-bold hover:bg-secondary rounded-xl"
               >
                 Log In
               </Button>
               <Button
                 onClick={() => navigate('/auth')}
-                className="h-11 px-6 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-95"
+                className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-95 text-xs sm:text-sm"
               >
                 Get Started
               </Button>
+
+              {/* Mobile Menu Trigger */}
+              <div className="md:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-secondary">
+                      <Menu className="w-5 h-5 text-foreground" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[300px] pt-20 bg-white border-l border-border/40">
+                    <nav className="flex flex-col gap-6">
+                      <a href="#features" className="text-2xl font-black uppercase tracking-tight text-foreground hover:text-primary transition-colors">Features</a>
+                      <a href="#pricing" className="text-2xl font-black uppercase tracking-tight text-foreground hover:text-primary transition-colors">Pricing</a>
+                      <div className="h-px bg-border/40 my-2" />
+                      <button
+                        onClick={() => navigate('/auth')}
+                        className="text-left text-2xl font-black uppercase tracking-tight text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        Log In
+                      </button>
+                    </nav>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </div>
         </div>
@@ -88,13 +190,13 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto text-center relative z-10 space-y-8">
           <AnimatedSection animation="fade-up">
             <Badge className="bg-secondary text-primary border-primary/10 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-              <Sparkles className="w-3.5 h-3.5 mr-2" />
+              <SparklesIcon className="w-3.5 h-3.5 mr-2" />
               The Autonomous Marketing Workforce
             </Badge>
           </AnimatedSection>
 
           <AnimatedSection animation="fade-up" delay={100}>
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-foreground leading-[0.95]">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-foreground leading-[0.95]">
               Marketing that <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">Runs Itself.</span>
             </h1>
@@ -156,7 +258,7 @@ const Landing = () => {
                 <div className="absolute right-[10%] bottom-[30%] p-6 bg-white rounded-[2rem] shadow-xl border border-black/5 w-72 animate-float-delayed">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                      <Sparkles className="w-5 h-5" />
+                      <SparklesIcon className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-muted-foreground uppercase">Generation</div>
@@ -184,7 +286,7 @@ const Landing = () => {
                   <div className="grid grid-cols-7 gap-4">
                     {[...Array(14)].map((_, i) => (
                       <div key={i} className={`aspect-square rounded-2xl flex items-center justify-center text-sm font-medium transition-colors ${i === 3 || i === 8 || i === 12 ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-secondary/50 text-muted-foreground'}`}>
-                        {i === 3 || i === 8 || i === 12 ? <Check className="w-4 h-4" /> : i + 1}
+                        {i === 3 || i === 8 || i === 12 ? <CheckIcon className="w-4 h-4" /> : i + 1}
                       </div>
                     ))}
                   </div>
@@ -221,6 +323,67 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Comparison Section */}
+      <section className="py-32 px-6 bg-white" id="comparison">
+        <div className="max-w-[1200px] mx-auto space-y-16">
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">
+              How Weez AI Is Different
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Most tools help you manage marketing. Weez AI actually runs it.
+            </p>
+          </div>
+
+          <AnimatedSection animation="fade-up" delay={200}>
+            <div className="relative rounded-[2.5rem] bg-white border border-border overflow-hidden shadow-xl max-w-full">
+              <div className="overflow-x-auto w-full pb-4">
+                <div className="min-w-[1000px] w-full">
+                  {/* Header */}
+                  <div className="grid grid-cols-5 border-b border-border bg-secondary/30">
+                    <div className="p-8 font-bold text-muted-foreground">Feature</div>
+                    <div className="p-8 font-bold text-muted-foreground">Traditional Social Media Tools</div>
+                    <div className="p-8 font-bold text-muted-foreground">AI Content Generators</div>
+                    <div className="p-8 font-bold text-muted-foreground">Marketing Agencies</div>
+                    <div className="p-8 font-black text-primary bg-primary/5 rounded-t-[2rem] border-x border-t border-primary/20 relative z-10 flex items-center justify-center">
+                      Weez AI
+                    </div>
+                  </div>
+
+                  {/* Rows */}
+                  <div className="flex flex-col">
+                    {comparisonRows.map((row, i) => (
+                      <div key={i} className={`grid grid-cols-5 border-b border-border/50 ${i === comparisonRows.length - 1 ? 'border-b-0' : ''} ${i % 2 === 0 ? 'bg-white' : 'bg-secondary/10'}`}>
+                        <div className="p-6 font-bold text-foreground flex items-center pl-8">{row.feature}</div>
+                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.traditional}</div>
+                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.ai}</div>
+                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.agencies}</div>
+                        <div className="p-6 text-sm font-bold text-foreground bg-primary/5 border-x border-primary/20 relative z-10 flex items-center gap-3">
+                          <CheckIcon className="w-5 h-5 text-primary shrink-0" />
+                          <span className="leading-relaxed">{row.weez}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bottom Highlight extension matching the bg-white or secondary */}
+                  <div className="grid grid-cols-5 bg-white">
+                    <div className="col-span-4 h-4"></div>
+                    <div className="bg-primary/5 border-x border-b border-primary/20 rounded-b-[2rem] h-4 relative z-10 -mt-[1px]"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
+
+          <AnimatedSection animation="fade-up" delay={400} className="text-center pt-8">
+            <p className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
+              Stop managing marketing tools. Start working with an autonomous marketing workforce.
+            </p>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section className="py-32 px-6" id="pricing">
         <div className="max-w-[1200px] mx-auto space-y-20">
@@ -241,9 +404,9 @@ const Landing = () => {
                 <p className="text-sm text-muted-foreground font-medium">Perfect for trying out the platform.</p>
                 <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Get Started</Button>
                 <ul className="space-y-4 pt-4">
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 1 Brand Workspace</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 10 AI Generations</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Basic Analytics</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 1 Brand Workspace</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 10 AI Generations</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Basic Analytics</li>
                 </ul>
               </div>
             </div>
@@ -262,10 +425,10 @@ const Landing = () => {
                 <p className="text-sm text-white/60 font-medium">For growing brands and creators.</p>
                 <Button onClick={() => navigate('/auth')} className="w-full h-14 rounded-2xl bg-white text-black hover:bg-white/90 font-bold">Start Free Trial</Button>
                 <ul className="space-y-4 pt-4 text-white/80">
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Unlimited Workspaces</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Unlimited Generations</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Advanced SEO Tools</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Priority Support</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Unlimited Workspaces</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Unlimited Generations</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Advanced SEO Tools</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Priority Support</li>
                 </ul>
               </div>
             </div>
@@ -281,9 +444,9 @@ const Landing = () => {
                 <p className="text-sm text-muted-foreground font-medium">Best value for long-term growth.</p>
                 <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Choose Yearly</Button>
                 <ul className="space-y-4 pt-4">
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Everything in Monthly</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> 2 Months Free</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><Check className="w-4 h-4 text-primary" /> Early Access features</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Everything in Monthly</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 2 Months Free</li>
+                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Early Access features</li>
                 </ul>
               </div>
             </div>
@@ -316,7 +479,7 @@ const Landing = () => {
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-background" />
+              <SparklesIcon className="w-4 h-4 text-background" />
             </div>
             <span className="font-bold tracking-tight">WEEZ INC.</span>
           </div>
