@@ -69,77 +69,83 @@
 
 @layer base {
   :root {
-    /* Violet Zen Palette - Deep, Premium, Ethereal */
-    --background: 270 20% 99%;
-    --foreground: 270 40% 5%;
+    /* Royal Indigo - Refined, Professional, Clean */
+    --background: 230 40% 99%;
+    --foreground: 230 40% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 270 40% 5%;
+    --card-foreground: 230 40% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 270 40% 5%;
+    --popover-foreground: 230 40% 5%;
 
-    /* Primary: Royal Midnight Purple */
-    --primary: 270 60% 10%;
-    --primary-foreground: 270 20% 98%;
+    /* Primary: Deep Royal Indigo */
+    --primary: 230 80% 15%;
+    --primary-foreground: 230 20% 98%;
 
-    /* Secondary: Ethereal Lavender Wash */
-    --secondary: 270 30% 96%;
-    --secondary-foreground: 270 60% 20%;
+    /* Secondary: Clean Silver Wash */
+    --secondary: 230 20% 96%;
+    --secondary-foreground: 230 60% 20%;
 
-    --muted: 270 20% 95%;
-    --muted-foreground: 270 15% 45%;
+    --muted: 230 15% 95%;
+    --muted-foreground: 230 10% 45%;
 
-    /* Accent: Electric Violet Spark */
-    --accent: 270 80% 55%;
+    /* Accent: Precision Electric Violet */
+    --accent: 250 85% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --border: 270 20% 92%;
-    --input: 270 20% 92%;
-    --ring: 270 60% 15%;
+    --border: 230 20% 91%;
+    --input: 230 20% 91%;
+    --ring: 230 80% 15%;
 
-    --radius: 1.25rem;
+    /* Minimalist radius - Sharper, Tech-focused */
+    --radius: 0.75rem;
 
-    /* Glassmorphism Classes */
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(139, 92, 246, 0.1);
+    /* Advanced Glass Effects */
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-inner: rgba(99, 102, 241, 0.04);
   }
 
   .dark {
-    /* Deep Void Purple */
-    --background: 270 50% 2%;
-    --foreground: 270 10% 98%;
+    --background: 230 50% 1.5%;
+    --foreground: 230 10% 98%;
 
-    --card: 270 50% 4%;
-    --card-foreground: 270 10% 98%;
+    --card: 230 50% 3%;
+    --card-foreground: 230 10% 98%;
 
-    --primary: 270 10% 98%;
-    --primary-foreground: 270 60% 5%;
+    --primary: 230 10% 98%;
+    --primary-foreground: 230 80% 5%;
 
-    --secondary: 270 40% 8%;
-    --secondary-foreground: 270 10% 98%;
+    --secondary: 230 40% 7%;
+    --secondary-foreground: 230 10% 98%;
 
-    --muted: 270 40% 8%;
-    --muted-foreground: 270 10% 65%;
+    --muted: 230 40% 7%;
+    --muted-foreground: 230 10% 65%;
 
-    --border: 270 40% 12%;
+    --border: 230 30% 10%;
+    
+    --glass-bg: rgba(10, 10, 20, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-inner: rgba(255, 255, 255, 0.02);
   }
 }
 
 @layer base {
   * {
-    @apply border-border selection:bg-accent/20 selection:text-foreground;
+    @apply border-border selection:bg-accent/20 selection:text-foreground transition-all duration-200;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
   }
 
-  /* Minimalist Scrollbar - Violet Tinted */
+  /* Ultra-Minimalist Scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   ::-webkit-scrollbar-track {
@@ -147,20 +153,27 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-accent/10 rounded-full hover:bg-accent/20 transition-colors;
+    @apply bg-foreground/5 rounded-full hover:bg-foreground/10;
   }
 }
 
 @layer components {
+  /* Dynamic Glass Panels */
   .glass-card {
-    @apply bg-white/70 backdrop-blur-xl border border-accent/10 shadow-[0_8px_32px_rgba(139, 92, 246, 0.04)];
+    @apply bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all duration-300;
+    box-shadow: inset 0 0 0 1px var(--glass-border);
   }
 
+  .glass-panel {
+    @apply bg-white/40 dark:bg-black/20 backdrop-blur-2xl border-white/20 dark:border-white/5;
+  }
+
+  /* Compact Minimalist Button */
   .zen-button {
-    @apply h-11 px-6 rounded-2xl font-semibold transition-all duration-300 active:scale-95;
+    @apply h-9 px-4 rounded-lg font-medium text-sm transition-all duration-300 active:scale-95 flex items-center justify-center gap-2;
   }
 
   .neo-blur {
-    @apply backdrop-blur-2xl bg-background/50 border-b border-border/40 sticky top-0 z-50;
+    @apply backdrop-blur-3xl bg-background/40 border-b border-border/40 sticky top-0 z-50;
   }
 }

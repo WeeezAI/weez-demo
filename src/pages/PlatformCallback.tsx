@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, Instagram, Facebook, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Instagram, Facebook, ArrowRight, ShieldCheck, Zap, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { weezAPI } from "@/services/weezAPI";
 import { EducationalLoader } from "@/components/EducationalLoader";
@@ -21,6 +21,7 @@ const PlatformCallback = () => {
   const pageName = params.get("page_name");
   const accountType = params.get("account_type");
   const publishingEnabled = params.get("publishing_enabled") === "true";
+  const provider = params.get("provider") || "instagram";
 
   useEffect(() => {
     if (isConnected && brandId && !isSuccess) {
@@ -120,6 +121,8 @@ const PlatformCallback = () => {
   };
 
   const renderSuccess = () => {
+    const isLinkedIn = provider === "linkedin";
+
     return (
       <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
         <div className="flex justify-center">
@@ -130,54 +133,98 @@ const PlatformCallback = () => {
 
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-black uppercase tracking-tighter">Connection Active 🎉</h1>
-          <p className="text-muted-foreground font-medium text-lg">Your brand identity is now synchronized and live.</p>
+          <p className="text-muted-foreground font-medium text-lg">
+            {isLinkedIn
+              ? "Your LinkedIn profile is now connected and ready for B2B publishing."
+              : "Your brand identity is now synchronized and live."}
+          </p>
         </div>
 
         <div className="grid gap-4">
           <div className="p-8 rounded-[2.5rem] bg-white border border-border/80 shadow-xl shadow-black/[0.02] space-y-6">
-            <div className="flex items-center justify-between border-b border-border/40 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center">
-                  <Instagram className="w-6 h-6 text-pink-500" />
+            {isLinkedIn ? (
+              /* LinkedIn Success Details */
+              <>
+                <div className="flex items-center justify-between border-b border-border/40 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center">
+                      <Linkedin className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Platform</span>
+                      <span className="text-lg font-black uppercase tracking-tight">LinkedIn</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Username</span>
-                  <span className="text-lg font-black uppercase tracking-tight">{username || "Syncing..."}</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between border-b border-border/40 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                  <Facebook className="w-6 h-6 text-blue-600" />
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Integration</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-bold uppercase tracking-widest">B2B Publishing</span>
+                      </span>
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Auto-Publish</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Enabled</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Linked Page</span>
-                  <span className="text-lg font-black uppercase tracking-tight">{pageName || "Syncing..."}</span>
+              </>
+            ) : (
+              /* Instagram Success Details (existing) */
+              <>
+                <div className="flex items-center justify-between border-b border-border/40 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center">
+                      <Instagram className="w-6 h-6 text-pink-500" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Username</span>
+                      <span className="text-lg font-black uppercase tracking-tight">{username || "Syncing..."}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Account Type</span>
-                  <span className="flex items-center gap-2 mt-1">
-                    <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{accountType || "Business"}</span>
-                  </span>
+                <div className="flex items-center justify-between border-b border-border/40 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                      <Facebook className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Linked Page</span>
+                      <span className="text-lg font-black uppercase tracking-tight">{pageName || "Syncing..."}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="w-px h-8 bg-border/40" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Publishing</span>
-                  <span className="flex items-center gap-2 mt-1">
-                    <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Enabled</span>
-                  </span>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Account Type</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-bold uppercase tracking-widest">{accountType || "Business"}</span>
+                      </span>
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Publishing</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Enabled</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
 

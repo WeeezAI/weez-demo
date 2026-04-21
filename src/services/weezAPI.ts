@@ -1,6 +1,6 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = "https://awfully-pumped-fowl.ngrok-free.app";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
@@ -57,6 +57,47 @@ export const weezAPI = {
       backendRedirectUri
     )}&scope=instagram_basic, instagram_content_publish,pages_show_list&response_type=code&state=${brandId}`;
   },
+
+  /**
+   * Generates the LinkedIn OAuth authorization URL (Redirects to Backend)
+   */
+  getLinkedInAuthUrl: (brandId: string) => {
+    return `${WEEZ_BASE_URL}/connectors/linkedin/authorize?brand_id=${brandId}`;
+  },
+
+  /**
+   * Fetches all connector statuses for a brand (Instagram, LinkedIn, Website)
+   */
+  getConnectorsStatus: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/connectors/status?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to fetch connector status");
+    return await response.json();
+  },
+
+  /**
+   * Connects a website to a brand and triggers analysis
+   */
+  connectWebsite: async (brandId: string, websiteUrl: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/connectors/website`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, website_url: websiteUrl }),
+    });
+    if (!response.ok) throw new Error("Failed to connect website");
+    return await response.json();
+  },
+
+  /**
+   * Disconnects LinkedIn from a brand
+   */
+  disconnectLinkedIn: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/connectors/linkedin/disconnect?brand_id=${brandId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to disconnect LinkedIn");
+    return await response.json();
+  },
+
 
   /**
    * Explicitly triggers the Brand Analysis Pipeline
@@ -335,5 +376,232 @@ export const weezAPI = {
       throw new Error(err.detail || "Failed to transcribe audio");
     }
     return await response.json();
-  }
+  },
+
+  // ─── Autopilot / Campaign Endpoints ─────────────────────────────────────────
+
+  /**
+   * Checks the active campaign status for a brand
+   */
+  getActiveCampaignStatus: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${brandId}/active-status`);
+    if (!response.ok) return { active: false };
+    return await response.json();
+  },
+
+  /**
+   * Fetches the full autopilot dashboard data for a brand
+   */
+  getAutopilotDashboard: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${brandId}/dashboard`);
+    if (!response.ok) throw new Error("Failed to fetch dashboard");
+    return await response.json();
+  },
+
+  /**
+   * Fetches 48-hour performance reports for a campaign
+   */
+  getPerformanceReports: async (campaignId: string, brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/performance-reports?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to fetch performance reports");
+    return await response.json();
+  },
+
+  /**
+   * Fetches conversation history for a campaign
+   */
+  getCampaignConversation: async (brandId: string, campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${brandId}/conversation?campaign_id=${campaignId}`);
+    if (!response.ok) throw new Error("Failed to fetch conversation");
+    return await response.json();
+  },
+
+  /**
+   * Generates a campaign brief from a user's marketing goal
+   */
+  getCampaignBrief: async (
+    brandId: string,
+    userPrompt: string,
+    duration?: string,
+    campaignType?: string,
+    marketingMode?: string
+  ): Promise<any> => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let url = `${WEEZ_BASE_URL}/autopilot/campaign/brief?brand_id=${brandId}&user_prompt=${encodeURIComponent(userPrompt)}&user_timezone=${encodeURIComponent(tz)}`;
+    if (duration) url += `&duration=${duration}`;
+    if (campaignType) url += `&campaign_type=${campaignType}`;
+    if (marketingMode) url += `&marketing_mode=${marketingMode}`;
+    const response = await fetchWithBypass(url, { method: "POST" });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Brief generation failed" }));
+      throw new Error(err.detail || "Failed to generate campaign brief");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Generates the content planner/calendar for a campaign
+   */
+  generateCampaignPlanner: async (campaignId: string, currentLocalTime?: string): Promise<any> => {
+    let url = `${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/planner`;
+    if (currentLocalTime) url += `?current_local_time=${encodeURIComponent(currentLocalTime)}`;
+    const response = await fetchWithBypass(url, { method: "POST" });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Planner generation failed" }));
+      throw new Error(err.detail || "Failed to generate planner");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Approves the planner and starts the campaign
+   */
+  approveAndStartCampaign: async (campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/approve`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Campaign start failed" }));
+      throw new Error(err.detail || "Failed to start campaign");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Rejects the campaign briefing and resets to draft
+   */
+  rejectBriefing: async (campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/reject-briefing`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to reject briefing");
+    return await response.json();
+  },
+
+  /**
+   * Rejects the planner and resets campaign to briefing status
+   */
+  rejectPlanner: async (campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/reject-planner`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to reject planner");
+    return await response.json();
+  },
+
+  /**
+   * Fetches poster jobs for a campaign
+   */
+  getCampaignPosterJobs: async (campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/poster-jobs`);
+    if (!response.ok) throw new Error("Failed to fetch poster jobs");
+    return await response.json();
+  },
+
+  /**
+   * Regenerates a poster job
+   */
+  regeneratePosterJob: async (campaignId: string, jobId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/poster-jobs/${jobId}/regenerate`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Regeneration failed" }));
+      throw new Error(err.detail || "Failed to regenerate poster");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Instantly publishes a poster job to its target platform (Instagram/LinkedIn)
+   */
+  postNow: async (campaignId: string, jobId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/poster-jobs/${jobId}/post-now`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Publish failed" }));
+      throw new Error(err.detail || "Failed to publish poster");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Deletes a content post
+   */
+  deleteContentPost: async (postId: string, brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/content-posts/${postId}?brand_id=${brandId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete content post");
+    return await response.json();
+  },
+
+  /**
+   * Fetches all campaigns for a brand
+   */
+  getAllCampaigns: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${brandId}/all`);
+    if (!response.ok) throw new Error("Failed to fetch campaigns");
+    return await response.json();
+  },
+
+  /**
+   * Deletes a campaign and all associated data
+   */
+  deleteCampaign: async (campaignId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Delete failed" }));
+      throw new Error(err.detail || "Failed to delete campaign");
+    }
+    return await response.json();
+  },
+
+  // ── HTML Poster Editor API ────────────────────────────────────────
+  
+  /**
+   * Fetches the HTML content for a poster job
+   */
+  getPosterHtml: async (jobId: string): Promise<{
+    job_id: string;
+    html: string;
+    editable_fields: string[];
+    aspect_ratio: string;
+    width: number;
+    height: number;
+    poster_idea: string;
+    status: string;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/html`);
+    if (!response.ok) throw new Error("Failed to fetch poster HTML");
+    return await response.json();
+  },
+
+  /**
+   * Saves edited HTML content back to the job
+   */
+  savePosterHtml: async (jobId: string, html: string): Promise<void> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/html`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html }),
+    });
+    if (!response.ok) throw new Error("Failed to save poster HTML");
+  },
+
+  /**
+   * Finalizes a poster: uploads the PNG capture and marks job as completed
+   */
+  finalizePoster: async (jobId: string, pngBase64: string): Promise<{ asset_url: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/finalize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ png_base64: pngBase64 }),
+    });
+    if (!response.ok) throw new Error("Failed to finalize poster");
+    return await response.json();
+  },
 };

@@ -79,7 +79,7 @@ const Spaces = () => {
 
   const handleSpaceClick = (space: any) => {
     selectSpace(space);
-    navigate(`/one-click-post/${space.id}`);
+    navigate(`/autonomous-marketing/${space.id}`);
   };
 
   const handleLogout = () => {
@@ -152,67 +152,43 @@ const Spaces = () => {
     <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans">
 
 
-
       {/* Zen Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-3xl bg-white/60 border-b border-border/40">
-        <div className="max-w-[1400px] mx-auto px-10 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <img src={logo} alt="Weez AI" className="h-10 w-auto" />
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-50 mt-1.5">The Autonomous Marketing Workforce</span>
-            </div>
+      <header className="sticky top-0 z-50 backdrop-blur-3xl bg-white/40 dark:bg-black/40 border-b border-border/30 transition-all duration-500">
+        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4 cursor-pointer group" onClick={() => navigate("/spaces")}>
+            <img src={logo} alt="Weez AI" className="h-6 w-auto transition-transform group-hover:scale-105" />
+            <div className="h-4 w-px bg-border/50 mx-2" />
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-40">Workspace Hub</span>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-4 cursor-pointer group hover:opacity-80 transition-opacity">
+                <div className="flex items-center gap-3 cursor-pointer group px-2 py-1.5 rounded-xl hover:bg-secondary/50 transition-all">
                   {user && (
-                    <div className="hidden md:flex items-center gap-4 pr-4">
+                    <>
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40 leading-none">System User</span>
-                        <span className="text-sm font-bold text-foreground mt-1">{user.name}</span>
+                        <span className="text-[10px] font-bold text-foreground leading-none">{user.name}</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-40 mt-1">PRO_USER</span>
                       </div>
-                      <div className="w-10 h-10 rounded-[1.2rem] bg-secondary flex items-center justify-center border border-border/50 group-hover:border-primary/30 transition-colors">
-                        <span className="text-xs font-black italic opacity-40">{user.name?.charAt(0)}</span>
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-600 font-bold text-xs">
+                        {user.name?.charAt(0)}
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 bg-white/80 backdrop-blur-xl border-border/50 shadow-xl">
-                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-2 py-1.5">My Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56 glass-card p-2 border-white/40 shadow-2xl">
+                <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest opacity-40 px-2 py-1.5">Account System</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border/30" />
-                <DropdownMenuItem className="cursor-pointer rounded-xl font-medium text-xs py-2.5 focus:bg-secondary" onClick={() => navigate("/plans")}>
-                  <Sparkles className="w-4 h-4 mr-2 text-primary" />
-                  Upgrade to Premium
+                <DropdownMenuItem className="cursor-pointer rounded-lg font-bold text-xs py-2 fade-in" onClick={() => navigate("/plans")}>
+                  <Sparkles className="w-3.5 h-3.5 mr-2 text-indigo-500" />
+                  Upgrade Engine
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border/30" />
-                <DropdownMenuItem className="cursor-pointer rounded-xl font-medium text-xs py-2.5 focus:bg-red-500/10 focus:text-red-600 text-red-500" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="w-10 h-10 rounded-[1.2rem] bg-white border border-border/50 flex items-center justify-center cursor-pointer hover:bg-secondary transition-all shadow-sm">
-                  <Menu className="w-5 h-5 text-foreground opacity-60" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 bg-white/80 backdrop-blur-xl border-border/50 shadow-xl mt-2">
-                <DropdownMenuItem className="cursor-pointer rounded-xl font-medium text-xs py-2.5 focus:bg-secondary mb-1" onClick={() => navigate("/plans")}>
-                  <Sparkles className="w-4 h-4 mr-3 text-primary" />
-                  Upgrade to Premium
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/30 my-1" />
-                <DropdownMenuItem className="cursor-pointer rounded-xl font-medium text-xs py-2.5 focus:bg-secondary" onClick={() => setIsHelpOpen(true)}>
-                  <HelpCircle className="w-4 h-4 mr-3 text-muted-foreground" />
-                  Help Center
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-xl font-medium text-xs py-2.5 focus:bg-secondary" onClick={() => setIsHelpOpen(true)}>
-                  <LifeBuoy className="w-4 h-4 mr-3 text-muted-foreground" />
-                  Support
+                <DropdownMenuItem className="cursor-pointer rounded-lg font-bold text-xs py-2 text-destructive hover:bg-destructive/5" onClick={handleLogout}>
+                  <LogOut className="w-3.5 h-3.5 mr-2" />
+                  Archive Session
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -221,140 +197,123 @@ const Spaces = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-[1400px] mx-auto px-10 pt-20 pb-32">
-        <div className="mb-20 space-y-6">
+      <main className="max-w-[1400px] mx-auto px-6 pt-16 pb-24">
+        <div className="mb-16 space-y-4">
           <div className="flex items-center gap-3">
-            <Badge className="bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest border-none px-3 py-1">Your Spaces</Badge>
-            <div className="h-px w-20 bg-border/50" />
+            <div className="h-px w-8 bg-indigo-500/30" />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-600/60">Registry</span>
           </div>
-          <h2 className="text-6xl font-black tracking-tighter leading-[0.85] text-foreground">
-            Project <br />
-            <span className="text-muted-foreground/30">Dashboard.</span>
-          </h2>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
-            <p className="text-lg font-medium text-muted-foreground max-w-xl leading-relaxed">
-              Select or create a new project to start creating content for your brand.
-            </p>
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black tracking-tighter leading-none text-foreground uppercase">
+                Active <span className="text-muted-foreground/30 italic">Spaces.</span>
+              </h2>
+              <p className="text-sm font-medium text-muted-foreground max-w-md leading-relaxed opacity-60">
+                Deploying marketing intelligence across your brand verticals.
+              </p>
+            </div>
+            
             <Button
               data-tutorial-id="create-space-button"
-              variant="outline"
-              className="h-16 px-10 rounded-2xl border-border bg-white text-xs font-black uppercase tracking-[0.2em] gap-3 shadow-xl shadow-black/[0.02] hover:bg-secondary active:scale-95 transition-all"
+              className="h-11 px-6 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest gap-2 shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all"
               onClick={handleNewSpaceClick}
               disabled={isFetchingSpaces}
             >
-              <Plus className="w-4 h-4" />
-              New Space
+              <Plus className="w-3.5 h-3.5" />
+              New Workspace
             </Button>
           </div>
         </div>
 
-        {/* Workspace Display with Cinematic Loading */}
+        {/* Workspace Display */}
         {isFetchingSpaces ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="aspect-[1.4/1] bg-white rounded-[4rem] border-2 border-dashed border-accent/20 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent animate-scan" />
-                <div className="h-full w-full flex flex-col items-center justify-center gap-6 opacity-30">
-                  <div className="w-16 h-16 rounded-[2rem] bg-secondary flex items-center justify-center">
-                    <Activity className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em]">Loading 0{i}</span>
-                </div>
+              <div key={i} className="aspect-[1.6/1] glass-card rounded-2xl flex flex-col items-center justify-center gap-4 opacity-40">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Connecting...</span>
               </div>
             ))}
           </div>
         ) : spaces.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-32 bg-white rounded-[5rem] text-center gap-10 shadow-2xl shadow-black/[0.01]">
-            <div className="w-24 h-24 rounded-[3rem] bg-secondary flex items-center justify-center relative">
-              <Globe className="w-10 h-10 text-muted-foreground opacity-20" />
-              <div className="absolute inset-0 border-2 border-dashed border-primary/20 rounded-[3rem] animate-spin duration-[10s]" />
+          <div className="flex flex-col items-center justify-center py-32 glass-card rounded-3xl text-center gap-8">
+            <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center border border-border/50">
+              <Globe className="w-8 h-8 text-muted-foreground opacity-20" />
             </div>
-            <div className="space-y-4">
-              <h3 className="text-3xl font-black tracking-tight uppercase">No Spaces found.</h3>
-              <p className="text-muted-foreground max-w-sm font-medium leading-relaxed opacity-60">Create your first space to start your journey.</p>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black uppercase tracking-tight">Empty Registry.</h3>
+              <p className="text-xs text-muted-foreground max-w-[240px] font-medium opacity-60">Initialize your first workspace to begin autonomous operations.</p>
             </div>
             <Button
               size="lg"
               onClick={handleNewSpaceClick}
-              className="h-16 px-12 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20"
+              className="h-12 px-8 rounded-xl bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/10"
             >
-              New Space
+              Initialize Space
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {spaces.map((space) => (
-              <Card
+              <div
                 key={space.id}
-                className="group relative border-none bg-white hover:bg-white hover:shadow-[0_80px_120px_rgba(139,92,246,0.08)] rounded-[4rem] transition-all duration-700 overflow-hidden flex flex-col min-h-[400px] p-12 cursor-pointer"
+                className="glass-card rounded-2xl p-8 cursor-pointer relative group overflow-hidden flex flex-col justify-between min-h-[220px] transition-all hover:scale-[1.02] hover:bg-white/80 active:scale-95"
                 onClick={() => handleSpaceClick(space)}
               >
-                {/* Visual Identity Block */}
-                <div className="flex justify-between items-start mb-16">
-                  <div className="w-24 h-24 rounded-[2.8rem] bg-secondary group-hover:bg-primary flex items-center justify-center transition-all duration-700 shadow-sm border border-border/50">
-                    <BrainCircuit className="w-10 h-10 text-primary group-hover:text-white transition-all duration-700" />
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/5 group-hover:bg-indigo-500 flex items-center justify-center transition-all duration-500 border border-indigo-500/10">
+                    <BrainCircuit className="w-5 h-5 text-indigo-600 group-hover:text-white transition-all" />
                   </div>
-                  <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 group-hover:animate-ping" />
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/5 border border-emerald-500/10 shrink-0">
+                    <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-[8px] font-black uppercase text-emerald-600 tracking-widest">Active</span>
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-6">
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30 leading-none">Space_0{spaces.indexOf(space) + 1}</div>
-                  <h3 className="text-5xl font-black tracking-tighter leading-tight group-hover:text-primary transition-colors duration-500 uppercase">
+                <div className="space-y-2 mt-auto">
+                   <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground opacity-30">Vertical_0{spaces.indexOf(space) + 1}</div>
+                   <h3 className="text-2xl font-black tracking-tighter uppercase leading-none group-hover:text-indigo-600 transition-colors">
                     {space.name}.
                   </h3>
                 </div>
 
-                {/* Tactical Actions */}
-                <div className="mt-12 flex items-center justify-between pt-10 border-t border-border/40">
-                  <div className="flex gap-4">
-                    <button
-                      className="w-12 h-12 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:border-primary group/action transition-all"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConnectSpaceId(space.id);
-                        setIsConnectModalOpen(true);
-                      }}
-                      title="Sync Signal"
-                    >
-                      <Database className="w-4 h-4 text-muted-foreground group-hover/action:text-white" />
-                    </button>
-                    <button
-                      className="w-12 h-12 rounded-full border border-border flex items-center justify-center hover:bg-foreground hover:border-foreground group/action transition-all"
-                      onClick={(e) => handleOpenSettings(e, space)}
-                      title="Space Settings"
-                    >
-                      <Settings className="w-4 h-4 text-muted-foreground group-hover/action:text-white" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4 group/enter">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500">Open Space</span>
-                    <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center transition-all group-hover:bg-primary shadow-sm border border-border/40">
-                      <ChevronRight className="w-6 h-6 group-hover:text-white transition-colors" />
-                    </div>
+                <div className="flex items-center gap-3 mt-6 pt-6 border-t border-border/10">
+                  <button
+                    className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConnectSpaceId(space.id);
+                      setIsConnectModalOpen(true);
+                    }}
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-foreground hover:text-white transition-all text-muted-foreground"
+                    onClick={(e) => handleOpenSettings(e, space)}
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="ml-auto flex items-center gap-2 group/enter opacity-0 group-hover:opacity-100 transition-all duration-500">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-indigo-600">Enter</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-indigo-600 animate-bounce-x" />
                   </div>
                 </div>
-
-                {/* Decorative Pattern */}
-                <div className="absolute top-0 right-0 p-10 opacity-0 group-hover:opacity-5 transition-opacity">
-                  <Zap className="w-48 h-48 rotate-12" />
-                </div>
-              </Card>
+              </div>
             ))}
 
             {canCreateSpace && (
               <button
-                className="group relative bg-transparent border-2 border-dashed border-accent/20 hover:border-primary/40 rounded-[4rem] p-12 transition-all duration-700 flex flex-col items-center justify-center gap-14 min-h-[400px]"
+                className="group relative bg-transparent border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/40 rounded-2xl p-8 transition-all duration-500 flex flex-col items-center justify-center gap-6 min-h-[220px]"
                 onClick={handleNewSpaceClick}
               >
-                <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center group-hover:scale-110 transition-all duration-500 border border-border/40">
-                  <Plus className="w-10 h-10 text-muted-foreground group-hover:text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                  <Plus className="w-6 h-6 text-muted-foreground group-hover:text-indigo-500" />
                 </div>
-                <div className="text-center space-y-4">
-                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">Assemble New project</span>
-                  <h4 className="text-3xl font-black tracking-tight uppercase">New Space</h4>
+                <div className="text-center space-y-1">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-40">Provisioning</span>
+                  <h4 className="text-sm font-black uppercase tracking-tight">New Workspace</h4>
                 </div>
               </button>
             )}
@@ -362,22 +321,22 @@ const Spaces = () => {
         )}
 
         {/* System Diagnostics Footer */}
-        <div className="mt-40 pt-12 border-t border-border/40 flex items-center justify-between opacity-30 grayscale active:grayscale-0 transition-all cursor-crosshair">
-          <div className="flex items-center gap-5">
-            <Zap className="w-6 h-6 fill-primary text-primary" />
+        <div className="mt-32 pt-8 border-t border-border/10 flex items-center justify-between opacity-30 transition-all">
+          <div className="flex items-center gap-4">
+            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-glow" />
             <div className="flex flex-col">
-              <span className="text-[11px] font-black tracking-[0.3em]">WEEZ_AI_OS_GRID_STABLE</span>
-              <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">v2.4.0 // SECURE VAULT ACTIVE</span>
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase">Weez_AI_Core.stable</span>
+              <span className="text-[8px] font-bold uppercase opacity-60">v2.4.0 // Session Authorized</span>
             </div>
           </div>
-          <div className="hidden lg:flex items-center gap-14">
+          <div className="hidden lg:flex items-center gap-8">
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black tracking-[0.2em] text-emerald-500 uppercase">Vault Response</span>
-              <span className="text-[11px] font-mono">AUTHORIZED 🟢</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Node Status</span>
+              <span className="text-[10px] font-mono">AUTHORIZED</span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black tracking-[0.2em] text-blue-500 uppercase">Node Throughput</span>
-              <span className="text-[11px] font-mono">92% SYNC</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">Latency</span>
+              <span className="text-[10px] font-mono">12ms</span>
             </div>
           </div>
         </div>
