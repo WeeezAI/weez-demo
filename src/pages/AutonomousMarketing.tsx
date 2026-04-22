@@ -479,7 +479,7 @@ function ActiveDashboard({
             const brandId = activeStatus?.brand_id;
             const campaignId = activeStatus?.campaign_id;
             if (!brandId) return;
-            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+            const API_URL = import.meta.env.VITE_API_URL || "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
             const res = await fetch(`${API_URL}/autopilot/content-posts/${postId}?brand_id=${brandId}`, { method: "DELETE" });
             if (res.ok) {
                 // Refresh dashboard to pick up deletion
