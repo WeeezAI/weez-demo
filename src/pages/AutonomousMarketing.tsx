@@ -479,7 +479,7 @@ function ActiveDashboard({
             const brandId = activeStatus?.brand_id;
             const campaignId = activeStatus?.campaign_id;
             if (!brandId) return;
-            const API_URL = import.meta.env.VITE_API_URL || "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+            const API_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
             const res = await fetch(`${API_URL}/autopilot/content-posts/${postId}?brand_id=${brandId}`, { method: "DELETE" });
             if (res.ok) {
                 // Refresh dashboard to pick up deletion
@@ -649,10 +649,10 @@ function ActiveDashboard({
                             isConnected={isWsConnected}
                             latestEvent={latestEvent}
                         />
-                        <PosterJobsGrid 
-                            posterJobs={posterJobs} 
-                            onDeletePost={handleDeletePost} 
-                            onRegeneratePost={handleRegeneratePost} 
+                        <PosterJobsGrid
+                            posterJobs={posterJobs}
+                            onDeletePost={handleDeletePost}
+                            onRegeneratePost={handleRegeneratePost}
                             onPostNowPost={handlePostNow}
                             onEditPoster={onEditPoster}
                         />
@@ -1243,7 +1243,7 @@ export default function AutonomousMarketing() {
                     <button
                         onClick={() => setActiveTab("chat")}
                         className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all", 
+                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
                             activeTab === "chat" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40"
                         )}
                     >
@@ -1253,7 +1253,7 @@ export default function AutonomousMarketing() {
                         onClick={() => setActiveTab("planner")}
                         disabled={!plannerData}
                         className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all", 
+                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
                             activeTab === "planner" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40",
                             !plannerData && "opacity-30 cursor-not-allowed"
                         )}
@@ -1263,7 +1263,7 @@ export default function AutonomousMarketing() {
                     <button
                         onClick={() => setActiveTab("connectors")}
                         className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all", 
+                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
                             activeTab === "connectors" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40"
                         )}
                     >
@@ -1311,7 +1311,7 @@ export default function AutonomousMarketing() {
                                 <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[40%] bg-cyan-500/5 rounded-full blur-[150px]" />
                             </div>
 
-                            <DexraflowCampaignChat 
+                            <DexraflowCampaignChat
                                 value={input}
                                 setValue={setInput}
                                 onGenerate={() => handleSend(input)}
