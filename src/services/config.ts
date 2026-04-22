@@ -7,7 +7,7 @@
 
 export const CONFIG = {
     // Main Poster Pipeline API (FastAPI)
-    WEEZ_BASE_URL: "http://localhost:3000",
+    WEEZ_BASE_URL: "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net",
 
     // Auth & Subscription API
     AUTH_BASE_URL: "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net",

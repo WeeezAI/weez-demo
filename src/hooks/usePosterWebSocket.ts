@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const WEEZ_BASE_URL = "http://localhost:3000";
+const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 // Derive WebSocket URL from API base
 function getWsUrl(campaignId: string): string {
