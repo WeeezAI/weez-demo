@@ -67,10 +67,10 @@ export function EducationalLoader() {
 
             {/* Icon Circle with Pulse */}
             <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-75 blur-xl duration-[2000ms]"></div>
+                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-75 blur-xl [animation-duration:2000ms]"></div>
                 <div className="w-32 h-32 bg-background border-4 border-primary/10 rounded-full flex items-center justify-center relative z-10 shadow-xl overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-50" />
-                    <Icon className="w-14 h-14 text-primary animate-pulse duration-[3000ms] relative z-20 group-hover:scale-110 transition-transform duration-500" />
+                    <Icon className="w-14 h-14 text-primary animate-pulse [animation-duration:3000ms] relative z-20 group-hover:scale-110 transition-transform duration-500" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 bg-yellow-400 p-2 rounded-full animate-bounce delay-1000 shadow-lg border-2 border-background z-30">
                     <Zap className="w-4 h-4 text-white fill-current" />

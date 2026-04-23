@@ -511,12 +511,12 @@ const OneClickPost = () => {
                 <div className="min-h-[400px] flex flex-col items-center justify-center p-20 bg-white/50 backdrop-blur-xl rounded-[3rem] border-2 border-dashed border-primary/20 relative overflow-hidden group">
                   {/* Background Accents */}
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-pulse" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent animate-pulse duration-[4s]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent animate-pulse [animation-duration:4s]" />
 
                   {/* Central Radar Animation */}
                   <div className="relative mb-12">
                     <div className="w-32 h-32 border-4 border-primary/10 rounded-full animate-ping opacity-20" />
-                    <div className="absolute inset-0 w-32 h-32 border-2 border-primary/20 rounded-full animate-spin duration-[3s]" />
+                    <div className="absolute inset-0 w-32 h-32 border-2 border-primary/20 rounded-full animate-spin [animation-duration:3s]" />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-16 h-16 bg-primary rounded-2xl rotate-45 animate-pulse shadow-2xl shadow-primary/40 flex items-center justify-center">
                         <BrainCircuit className="w-8 h-8 text-white -rotate-45" />
@@ -626,7 +626,7 @@ const OneClickPost = () => {
                 <div className="w-full h-full flex flex-col items-center justify-center gap-12 p-16 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-transparent to-accent/20 animate-pulse" />
                   <div className="relative">
-                    <div className="w-40 h-40 border-2 border-white/10 border-t-primary rounded-full animate-spin duration-[2.5s]" />
+                    <div className="w-40 h-40 border-2 border-white/10 border-t-primary rounded-full animate-spin [animation-duration:2.5s]" />
                     <BrainCircuit className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary w-14 h-14 animate-pulse" />
                   </div>
                   <div className="space-y-6 relative z-10">

@@ -83,10 +83,10 @@ export function DexraflowCampaignChat({
 
     const brandName = currentSpace?.name || "your brand";
     const phrases = [
-        "increase the engagement by 20% in 30 days",
-        "do rapid marketing for 7 days",
-        "do content posting for 30 days",
-        "Architect your next breakthrough..."
+        "Do content posting for 30 days",
+        "Do rapid marketing for 30 days",
+        "Run my Marketing for 30 days",
+        "Maximize my engagement for 30 days"
     ];
     
     const [displayText, setDisplayText] = useState("");
@@ -222,12 +222,22 @@ export function DexraflowCampaignChat({
                         {/* Interactive Sparkles or Dots can be added here if needed */}
                     </button>
 
-                    {/* Quick Tactical Actions Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                         <StrategicAction icon={<Layers className="text-indigo-500" />} label="10x Carousel" />
-                         <StrategicAction icon={<Sparkles className="text-indigo-500" />} label="Vision series" />
-                         <StrategicAction icon={<Share2 className="text-indigo-500" />} label="Platform Switch" />
-                         <StrategicAction icon={<BrainCircuit className="text-indigo-500" />} label="Strategic Brief" />
+                    {/* Suggestion Bubbles Section */}
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        {phrases.map((phrase, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    setValue(phrase);
+                                    textareaRef.current?.focus();
+                                    adjustHeight();
+                                }}
+                                className="px-5 py-2.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 text-white text-[11px] font-bold tracking-tight border border-white/5 shadow-xl transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-500"
+                                style={{ animationDelay: `${idx * 100}ms` }}
+                            >
+                                {phrase}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -259,16 +269,5 @@ function ConfigOption({ label, icon, value, options, onSelect }: { label: string
                 ))}
             </div>
         </div>
-    );
-}
-
-function StrategicAction({ icon, label }: { icon: React.ReactNode; label: string }) {
-    return (
-        <button className="flex flex-col items-center justify-center gap-3 p-4 glass-card bg-white/40 hover:bg-white/80 border border-white/10 rounded-2xl transition-all hover:-translate-y-1 group">
-            <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <div className="scale-100">{icon}</div>
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-600 transition-colors">{label}</span>
-        </button>
     );
 }
