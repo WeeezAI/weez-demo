@@ -64,7 +64,7 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
         try {
             setIsConnectingWebsite(true);
             await weezAPI.connectWebsite(brandId, websiteUrl);
-            toast.success("Website connected! Brand memory recalibration started.");
+            toast.success("Website connected! Your brand voice is being synthesized — this may take a minute.");
             fetchStatus();
         } catch (err: any) {
             toast.error(err.message || "Failed to connect website");
@@ -113,34 +113,40 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
 
     const CONNECTOR_METADATA = [
         {
-            id: "instagram",
-            name: "Instagram",
-            description: "Direct connection to your professional Instagram profile. Tracks visuals, captions, and engagement patterns.",
-            icon: Instagram,
-            color: "text-pink-500",
-            bg: "bg-pink-500/10",
-            action: handleConnectInstagram,
-            comingSoon: false
-        },
-        {
-            id: "linkedin",
-            name: "LinkedIn",
-            description: "Connect your LinkedIn profile to analyze your professional voice, industry positioning, and B2B messaging.",
-            icon: Linkedin,
-            color: "text-blue-600",
-            bg: "bg-blue-600/10",
-            action: handleConnectLinkedIn,
-            comingSoon: false
-        },
-        {
             id: "website",
             name: "Official Website",
-            description: "Your primary source of truth. We crawl your site to extract core services, product details, and brand vision.",
+            description: "Your primary brand identity source. Connect your website first for the best experience — we'll analyze your brand voice, products, and visual identity.",
             icon: Globe,
             color: "text-emerald-600",
             bg: "bg-emerald-600/10",
             action: null, // Handled by inline form
-            comingSoon: false
+            comingSoon: false,
+            isOptional: false,
+            isPrimary: true
+        },
+        {
+            id: "linkedin",
+            name: "LinkedIn",
+            description: "Your distribution channel. Connect to publish content directly to LinkedIn and analyze your professional voice and B2B messaging.",
+            icon: Linkedin,
+            color: "text-blue-600",
+            bg: "bg-blue-600/10",
+            action: handleConnectLinkedIn,
+            comingSoon: false,
+            isOptional: false,
+            isPrimary: false
+        },
+        {
+            id: "instagram",
+            name: "Instagram",
+            description: "Enhance your brand memory with visual identity from Instagram. Connect to track visuals, captions, and publish to your IG profile.",
+            icon: Instagram,
+            color: "text-pink-500",
+            bg: "bg-pink-500/10",
+            action: handleConnectInstagram,
+            comingSoon: false,
+            isOptional: true,
+            isPrimary: false
         }
     ];
 
@@ -163,6 +169,21 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
                         Recalibrate Brand Memory
                     </Button>
                 </div>
+
+                {/* Guided Onboarding Hint — show when website is not connected */}
+                {!isLoading && !isConnected("website") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <Globe className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-emerald-900">Start by connecting your website</p>
+                            <p className="text-xs text-emerald-700/70 mt-1 leading-relaxed">
+                                Your website is the primary source of truth for your brand identity. Connect it first and we'll synthesize your brand voice, visual identity, and product catalog automatically.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Main Grid */}
                 <div className="grid grid-cols-1 gap-6">
@@ -194,6 +215,17 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
                                                             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                                                                 <CheckCircle2 className="w-3 h-3" />
                                                                 <span className="text-[9px] font-black uppercase tracking-wider">Active</span>
+                                                            </div>
+                                                        )}
+                                                        {platform.isPrimary && (
+                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                <Zap className="w-3 h-3" />
+                                                                <span className="text-[9px] font-black uppercase tracking-wider">Primary Source</span>
+                                                            </div>
+                                                        )}
+                                                        {platform.isOptional && (
+                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-50 text-zinc-500 border border-zinc-200">
+                                                                <span className="text-[9px] font-black uppercase tracking-wider">Optional</span>
                                                             </div>
                                                         )}
                                                     </div>
