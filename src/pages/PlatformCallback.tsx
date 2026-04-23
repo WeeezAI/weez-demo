@@ -25,9 +25,15 @@ const PlatformCallback = () => {
 
   useEffect(() => {
     if (isConnected && brandId && !isSuccess) {
-      handleRunAnalysis(brandId);
+      if (provider === "linkedin") {
+        // Skip full brand analysis for LinkedIn to avoid redundant voice synthesis
+        // The backend already stored the token, so we just show success
+        setIsSuccess(true);
+      } else {
+        handleRunAnalysis(brandId);
+      }
     }
-  }, [isConnected, brandId]);
+  }, [isConnected, brandId, provider, isSuccess]);
 
   const handleRunAnalysis = async (id: string) => {
     setIsAnalyzing(true);
