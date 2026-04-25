@@ -518,6 +518,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
     queued: { label: "Queued", color: "text-gray-500", bgColor: "bg-gray-50", borderColor: "border-gray-200" },
     prompt_generating: { label: "Generating Prompt", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
     image_generating: { label: "Generating Image", color: "text-violet-600", bgColor: "bg-violet-50", borderColor: "border-violet-200" },
+    jsx_generating: { label: "Designing Layout", color: "text-indigo-600", bgColor: "bg-indigo-50", borderColor: "border-indigo-200" },
+    jsx_rendering: { label: "Rendering PNG", color: "text-cyan-600", bgColor: "bg-cyan-50", borderColor: "border-cyan-200" },
     rendering: { label: "Rendering", color: "text-amber-600", bgColor: "bg-amber-50", borderColor: "border-amber-200" },
     html_ready: { label: "Generated", color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
     completed: { label: "Completed", color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
@@ -788,7 +790,7 @@ const ImageModal = ({
 // --- Poster Job Card Component ---
 export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, onEditPoster }: { job: any; onDelete?: (id: string) => void; onView?: (url: string, title: string, businessValue?: string, caption?: string, hashtags?: string, linkedinArticle?: string, platform?: string, slides?: any[], zipUrl?: string, format?: string) => void; onRegenerate?: (jobId: string) => void; onPostNow?: (jobId: string) => void; onEditPoster?: (jobId: string) => void }) => {
     const config = STATUS_CONFIG[job.status] || STATUS_CONFIG.queued;
-    const isActive = ["queued", "prompt_generating", "image_generating", "rendering", "publishing"].includes(job.status);
+    const isActive = ["queued", "prompt_generating", "image_generating", "jsx_generating", "jsx_rendering", "rendering", "publishing"].includes(job.status);
     const isCompleted = job.status === "completed" || job.status === "html_ready" || job.status === "posted";
     const isHtmlReady = job.status === "html_ready";
     const isFailed = job.status === "failed";

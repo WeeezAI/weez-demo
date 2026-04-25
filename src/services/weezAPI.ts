@@ -560,7 +560,83 @@ export const weezAPI = {
     return await response.json();
   },
 
-  // ── HTML Poster Editor API ────────────────────────────────────────
+  // ── Unified Poster Editor API ────────────────────────────────────────
+  
+  /**
+   * Fetches the content (JSX or HTML) for a poster job
+   */
+  getPosterContent: async (jobId: string): Promise<{
+    job_id: string;
+    markup: string;
+    engine: "jsx" | "html";
+    editable_fields: string[];
+    aspect_ratio: string;
+    width: number;
+    height: number;
+    poster_idea: string;
+    status: string;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/content`);
+    if (!response.ok) throw new Error("Failed to fetch poster content");
+    return await response.json();
+  },
+
+  /**
+   * Saves edited markup content back to the job
+   */
+  savePosterContent: async (jobId: string, markup: string, engine: "jsx" | "html" = "jsx"): Promise<void> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/content`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markup, engine }),
+    });
+    if (!response.ok) throw new Error("Failed to save poster content");
+  },
+
+  /**
+   * Re-renders the saved JSX markup to PNG via the microservice
+   */
+  renderPosterJSX: async (jobId: string): Promise<{ asset_url: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/render`, {
+      method: "POST"
+    });
+    if (!response.ok) throw new Error("Failed to render JSX poster");
+    return await response.json();
+  },
+
+  /**
+   * Finalizes a poster: uploads the PNG capture and marks job as completed
+   */
+  finalizePoster: async (jobId: string, pngBase64: string): Promise<{ asset_url: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/finalize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ png_base64: pngBase64 }),
+    });
+    if (!response.ok) throw new Error("Failed to finalize poster");
+    return await response.json();
+  },
+
+  /**
+   * Ad-hoc JSX generation
+   */
+  generateJSX: async (params: {
+    poster_idea: string;
+    brand_memory?: any;
+    platform?: string;
+    width?: number;
+    height?: number;
+  }): Promise<{ markup: string; engine: string; width: number; height: number }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/generate-jsx`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) throw new Error("Failed to generate JSX poster");
+    return await response.json();
+  },
+
+  // ── Legacy HTML Poster Editor API (Backward Compatibility) ─────────
 
   /**
    * Fetches the HTML content for a poster job
@@ -590,18 +666,5 @@ export const weezAPI = {
       body: JSON.stringify({ html }),
     });
     if (!response.ok) throw new Error("Failed to save poster HTML");
-  },
-
-  /**
-   * Finalizes a poster: uploads the PNG capture and marks job as completed
-   */
-  finalizePoster: async (jobId: string, pngBase64: string): Promise<{ asset_url: string }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/editor/poster/${jobId}/finalize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ png_base64: pngBase64 }),
-    });
-    if (!response.ok) throw new Error("Failed to finalize poster");
-    return await response.json();
   },
 };

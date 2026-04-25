@@ -50,12 +50,22 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
   // Handle HTML rendering with focus preservation
   useEffect(() => {
     if (posterRootRef.current) {
+      let processed = html;
+
+      // 1. Process <Icon /> tags for browser rendering
+      // Replace <Icon name="Rocket" size="48" color="#fff" /> with a placeholder
+      processed = processed.replace(
+        /<Icon\s+name="([^"]+)"\s+size="([^"]+)"\s+color="([^"]+)"\s*\/>/g,
+        '<div style="display: flex; align-items: center; justify-content: center; width: $2px; height: $2px; color: $3; border: 1px dashed $3; border-radius: 4px; font-size: 10px; font-weight: bold; overflow: hidden;" title="Icon: $1">[$1]</div>'
+      );
+
+      // 2. Add contenteditable to data-field elements
       const targetHtml = editable
-        ? html.replace(
+        ? processed.replace(
             /data-field="([^"]+)"/g,
             'data-field="$1" contenteditable="true" style="outline: none; cursor: text;"'
           )
-        : html;
+        : processed;
 
       if (targetHtml !== lastProcessedHtml.current) {
         posterRootRef.current.innerHTML = targetHtml;
@@ -72,6 +82,18 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = currentHtml;
       
+      // 1. Restore <Icon /> tags from placeholders
+      tempDiv.querySelectorAll("[title^='Icon: ']").forEach((el) => {
+        const title = el.getAttribute("title") || "";
+        const iconName = title.replace("Icon: ", "");
+        const size = el.style.width.replace("px", "") || "24";
+        const color = (el as HTMLElement).style.color || "#ffffff";
+        
+        const iconTag = `<Icon name="${iconName}" size="${size}" color="${color}" />`;
+        el.outerHTML = iconTag;
+      });
+
+      // 2. Clean up contenteditable and editor-only styles
       tempDiv.querySelectorAll("[contenteditable]").forEach((el) => {
         el.removeAttribute("contenteditable");
         const style = (el as HTMLElement).getAttribute("style") || "";

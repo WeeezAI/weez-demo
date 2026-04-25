@@ -18,8 +18,9 @@ const PosterEditorModal: React.FC<PosterEditorModalProps> = ({
   jobId,
   onFinalized,
 }) => {
-  const [html, setHtml] = useState("");
-  const [editedHtml, setEditedHtml] = useState("");
+  const [markup, setMarkup] = useState("");
+  const [editedMarkup, setEditedMarkup] = useState("");
+  const [engine, setEngine] = useState<"jsx" | "html">("jsx");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
@@ -28,19 +29,20 @@ const PosterEditorModal: React.FC<PosterEditorModalProps> = ({
   const [posterIdea, setPosterIdea] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Load HTML on open
+  // Load content on open
   useEffect(() => {
     if (isOpen && jobId) {
-      loadPosterHtml();
+      loadPosterContent();
     }
   }, [isOpen, jobId]);
 
-  const loadPosterHtml = async () => {
+  const loadPosterContent = async () => {
     setLoading(true);
     try {
-      const data = await weezAPI.getPosterHtml(jobId);
-      setHtml(data.html);
-      setEditedHtml(data.html);
+      const data = await weezAPI.getPosterContent(jobId);
+      setMarkup(data.markup);
+      setEditedMarkup(data.markup);
+      setEngine(data.engine);
       setWidth(data.width);
       setHeight(data.height);
       setPosterIdea(data.poster_idea || "");
@@ -52,16 +54,16 @@ const PosterEditorModal: React.FC<PosterEditorModalProps> = ({
     }
   };
 
-  const handleHtmlChange = useCallback((newHtml: string) => {
-    setEditedHtml(newHtml);
+  const handleMarkupChange = useCallback((newMarkup: string) => {
+    setEditedMarkup(newMarkup);
     setHasUnsavedChanges(true);
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await weezAPI.savePosterHtml(jobId, editedHtml);
-      setHtml(editedHtml);
+      await weezAPI.savePosterContent(jobId, editedMarkup, engine);
+      setMarkup(editedMarkup);
       setHasUnsavedChanges(false);
       toast.success("Poster saved!");
     } catch (err) {
@@ -74,61 +76,65 @@ const PosterEditorModal: React.FC<PosterEditorModalProps> = ({
   const handleFinalize = async () => {
     setFinalizing(true);
     try {
-      // 1. Save HTML state first if changed
+      // 1. Save state first if changed
       if (hasUnsavedChanges) {
-        await weezAPI.savePosterHtml(jobId, editedHtml);
+        await weezAPI.savePosterContent(jobId, editedMarkup, engine);
       }
 
-      // 2. Capture using off-screen clone approach
-      //    This avoids the createPattern error caused by CSS transforms on the live element.
-      //    We create a hidden container at the poster's FULL pixel dimensions (no scaling),
-      //    inject the clean HTML, and run html2canvas on that instead.
-      const { default: html2canvas } = await import("html2canvas");
+      if (engine === "jsx") {
+        // JSX: Render via backend microservice
+        const result = await weezAPI.renderPosterJSX(jobId);
+        toast.success("Design finalized and published via JSX engine!");
+        onFinalized?.(result.asset_url);
+        onClose();
+      } else {
+        // Legacy HTML: Client-side capture via html2canvas
+        const { default: html2canvas } = await import("html2canvas");
 
-      // Get the current HTML from the live editor (includes user edits)
-      const liveRoot = document.querySelector("[data-poster-root]") as HTMLElement;
-      const captureHtml = liveRoot ? liveRoot.innerHTML : (editedHtml || html);
+        // Get the current HTML from the live editor
+        const liveRoot = document.querySelector("[data-poster-root]") as HTMLElement;
+        const captureHtml = liveRoot ? liveRoot.innerHTML : editedMarkup;
 
-      // Create off-screen container at full poster dimensions
-      const offscreen = document.createElement("div");
-      offscreen.style.position = "fixed";
-      offscreen.style.left = "-99999px";
-      offscreen.style.top = "0";
-      offscreen.style.width = `${width}px`;
-      offscreen.style.height = `${height}px`;
-      offscreen.style.overflow = "hidden";
-      offscreen.style.zIndex = "-1";
-      offscreen.innerHTML = captureHtml;
+        // Create off-screen container at full poster dimensions
+        const offscreen = document.createElement("div");
+        offscreen.style.position = "fixed";
+        offscreen.style.left = "-99999px";
+        offscreen.style.top = "0";
+        offscreen.style.width = `${width}px`;
+        offscreen.style.height = `${height}px`;
+        offscreen.style.overflow = "hidden";
+        offscreen.style.zIndex = "-1";
+        offscreen.innerHTML = captureHtml;
 
-      // Remove any contenteditable attributes from the clone
-      offscreen.querySelectorAll("[contenteditable]").forEach((el) => {
-        el.removeAttribute("contenteditable");
-      });
+        // Remove any contenteditable attributes from the clone
+        offscreen.querySelectorAll("[contenteditable]").forEach((el) => {
+          el.removeAttribute("contenteditable");
+        });
 
-      document.body.appendChild(offscreen);
+        document.body.appendChild(offscreen);
 
-      // Wait for fonts/SVGs to render in the clone
-      await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for fonts/SVGs to render
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const canvas = await html2canvas(offscreen, {
-        width,
-        height,
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-        logging: false,
-      });
+        const canvas = await html2canvas(offscreen, {
+          width,
+          height,
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false,
+        });
 
-      // Clean up the off-screen element
-      document.body.removeChild(offscreen);
+        document.body.removeChild(offscreen);
 
-      const pngBase64 = canvas.toDataURL("image/png");
+        const pngBase64 = canvas.toDataURL("image/png");
 
-      // 3. Upload PNG to backend
-      const result = await weezAPI.finalizePoster(jobId, pngBase64);
-      toast.success("Design finalized and published!");
-      onFinalized?.(result.asset_url);
-      onClose();
+        // Upload PNG to backend
+        const result = await weezAPI.finalizePoster(jobId, pngBase64);
+        toast.success("Design finalized and published!");
+        onFinalized?.(result.asset_url);
+        onClose();
+      }
     } catch (err: any) {
       console.error("Finalize failed:", err);
       toast.error("Failed to finalize: " + (err?.message || "Unknown error"));
@@ -220,13 +226,13 @@ const PosterEditorModal: React.FC<PosterEditorModalProps> = ({
             <div className="w-12 h-12 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
             <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.3em]">Calibrating Studio</p>
           </div>
-        ) : html ? (
+        ) : markup ? (
           <div className="w-full h-full flex items-center justify-center">
             <PosterEditor
-              html={editedHtml || html}
+              html={editedMarkup || markup}
               width={width}
               height={height}
-              onHtmlChange={handleHtmlChange}
+              onHtmlChange={handleMarkupChange}
               editable={true}
             />
           </div>
