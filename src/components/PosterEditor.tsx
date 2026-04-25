@@ -84,10 +84,11 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
       
       // 1. Restore <Icon /> tags from placeholders
       tempDiv.querySelectorAll("[title^='Icon: ']").forEach((el) => {
-        const title = el.getAttribute("title") || "";
+        const htmlEl = el as HTMLElement;
+        const title = htmlEl.getAttribute("title") || "";
         const iconName = title.replace("Icon: ", "");
-        const size = el.style.width.replace("px", "") || "24";
-        const color = (el as HTMLElement).style.color || "#ffffff";
+        const size = htmlEl.style.width.replace("px", "") || "24";
+        const color = htmlEl.style.color || "#ffffff";
         
         const iconTag = `<Icon name="${iconName}" size="${size}" color="${color}" />`;
         el.outerHTML = iconTag;
