@@ -90,7 +90,7 @@ export const TutorialProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     useEffect(() => {
         // Check if user has completed tutorial
-        const tutorialCompleted = localStorage.getItem('tutorial_completed');
+        const tutorialCompleted = sessionStorage.getItem('tutorial_completed');
         if (!tutorialCompleted) {
             // Auto-start tutorial for new users after a short delay
             const timer = setTimeout(() => {
@@ -140,12 +140,12 @@ export const TutorialProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const skipTutorial = () => {
         setIsActive(false);
-        localStorage.setItem('tutorial_completed', 'true');
+        sessionStorage.setItem('tutorial_completed', 'true');
     };
 
     const completeTutorial = () => {
         setIsActive(false);
-        localStorage.setItem('tutorial_completed', 'true');
+        sessionStorage.setItem('tutorial_completed', 'true');
     };
 
     const currentStepData = isActive ? tutorialSteps[currentStep] : null;

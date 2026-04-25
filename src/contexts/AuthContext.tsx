@@ -55,22 +55,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(() => {
-    const saved = localStorage.getItem("weez_current_space");
+    const saved = sessionStorage.getItem("weez_current_space");
     return saved ? JSON.parse(saved) : null;
   });
 
   const [token, setToken] = useState<string | null>(
-    localStorage.getItem("token")
+    sessionStorage.getItem("token")
   );
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isFetchingSpaces, setIsFetchingSpaces] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // Load cached spaces from localStorage
+  // Load cached spaces from sessionStorage
   const loadCachedSpaces = () => {
     try {
-      const cached = localStorage.getItem(SPACES_CACHE_KEY);
+      const cached = sessionStorage.getItem(SPACES_CACHE_KEY);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
         const now = Date.now();
@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         data: spacesData,
         timestamp: Date.now(),
       };
-      localStorage.setItem(SPACES_CACHE_KEY, JSON.stringify(cacheData));
+      sessionStorage.setItem(SPACES_CACHE_KEY, JSON.stringify(cacheData));
       setLastFetchTime(Date.now());
     } catch (err) {
       console.error("Failed to cache spaces", err);
@@ -145,10 +145,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         plan_type: data.user.plan_type,
       };
 
-      localStorage.setItem("token", data.access_token);
+      sessionStorage.setItem("token", data.access_token);
       setToken(data.access_token);
 
-      localStorage.setItem("weez_user", JSON.stringify(mappedUser));
+      sessionStorage.setItem("weez_user", JSON.stringify(mappedUser));
       setUser(mappedUser);
 
       return { success: true };
@@ -169,10 +169,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // LOGOUT
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("weez_user");
-    localStorage.removeItem("weez_current_space");
-    localStorage.removeItem(SPACES_CACHE_KEY);
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("weez_user");
+    sessionStorage.removeItem("weez_current_space");
+    sessionStorage.removeItem(SPACES_CACHE_KEY);
     setToken(null);
     setUser(null);
     setSpaces([]);
@@ -183,12 +183,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Select space
   const selectSpace = (space: Space) => {
     setCurrentSpace(space);
-    localStorage.setItem("weez_current_space", JSON.stringify(space));
+    sessionStorage.setItem("weez_current_space", JSON.stringify(space));
   };
 
   const exitSpace = () => {
     setCurrentSpace(null);
-    localStorage.removeItem("weez_current_space");
+    sessionStorage.removeItem("weez_current_space");
   };
 
   // CREATE SPACE
@@ -211,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchSpaces(true); // Force refresh after deleting
       if (currentSpace?.id === space_id) {
         setCurrentSpace(null);
-        localStorage.removeItem("weez_current_space");
+        sessionStorage.removeItem("weez_current_space");
       }
       return { success: true };
     } catch (err: any) {
@@ -230,7 +230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (currentSpace?.id === space_id) {
         const updatedSpace = { ...currentSpace, name };
         setCurrentSpace(updatedSpace);
-        localStorage.setItem("weez_current_space", JSON.stringify(updatedSpace));
+        sessionStorage.setItem("weez_current_space", JSON.stringify(updatedSpace));
       }
 
       return { success: true };
@@ -241,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // LOAD USER ONCE
   useEffect(() => {
-    const storedUser = localStorage.getItem("weez_user");
+    const storedUser = sessionStorage.getItem("weez_user");
 
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));

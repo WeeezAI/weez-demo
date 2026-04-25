@@ -28,7 +28,7 @@ interface Connector {
 
 const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
   const { currentSpace } = useAuth();
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   const [connectors, setConnectors] = useState<Connector[]>([
     {

@@ -522,6 +522,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
     html_ready: { label: "Generated", color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
     completed: { label: "Completed", color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
     failed: { label: "Failed", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
+    publishing: { label: "Publishing", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    posted: { label: "Published", color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
 };
 
 // --- Rich Text Renderer ---
@@ -786,12 +788,12 @@ const ImageModal = ({
 // --- Poster Job Card Component ---
 export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, onEditPoster }: { job: any; onDelete?: (id: string) => void; onView?: (url: string, title: string, businessValue?: string, caption?: string, hashtags?: string, linkedinArticle?: string, platform?: string, slides?: any[], zipUrl?: string, format?: string) => void; onRegenerate?: (jobId: string) => void; onPostNow?: (jobId: string) => void; onEditPoster?: (jobId: string) => void }) => {
     const config = STATUS_CONFIG[job.status] || STATUS_CONFIG.queued;
-    const isActive = ["queued", "prompt_generating", "image_generating", "rendering"].includes(job.status);
-    const isCompleted = job.status === "completed" || job.status === "html_ready";
+    const isActive = ["queued", "prompt_generating", "image_generating", "rendering", "publishing"].includes(job.status);
+    const isCompleted = job.status === "completed" || job.status === "html_ready" || job.status === "posted";
     const isHtmlReady = job.status === "html_ready";
     const isFailed = job.status === "failed";
     const isDeleted = job.status === "deleted";
-    const isPublished = job.publish_status === "posted";
+    const isPublished = job.status === "posted" || job.publish_status === "posted";
     const [imgError, setImgError] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [isPosting, setIsPosting] = useState(false);

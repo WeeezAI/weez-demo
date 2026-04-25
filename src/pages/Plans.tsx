@@ -135,7 +135,7 @@ const Plans = () => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token")}` // Ensure token is available
+                    "Authorization": `Bearer ${sessionStorage.getItem("token")}` // Ensure token is available
                 },
                 body: JSON.stringify({ code: redeemCode.trim() })
             });

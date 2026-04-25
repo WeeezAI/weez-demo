@@ -60,7 +60,7 @@ export function usePosterWebSocket(
     const fetchPosterJobs = useCallback(async () => {
         if (!campaignId) return;
         try {
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
             const headers: Record<string, string> = {
                 "ngrok-skip-browser-warning": "69420",
             };
