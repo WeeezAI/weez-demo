@@ -21,7 +21,7 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
   const posterRootRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [isCapturing, setIsCapturing] = useState(false);
-  
+
   // Track the HTML we actually rendered to prevent focus-losing re-renders
   const lastProcessedHtml = useRef<string>("");
 
@@ -62,9 +62,9 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
       // 2. Add contenteditable to data-field elements
       const targetHtml = editable
         ? processed.replace(
-            /data-field="([^"]+)"/g,
-            'data-field="$1" contenteditable="true" style="outline: none; cursor: text;"'
-          )
+          /data-field="([^"]+)"/g,
+          'data-field="$1" contenteditable="true" style="outline: none; cursor: text;"'
+        )
         : processed;
 
       if (targetHtml !== lastProcessedHtml.current) {
@@ -78,10 +78,10 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
   const handleInput = useCallback((e: React.FormEvent) => {
     if (posterRootRef.current && onHtmlChange) {
       const currentHtml = posterRootRef.current.innerHTML;
-      
+
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = currentHtml;
-      
+
       // 1. Restore <Icon /> tags from placeholders
       tempDiv.querySelectorAll("[title^='Icon: ']").forEach((el) => {
         const htmlEl = el as HTMLElement;
@@ -89,7 +89,7 @@ const PosterEditor: React.FC<PosterEditorProps> = ({
         const iconName = title.replace("Icon: ", "");
         const size = htmlEl.style.width.replace("px", "") || "24";
         const color = htmlEl.style.color || "#ffffff";
-        
+
         const iconTag = `<Icon name="${iconName}" size="${size}" color="${color}" />`;
         el.outerHTML = iconTag;
       });

@@ -790,12 +790,14 @@ const ImageModal = ({
 // --- Poster Job Card Component ---
 export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, onEditPoster }: { job: any; onDelete?: (id: string) => void; onView?: (url: string, title: string, businessValue?: string, caption?: string, hashtags?: string, linkedinArticle?: string, platform?: string, slides?: any[], zipUrl?: string, format?: string) => void; onRegenerate?: (jobId: string) => void; onPostNow?: (jobId: string) => void; onEditPoster?: (jobId: string) => void }) => {
     const config = STATUS_CONFIG[job.status] || STATUS_CONFIG.queued;
-    const isActive = ["queued", "prompt_generating", "image_generating", "jsx_generating", "jsx_rendering", "rendering", "publishing"].includes(job.status);
+    const isActive = ["queued", "prompt_generating", "image_generating", "jsx_generating", "jsx_rendering", "rendering"].includes(job.status);
+    const isPublishing = job.status === "publishing";
     const isCompleted = job.status === "completed" || job.status === "html_ready" || job.status === "posted";
     const isHtmlReady = job.status === "html_ready";
     const isFailed = job.status === "failed";
     const isDeleted = job.status === "deleted";
     const isPublished = job.status === "posted" || job.publish_status === "posted";
+    const canShowVisual = (isCompleted || isPublished || isPublishing);
     const [imgError, setImgError] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
@@ -864,8 +866,18 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                         <Share2 className="w-3 h-3 text-white" />
                         <span className="text-[10px] font-black text-white uppercase tracking-wider">LinkedIn</span>
                     </div>
-                    {(isCompleted || isPublished) && job.asset_url && !imgError ? (
-                        <img src={job.asset_url} alt={job.poster_idea} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={() => setImgError(true)} />
+                    {canShowVisual && job.asset_url && !imgError ? (
+                        <>
+                            <img src={job.asset_url} alt={job.poster_idea} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={() => setImgError(true)} />
+                            {isPublishing && (
+                                <div className="absolute inset-0 bg-[#0A66C2]/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-20">
+                                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse border border-white/30">
+                                        <Sparkles className="w-5 h-5 text-white" />
+                                    </div>
+                                    <p className="mt-2 text-[10px] font-black text-white uppercase tracking-widest">Publishing...</p>
+                                </div>
+                            )}
+                        </>
                     ) : imgError ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                             <ImageIcon className="w-6 h-6 text-[#0A66C2]/30" />
@@ -1013,7 +1025,7 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                     <span className="text-[10px] font-black text-white uppercase tracking-wider">Instagram</span>
                 </div>
 
-                {(isCompleted || isPublished) && (isCarousel ? job.slides[currentSlide]?.image_url || job.asset_url : job.asset_url) && !imgError ? (
+                {canShowVisual && (isCarousel ? job.slides[currentSlide]?.image_url || job.asset_url : job.asset_url) && !imgError ? (
                     <>
                         <img
                             src={isCarousel ? job.slides[currentSlide]?.image_url || job.asset_url : job.asset_url}
@@ -1021,6 +1033,15 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                             onError={() => setImgError(true)}
                         />
+
+                        {isPublishing && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-30">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse border border-white/30">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                <p className="mt-2 text-[10px] font-black text-white uppercase tracking-widest">Publishing...</p>
+                            </div>
+                        )}
                         
                         {isCarousel && (
                             <>
