@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 export type TutorialStep = {
     id: string;
@@ -85,20 +86,23 @@ const TutorialContext = createContext<TutorialContextType | undefined>(undefined
 export const TutorialProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isActive, setIsActive] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
-        // Check if user has completed tutorial
+        // Check if user has completed tutorial and is logged in
         const tutorialCompleted = sessionStorage.getItem('tutorial_completed');
-        if (!tutorialCompleted) {
+        
+        // Only auto-start tutorial if user is authenticated and hasn't completed it
+        if (!tutorialCompleted && isAuthenticated) {
             // Auto-start tutorial for new users after a short delay
             const timer = setTimeout(() => {
                 setIsActive(true);
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     // Navigate to the correct page when the step changes
     useEffect(() => {
