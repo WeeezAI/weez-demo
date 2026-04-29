@@ -1274,40 +1274,46 @@ export default function AutonomousMarketing() {
             />
 
             <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-                <div className="absolute top-8 right-8 z-[100] flex items-center bg-white/60 backdrop-blur-xl rounded-2xl p-1 gap-1 border border-white/20 shadow-2xl shadow-indigo-500/10 transition-all hover:bg-white/80">
-                    <button
-                        onClick={() => setActiveTab("chat")}
-                        className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
-                            activeTab === "chat" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40"
-                        )}
-                    >
-                        <MessageSquare className="w-4 h-4" /> Chat
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("planner")}
-                        disabled={!plannerData}
-                        className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
-                            activeTab === "planner" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40",
-                            !plannerData && "opacity-30 cursor-not-allowed"
-                        )}
-                    >
-                        <Calendar className="w-4 h-4" /> Content Planner
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("connectors")}
-                        className={cn(
-                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
-                            activeTab === "connectors" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-indigo-900/40 hover:text-indigo-600 hover:bg-white/40"
-                        )}
-                    >
-                        <Zap className="w-4 h-4" /> Connectors
-                    </button>
+                <AuroraBG />
 
-                    {campaignId && (
-                        <div className="h-4 w-px bg-indigo-100 mx-1" />
-                    )}
+                <motion.div
+                    initial={{ opacity: 0, y: -16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute top-6 right-6 z-[100] flex items-center bg-white/55 backdrop-blur-2xl rounded-2xl p-1 gap-1 border border-white/40 shadow-[0_20px_60px_-20px_rgba(79,70,229,0.35)]"
+                >
+                    {[
+                        { id: "chat", label: "Chat", icon: MessageSquare, disabled: false },
+                        { id: "planner", label: "Content Planner", icon: Calendar, disabled: !plannerData },
+                        { id: "connectors", label: "Connectors", icon: Zap, disabled: false },
+                    ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
+                                disabled={tab.disabled}
+                                className={cn(
+                                    "relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-colors",
+                                    isActive ? "text-white" : "text-indigo-900/50 hover:text-indigo-700",
+                                    tab.disabled && "opacity-30 cursor-not-allowed"
+                                )}
+                            >
+                                {isActive && (
+                                    <motion.span
+                                        layoutId="am-tab-pill"
+                                        className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 shadow-lg shadow-indigo-500/40"
+                                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                                    />
+                                )}
+                                <Icon className="relative w-4 h-4" />
+                                <span className="relative">{tab.label}</span>
+                            </button>
+                        );
+                    })}
+
+                    {campaignId && <div className="h-4 w-px bg-indigo-100 mx-1" />}
 
                     {campaignId && (
                         <button
@@ -1319,7 +1325,7 @@ export default function AutonomousMarketing() {
                             Delete
                         </button>
                     )}
-                </div>
+                </motion.div>
 
                 {/* Messages Area — Chat Tab */}
                 {activeTab === "chat" && (
