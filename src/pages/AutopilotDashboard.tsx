@@ -154,7 +154,7 @@ export default function AutopilotDashboard() {
         try {
             setIsToggling(true);
             const newStatus = data.campaign.status === "active" ? "paused" : "active";
-            await weezAPI.toggleAutopilotStatus(data.campaign.id, newStatus);
+            await (weezAPI as any).toggleAutopilotStatus?.(data.campaign.id, newStatus);
             toast.success(`Campaign ${newStatus === "active" ? "resumed" : "paused"}`);
             loadDashboard();
         } catch (err: any) {
