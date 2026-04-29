@@ -1266,7 +1266,7 @@ export default function AutonomousMarketing() {
     ];
 
     return (
-        <div className="flex h-screen bg-[#F9FAFB] overflow-hidden font-inter w-full">
+        <div className="flex h-screen bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50 overflow-hidden font-inter w-full">
             <ConversationSidebar
                 spaceId={spaceId!}
                 onNewChat={() => navigate("/spaces")}
