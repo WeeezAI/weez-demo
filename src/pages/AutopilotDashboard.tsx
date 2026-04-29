@@ -32,7 +32,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ConversationSidebar from "@/components/ConversationSidebar";
-import { weezAPI, AutopilotDashboardData } from "@/services/weezAPI";
+import { weezAPI } from "@/services/weezAPI";
+
+type AutopilotDashboardData = any;
 
 /* ---------- Animated Counter ---------- */
 const AnimatedNumber = ({ value, decimals = 0, suffix = "" }: { value: number; decimals?: number; suffix?: string }) => {
@@ -95,12 +97,12 @@ const Glass = ({ className, children, ...rest }: any) => (
     </motion.div>
 );
 
-const fadeUp = {
+const fadeUp: any = {
     hidden: { opacity: 0, y: 24 },
     show: (i: number = 0) => ({
         opacity: 1,
         y: 0,
-        transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+        transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] as any },
     }),
 };
 
