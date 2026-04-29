@@ -38,7 +38,42 @@ import {
     RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import Plan from "@/components/ui/agent-plan";
+
+// ─── Aurora Background (cinematic glassmorphism) ──────────────────────────────
+function AuroraBG() {
+    return (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <motion.div
+                aria-hidden
+                className="absolute -top-[20%] -left-[15%] w-[55%] h-[55%] rounded-full bg-indigo-500/25 blur-[140px]"
+                animate={{ x: [0, 60, -20, 0], y: [0, 40, -30, 0], scale: [1, 1.15, 0.95, 1] }}
+                transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+                aria-hidden
+                className="absolute top-[10%] -right-[10%] w-[45%] h-[45%] rounded-full bg-fuchsia-400/20 blur-[160px]"
+                animate={{ x: [0, -50, 30, 0], y: [0, 30, -20, 0], scale: [1, 1.1, 1.05, 1] }}
+                transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+                aria-hidden
+                className="absolute -bottom-[15%] left-[15%] w-[60%] h-[55%] rounded-full bg-cyan-400/20 blur-[170px]"
+                animate={{ x: [0, 40, -40, 0], y: [0, -30, 20, 0], scale: [1, 1.08, 0.92, 1] }}
+                transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(255,255,255,0.4)_100%)]" />
+            <div
+                className="absolute inset-0 opacity-[0.035] mix-blend-overlay"
+                style={{
+                    backgroundImage:
+                        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+                }}
+            />
+        </div>
+    );
+}
 import { weezAPI } from "@/services/weezAPI";
 import ConversationSidebar from "@/components/ConversationSidebar";
 import { toast } from "sonner";
