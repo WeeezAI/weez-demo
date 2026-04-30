@@ -211,9 +211,10 @@ const Plans = () => {
             period: isFree ? 'forever' : (isMonthly ? 'per month' : 'per year'),
             tier: isFree ? 'free' : (isMonthly ? 'premium-monthly' : 'premium-yearly'),
             highlight: highlight,
-            cta: isFree ? 'Current Plan' : (isYearly ? 'Execute Mastery' : 'Activate Scale'),
+            cta: isFree ? 'Current Level' : (isYearly ? 'Execute Mastery' : 'Activate Scale'),
             // Icons based on tier
             iconType: isFree ? 'zap' : (isYearly ? 'cpu' : 'rocket'),
+            badge: !isFree ? "Premium Intelligence" : null,
             // Features
             uiFeatures: getFeatures(plan)
         };
@@ -265,6 +266,17 @@ const Plans = () => {
                                     <div className="absolute top-10 right-10">
                                         <div className="px-5 py-2 bg-primary rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-primary/40 animate-pulse">
                                             Strategic Choice
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {plan.badge && (
+                                     <div className="absolute top-10 left-10">
+                                        <div className={cn(
+                                            "px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border",
+                                            plan.highlight ? "bg-white/10 border-white/20 text-white" : "bg-primary/5 border-primary/10 text-primary"
+                                        )}>
+                                            {plan.badge}
                                         </div>
                                     </div>
                                 )}

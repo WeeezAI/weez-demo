@@ -14,6 +14,7 @@ interface User {
   email: string;
   name: string;
   plan_type: string;
+  created_at?: string;
 }
 
 interface Space {
@@ -143,6 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: data.user.email,
         name: `${data.user.first_name} ${data.user.last_name}`,
         plan_type: data.user.plan_type,
+        created_at: data.user.created_at,
       };
 
       sessionStorage.setItem("token", data.access_token);
