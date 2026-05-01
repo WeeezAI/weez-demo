@@ -1334,7 +1334,7 @@ export default function AutonomousMarketing() {
                 {/* Messages Area — Chat Tab */}
                 {activeTab === "chat" && (
                     workspaceMode === "results" ? (
-                        <div className="flex-1 overflow-y-auto pt-32 px-8 pb-10 relative z-10">
+                        <div className="flex-1 overflow-y-auto pt-8 px-8 pb-10 relative z-10">
                             <ActiveDashboard
                                 messages={messages}
                                 activeStatus={activeStatus}
