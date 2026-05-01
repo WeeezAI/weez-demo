@@ -1248,7 +1248,7 @@ export default function AutonomousMarketing() {
     ];
 
     return (
-        <div className="flex h-screen bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50 overflow-hidden font-inter w-full">
+        <div className="flex h-screen bg-[#FAFAFB] overflow-hidden font-inter w-full">
             <ConversationSidebar
                 spaceId={spaceId!}
                 onNewChat={() => navigate("/spaces")}
@@ -1258,56 +1258,78 @@ export default function AutonomousMarketing() {
             <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
                 <AuroraBG />
 
-                <motion.div
-                    initial={{ opacity: 0, y: -16 }}
+                {/* Top navigation bar — clear, centered, easy to scan */}
+                <motion.header
+                    initial={{ opacity: 0, y: -12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute top-6 right-6 z-[100] flex items-center bg-white/55 backdrop-blur-2xl rounded-2xl p-1 gap-1 border border-white/40 shadow-[0_20px_60px_-20px_rgba(79,70,229,0.35)]"
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="relative z-50 flex items-center justify-between gap-4 px-6 lg:px-10 h-16 border-b border-zinc-200/70 bg-white/80 backdrop-blur-xl"
                 >
-                    {[
-                        { id: "chat", label: "Chat", icon: MessageSquare, disabled: false },
-                        { id: "planner", label: "Content Planner", icon: Calendar, disabled: !plannerData },
-                        { id: "connectors", label: "Connectors", icon: Zap, disabled: false },
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
+                    {/* Left: section label */}
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="hidden sm:flex flex-col leading-tight min-w-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">Autonomous Marketing</span>
+                            <span className="text-sm font-semibold text-zinc-900 truncate">
+                                {activeTab === "chat" && "Campaign workspace"}
+                                {activeTab === "planner" && "Content planner"}
+                                {activeTab === "connectors" && "Connected accounts"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Center: tabs */}
+                    <nav className="flex items-center bg-zinc-100/80 rounded-full p-1 gap-1">
+                        {[
+                            { id: "chat", label: "Chat", icon: MessageSquare, disabled: false },
+                            { id: "planner", label: "Planner", icon: Calendar, disabled: !plannerData },
+                            { id: "connectors", label: "Connectors", icon: Zap, disabled: false },
+                        ].map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
+                                    disabled={tab.disabled}
+                                    title={tab.disabled ? "Available after planner is generated" : tab.label}
+                                    className={cn(
+                                        "relative flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-colors",
+                                        isActive ? "text-white" : "text-zinc-600 hover:text-zinc-900",
+                                        tab.disabled && "opacity-40 cursor-not-allowed hover:text-zinc-600"
+                                    )}
+                                >
+                                    {isActive && (
+                                        <motion.span
+                                            layoutId="am-tab-pill"
+                                            className="absolute inset-0 rounded-full bg-zinc-900 shadow-sm"
+                                            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                                        />
+                                    )}
+                                    <Icon className="relative w-3.5 h-3.5" />
+                                    <span className="relative">{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Right: destructive action */}
+                    <div className="flex items-center gap-2 min-w-[40px] justify-end">
+                        {campaignId && (
                             <button
-                                key={tab.id}
-                                onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
-                                disabled={tab.disabled}
-                                className={cn(
-                                    "relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-colors",
-                                    isActive ? "text-white" : "text-indigo-900/50 hover:text-indigo-700",
-                                    tab.disabled && "opacity-30 cursor-not-allowed"
-                                )}
+                                onClick={handleDeleteCampaign}
+                                disabled={isDeleting}
+                                title="Delete campaign"
+                                className="flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-medium transition-colors text-zinc-500 hover:text-red-600 hover:bg-red-50"
                             >
-                                {isActive && (
-                                    <motion.span
-                                        layoutId="am-tab-pill"
-                                        className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 shadow-lg shadow-indigo-500/40"
-                                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                                    />
-                                )}
-                                <Icon className="relative w-4 h-4" />
-                                <span className="relative">{tab.label}</span>
+                                {isDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                <span className="hidden md:inline">Delete</span>
                             </button>
-                        );
-                    })}
-
-                    {campaignId && <div className="h-4 w-px bg-indigo-100 mx-1" />}
-
-                    {campaignId && (
-                        <button
-                            onClick={handleDeleteCampaign}
-                            disabled={isDeleting}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all text-red-500/40 hover:text-red-600 hover:bg-red-50"
-                        >
-                            {isDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                            Delete
-                        </button>
-                    )}
-                </motion.div>
+                        )}
+                    </div>
+                </motion.header>
 
                 {/* Messages Area — Chat Tab */}
                 {activeTab === "chat" && (
