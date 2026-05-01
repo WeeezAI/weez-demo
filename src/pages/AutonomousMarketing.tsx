@@ -1370,7 +1370,7 @@ export default function AutonomousMarketing() {
                             />
                         </div>
                     ) : (
-                        <div className="flex-1 overflow-y-auto relative z-10 px-8 pt-32 pb-10">
+                        <div className="flex-1 overflow-y-auto relative z-10 px-8 pt-8 pb-10">
                             <div className="max-w-4xl mx-auto">
                                 {(() => {
                                     const displayMessages = workspaceMode === "active"
