@@ -154,7 +154,7 @@ export const weezAPI = {
     brandId: string,
     idea: ContentIdea,
     aspectRatio: string = "1:1",
-    imageModel: string = "imagen4"
+    imageModel: string = "gpt-image-2"
   ): Promise<CreativeResponse> => {
     const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/generate-from-idea`, {
       method: "POST",
@@ -180,7 +180,7 @@ export const weezAPI = {
     brandId: string,
     userPrompt: string,
     aspectRatio: string = "1:1",
-    imageModel: string = "imagen4"
+    imageModel: string = "gpt-image-2"
   ): Promise<CreativeResponse> => {
     const response = await fetchWithBypass(`${WEEZ_BASE_URL}/creatives/generate-from-prompt`, {
       method: "POST",
