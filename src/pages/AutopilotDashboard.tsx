@@ -250,6 +250,23 @@ export default function AutopilotDashboard() {
                                     Autopilot Mode
                                 </span>
                             </motion.div>
+                            
+                            {/* Strategy Badge */}
+                            <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full border backdrop-blur-xl shadow-sm",
+                                    data?.account_type === "org" 
+                                        ? "bg-indigo-50/70 text-indigo-700 border-indigo-200/50" 
+                                        : "bg-rose-50/70 text-rose-700 border-rose-200/50"
+                                )}
+                            >
+                                <Target className={cn("w-3 h-3", data?.account_type === "org" ? "text-indigo-500" : "text-rose-500")} />
+                                <span className="text-[10px] font-black uppercase tracking-[0.15em]">
+                                    {data?.account_type === "org" ? "Organization Page" : "Founder Page"}
+                                </span>
+                            </motion.div>
+
                             <Badge
                                 variant="secondary"
                                 className={cn(

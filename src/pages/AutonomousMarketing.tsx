@@ -1393,7 +1393,16 @@ export default function AutonomousMarketing() {
                                                         <div className="w-7 h-7 rounded-xl bg-violet-600 flex items-center justify-center">
                                                             <span className="text-[9px] font-black text-white">D{dayNum}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest">Day {dayNum} — Poster Generation Process</span>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest leading-none">
+                                                                Day {dayNum} — Poster Generation Process
+                                                            </span>
+                                                            {msg.metadata?.distribution_label && (
+                                                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
+                                                                    {msg.metadata.distribution_label}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -1715,18 +1724,31 @@ export default function AutonomousMarketing() {
                             </div>
                             {/* Day-by-Day grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(Array.isArray(plannerData) ? plannerData : (plannerData as any).calendar || []).map((post: any, idx: number) => {
-                                    const dayNum = post.day_number || post.day || (idx + 1);
+                                (Array.isArray(plannerData) ? plannerData : (plannerData as any).calendar || []).map((post: any, idx: number) => {
+                                    const sequenceNum = idx + 1;
+                                    const dayNum = post.day || sequenceNum;
                                     return (
-                                        <div key={idx} className="rounded-[1.5rem] border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                        <div key={idx} className="rounded-[2rem] border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow relative">
+                                            {/* Distribution Badge (Founder vs Org) */}
+                                            {post.distribution_label && (
+                                                <div className={cn(
+                                                    "absolute top-18 right-5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm z-20",
+                                                    post.distribution_label.includes("Founder") 
+                                                        ? "bg-rose-50 text-rose-700 border-rose-200" 
+                                                        : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                )}>
+                                                    {post.distribution_label}
+                                                </div>
+                                            )}
+
                                             {/* Day header */}
-                                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+                                            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
-                                                        <span className="text-[11px] font-black text-white">D{dayNum}</span>
+                                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-200">
+                                                        <span className="text-[11px] font-black text-white">D{sequenceNum}</span>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Day {dayNum}</p>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Post {sequenceNum}</p>
                                                         <p className="text-xs font-bold text-gray-700">{post.date || post.scheduled_date || ""}</p>
                                                     </div>
                                                 </div>
@@ -1742,8 +1764,8 @@ export default function AutonomousMarketing() {
                                                             {post.platform}
                                                         </Badge>
                                                     )}
-                                                    {post.content_focus && (
-                                                        <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-wider">{post.content_focus}</span>
+                                                    {post.funnel_stage && (
+                                                        <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-wider">{post.funnel_stage}</span>
                                                     )}
                                                 </div>
                                             </div>
