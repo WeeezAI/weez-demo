@@ -1728,23 +1728,11 @@ export default function AutonomousMarketing() {
                             </div>
                             {/* Day-by-Day grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                (Array.isArray(plannerData) ? plannerData : (plannerData as any).calendar || []).map((post: any, idx: number) => {
+                                {(Array.isArray(plannerData) ? plannerData : (plannerData as any).calendar || []).map((post: any, idx: number) => {
                                     const sequenceNum = idx + 1;
                                     const dayNum = post.day || sequenceNum;
                                     return (
                                         <div key={idx} className="rounded-[2rem] border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow relative">
-                                            {/* Distribution Badge (Founder vs Org) */}
-                                            {post.distribution_label && (
-                                                <div className={cn(
-                                                    "absolute top-18 right-5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm z-20",
-                                                    post.distribution_label.includes("Founder") 
-                                                        ? "bg-rose-50 text-rose-700 border-rose-200" 
-                                                        : "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                )}>
-                                                    {post.distribution_label}
-                                                </div>
-                                            )}
-
                                             {/* Day header */}
                                             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
                                                 <div className="flex items-center gap-3">
@@ -1752,7 +1740,19 @@ export default function AutonomousMarketing() {
                                                         <span className="text-[11px] font-black text-white">D{sequenceNum}</span>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Post {sequenceNum}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Post {sequenceNum}</p>
+                                                            {post.distribution_label && (
+                                                                <Badge className={cn(
+                                                                    "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm",
+                                                                    post.distribution_label === "Founder Led" 
+                                                                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                                                                        : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+                                                                )}>
+                                                                    {post.distribution_label}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
                                                         <p className="text-xs font-bold text-gray-700">{post.date || post.scheduled_date || ""}</p>
                                                     </div>
                                                 </div>

@@ -376,7 +376,19 @@ export const GeneratedContentSection = ({ posts }: { posts: any[] }) => (
                                     <span className={cn("inline-block w-1.5 h-1.5 rounded-full mr-1.5", post.status === 'Published' ? 'bg-emerald-500' : 'bg-amber-500')} />
                                     {post.status}
                                 </span>
-                                <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Day {post.day}</span>
+                                <div className="flex items-center gap-2">
+                                    {post.distribution_label && (
+                                        <Badge className={cn(
+                                            "text-[7px] font-black uppercase tracking-widest px-1.5 py-0 rounded",
+                                            post.distribution_label === "Founder Led" 
+                                                ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                                                : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+                                        )}>
+                                            {post.distribution_label}
+                                        </Badge>
+                                    )}
+                                    <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Day {post.day}</span>
+                                </div>
                             </div>
                             <h4 className="text-[11px] font-black text-foreground tracking-tight leading-tight line-clamp-2">{post.title}</h4>
                         </div>
@@ -455,8 +467,20 @@ export const UpcomingContentSection = ({ schedule }: { schedule: any[] }) => {
                                         </div>
                                     </div>
                                     <div className="h-6 w-px bg-white/20 shrink-0" />
-                                    <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="text-[11px] font-black text-foreground/80 tracking-tight truncate">{item.topic}</span>
+                                     <div className="flex flex-col min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-black text-foreground/80 tracking-tight truncate">{item.topic}</span>
+                                            {item.distribution_label && (
+                                                <Badge className={cn(
+                                                    "text-[7px] font-black uppercase tracking-widest px-1.5 py-0 rounded",
+                                                    item.distribution_label === "Founder Led" 
+                                                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                                                        : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+                                                )}>
+                                                    {item.distribution_label}
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4 ml-4">
@@ -928,7 +952,19 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                 <div className="flex flex-col flex-1 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                         <Badge variant="outline" className={cn("text-[9px] font-black uppercase tracking-widest border px-2 py-0.5", isPublished ? "text-emerald-600 bg-emerald-50 border-emerald-200" : config.color + " " + config.bgColor + " " + config.borderColor)}>{isPublished ? "Published" : config.label}</Badge>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day {job.content_day}</span>
+                        <div className="flex items-center gap-2">
+                            {job.distribution_label && (
+                                <Badge className={cn(
+                                    "text-[7px] font-black uppercase tracking-widest px-1.5 py-0 rounded",
+                                    job.distribution_label === "Founder Led" 
+                                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                                        : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+                                )}>
+                                    {job.distribution_label}
+                                </Badge>
+                            )}
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day {job.content_day}</span>
+                        </div>
                     </div>
                     <h4 className="text-xs font-bold text-gray-900 tracking-tight leading-snug line-clamp-2">{job.poster_idea || "Generating..."}</h4>
                     {job.linkedin_post_text ? (
@@ -1191,7 +1227,19 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                     >
                         {isPublished ? "Published" : config.label}
                     </Badge>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day {job.content_day}</span>
+                    <div className="flex items-center gap-2">
+                        {job.distribution_label && (
+                            <Badge className={cn(
+                                "text-[7px] font-black uppercase tracking-widest px-1.5 py-0 rounded",
+                                job.distribution_label === "Founder Led" 
+                                    ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                                    : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+                            )}>
+                                {job.distribution_label}
+                            </Badge>
+                        )}
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day {job.content_day}</span>
+                    </div>
                 </div>
 
                 <h4 className="text-xs font-bold text-gray-900 tracking-tight leading-snug line-clamp-2">
