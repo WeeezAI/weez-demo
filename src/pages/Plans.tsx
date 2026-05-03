@@ -10,6 +10,13 @@ import { useToast } from "@/hooks/use-toast"; // Ensure this hook exists or use 
 import { cn } from "@/lib/utils";
 import { weezAPI } from "@/services/weezAPI";
 import logo from "@/assets/weez-logo.png";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const Plans = () => {
     const navigate = useNavigate();
@@ -20,6 +27,16 @@ const Plans = () => {
     const [isRedeeming, setIsRedeeming] = useState(false);
     const [apiPlans, setApiPlans] = useState<any[]>([]);
     const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+    const [selectedCountry, setSelectedCountry] = useState<string>("");
+
+    // Initialize Paddle
+    useEffect(() => {
+        if ((window as any).Paddle) {
+            (window as any).Paddle.Initialize({ 
+                token: import.meta.env.VITE_PADDLE_CLIENT_TOKEN || "" 
+            });
+        }
+    }, []);
 
     // Load available plans
     useEffect(() => {
@@ -59,11 +76,58 @@ const Plans = () => {
             return;
         }
 
+        if (!selectedCountry) {
+            toast({
+                title: "Select Country",
+                description: "Please select your country to proceed with the payment.",
+                variant: "destructive"
+            });
+            // Smooth scroll to country selector
+            document.getElementById('country-selector')?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
         try {
             // 1. Create Order
-            const order = await weezAPI.createPaymentOrder(apiPlan.id);
+            const order = await weezAPI.createPaymentOrder(apiPlan.id, selectedCountry);
 
-            // 2. Open Razorpay
+            if (order.gateway === 'paddle') {
+                // 2. Open Paddle Checkout
+                (window as any).Paddle.Checkout.open({
+                    settings: {
+                        displayMode: "overlay",
+                        theme: "light",
+                        locale: "en"
+                    },
+                    items: [
+                        {
+                            priceId: order.paddle_price_id,
+                            quantity: 1
+                        }
+                    ],
+                    customer: {
+                        email: order.email
+                    },
+                    customData: {
+                        user_id: order.user_id,
+                        order_id: order.order_id
+                    },
+                    eventCallback: function(data: any) {
+                        if (data.name === "checkout.completed") {
+                             toast({
+                                title: "Payment Initiated",
+                                description: "We are processing your payment. Your subscription will be active shortly.",
+                                className: "bg-emerald-500 text-white border-none"
+                            });
+                            // Optionally redirect to a success page or refresh
+                            setTimeout(() => window.location.reload(), 3000);
+                        }
+                    }
+                });
+                return;
+            }
+
+            // 2. Open Razorpay (Default for India)
             const options = {
                 key: order.key_id,
                 amount: order.amount,
@@ -243,6 +307,35 @@ const Plans = () => {
                     </h1>
                     <p className="text-xl font-medium text-muted-foreground max-w-2xl mx-auto opacity-70 leading-relaxed">
                         Select the power level required for your marketing workforce. Transact for absolute scale.
+                    </p>
+                </div>
+
+                {/* Country Selector */}
+                <div id="country-selector" className="max-w-md mx-auto mb-20 space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-4">
+                        Select Your Location (Mandatory)
+                    </label>
+                    <Select onValueChange={setSelectedCountry} value={selectedCountry}>
+                        <SelectTrigger className="h-16 rounded-[1.5rem] bg-white border-border/40 shadow-sm text-lg font-bold">
+                            <SelectValue placeholder="Select your country" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
+                            <SelectItem value="India" className="font-bold">🇮🇳 India</SelectItem>
+                            <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                            <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                            <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                            <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
+                            <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
+                            <SelectItem value="France">🇫🇷 France</SelectItem>
+                            <SelectItem value="Other">🌍 Other (International)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p className="text-[9px] font-medium text-muted-foreground text-center opacity-60">
+                        {selectedCountry === "India" 
+                            ? "Secure payments via Razorpay (UPI, Cards, NetBanking)" 
+                            : selectedCountry 
+                                ? "International checkout secured by Paddle (PayPal, Cards, Apple/Google Pay)" 
+                                : "Please select your country to see available payment methods."}
                     </p>
                 </div>
 

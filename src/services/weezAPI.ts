@@ -329,12 +329,12 @@ export const weezAPI = {
     return await response.json();
   },
 
-  createPaymentOrder: async (planId: string) => {
+  createPaymentOrder: async (planId: string, country?: string) => {
     const AUTH_URL = "https://dexraflow-auth-api-dsaafqdxamgma9hx.canadacentral-01.azurewebsites.net";
     const response = await fetchWithBypass(`${AUTH_URL}/payments/create-order`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan_id: planId }),
+      body: JSON.stringify({ plan_id: planId, country }),
     });
 
     if (!response.ok) {
