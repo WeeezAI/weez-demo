@@ -20,7 +20,8 @@ import {
     Trophy,
     Rocket,
     X,
-    ChevronDown
+    ChevronDown,
+    Mic
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,8 @@ export function DexraflowCampaignChat({
     setCampaignType: (v: string) => void;
     marketingMode: string;
     setMarketingMode: (v: string) => void;
+    onMicClick?: () => void;
+    isRecording?: boolean;
 }) {
     const { currentSpace } = useAuth();
     const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -148,7 +151,23 @@ export function DexraflowCampaignChat({
                             className="w-full px-8 py-5 resize-none bg-transparent border-none text-zinc-950 text-base font-bold placeholder:text-muted-foreground/30 focus-visible:ring-0 min-h-[64px] scrollbar-hide leading-relaxed transition-all duration-500"
                         />
 
-                        <div className="flex items-center justify-end px-6 py-4 border-t border-white/5 bg-white/5">
+                        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-white/5">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={onMicClick}
+                                    className={cn(
+                                        "p-2.5 rounded-xl transition-all border shadow-sm",
+                                        isRecording
+                                            ? "bg-red-500 text-white border-red-400 animate-pulse"
+                                            : "bg-white/40 hover:bg-white/60 border-white/10 text-foreground"
+                                    )}
+                                >
+                                    <Mic className="w-3.5 h-3.5" />
+                                </button>
+                                <button className="p-2.5 rounded-xl bg-white/40 hover:bg-white/60 border border-white/10 text-foreground shadow-sm transition-all">
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                             <button 
                                 onClick={() => setIsConfigOpen(!isConfigOpen)}
                                 className={cn(

@@ -397,7 +397,9 @@ function ActiveDashboard({
     posterJobs,
     isWsConnected,
     latestEvent,
-    onEditPoster
+    onEditPoster,
+    refreshPosterJobs,
+    fetchConversation
 }: {
     messages: Message[],
     activeStatus: any,
@@ -407,7 +409,9 @@ function ActiveDashboard({
     posterJobs: any[],
     isWsConnected: boolean,
     latestEvent: any,
-    onEditPoster?: (jobId: string) => void
+    onEditPoster?: (jobId: string) => void,
+    refreshPosterJobs: () => void,
+    fetchConversation: (id: string) => Promise<void>
 }) {
     const lastReport = performanceReports?.[0];
     // Mock/Extract data for the dashboard
@@ -496,17 +500,17 @@ function ActiveDashboard({
             const brandId = activeStatus?.brand_id;
             const campaignId = activeStatus?.campaign_id;
             if (!brandId) return;
-            const API_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
-            const res = await fetch(`${API_URL}/autopilot/content-posts/${postId}?brand_id=${brandId}`, { method: "DELETE" });
-            if (res.ok) {
-                // Refresh dashboard to pick up deletion
-                refreshPosterJobs();
-                if (campaignId) fetchConversation(campaignId);
-                console.log("Post deleted successfully");
-                toast.success("Post deleted successfully");
-            }
-        } catch (err) {
+            
+            await weezAPI.deleteContentPost(postId, brandId);
+            
+            // Refresh dashboard to pick up deletion
+            refreshPosterJobs();
+            if (campaignId) fetchConversation(campaignId);
+            console.log("Post deleted successfully");
+            toast.success("Post deleted successfully");
+        } catch (err: any) {
             console.error("Failed to delete post:", err);
+            toast.error(err.message || "Failed to delete post");
         }
     };
 
@@ -989,7 +993,7 @@ export default function AutonomousMarketing() {
 
         setMessages((prev) => [
             ...prev,
-            { role: "user", content: prompt, time: nowTime() },
+            { role: "user", content: prompt, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
             {
                 role: "assistant",
                 content: "Great. I'm now analyzing your brand positioning, audience, and goals to create a strategic campaign plan. This helps ensure that every piece of content aligns with revenue growth and customer acquisition.",
@@ -1021,6 +1025,7 @@ export default function AutonomousMarketing() {
             setAgentPhase(6);
             setCampaignId(res.campaign_id);
             setBriefingData(res.briefing);
+            setActiveStatus({ campaign_id: res.campaign_id, status: "briefing", brand_id: spaceId });
 
             const currentPct = (res.current_engagement * 100).toFixed(2);
             const targetPct = (res.target_engagement * 100).toFixed(2);
@@ -1198,6 +1203,7 @@ export default function AutonomousMarketing() {
         if (!campaignId) return;
         try {
             setIsStarting(true);
+            await weezAPI.rejectPlanner(campaignId);
             setPlannerData(null);
             setPlannerExplanation(null);
             setWorkspaceMode("briefing");
@@ -1345,6 +1351,8 @@ export default function AutonomousMarketing() {
                                 isWsConnected={isWsConnected}
                                 latestEvent={latestWsEvent}
                                 onEditPoster={(jobId) => setEditingJobId(jobId)}
+                                refreshPosterJobs={refreshPosterJobs}
+                                fetchConversation={fetchConversation}
                             />
                         </div>
                     ) : isInitial ? (
@@ -1367,6 +1375,8 @@ export default function AutonomousMarketing() {
                                 setCampaignType={setCampaignType}
                                 marketingMode={marketingMode}
                                 setMarketingMode={setMarketingMode}
+                                onMicClick={handleMicClick}
+                                isRecording={isRecording}
                             />
                         </div>
                     ) : (
@@ -1612,7 +1622,7 @@ export default function AutonomousMarketing() {
                                                     {/* Total Posts */}
                                                     <div className="bg-gray-50 rounded-2xl p-5 text-center">
                                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Total Posts</p>
-                                                        <p className="text-3xl font-black text-gray-900">{campaignSummary?.total_posts || plannerData.length}</p>
+                                                        <p className="text-3xl font-black text-gray-900">{campaignSummary?.total_posts || plannerData?.length || 0}</p>
                                                         <p className="text-xs text-gray-500 mt-1">Over {campaignSummary?.campaign_days || 30} days</p>
                                                     </div>
                                                     {/* Target */}
@@ -1737,7 +1747,7 @@ export default function AutonomousMarketing() {
                                             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-200">
-                                                        <span className="text-[11px] font-black text-white">D{sequenceNum}</span>
+                                                        <span className="text-[11px] font-black text-white">D{post.day || sequenceNum}</span>
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2">

@@ -15,7 +15,9 @@ interface ConversationSidebarProps {
 }
 
 const ConversationSidebar = ({
-  spaceId
+  spaceId,
+  onNewChat,
+  onSelectConversation
 }: ConversationSidebarProps) => {
   const { exitSpace } = useAuth();
   const navigate = useNavigate();
