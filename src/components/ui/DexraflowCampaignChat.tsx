@@ -56,7 +56,9 @@ export function DexraflowCampaignChat({
     campaignType,
     setCampaignType,
     marketingMode,
-    setMarketingMode
+    setMarketingMode,
+    onMicClick,
+    isRecording
 }: { 
     value: string; 
     setValue: (v: string) => void; 
