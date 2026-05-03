@@ -894,11 +894,9 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                         <>
                             <img src={job.asset_url} alt={job.poster_idea} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={() => setImgError(true)} />
                             {isPublishing && (
-                                <div className="absolute inset-0 bg-[#0A66C2]/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-20">
-                                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse border border-white/30">
-                                        <Sparkles className="w-5 h-5 text-white" />
-                                    </div>
-                                    <p className="mt-2 text-[10px] font-black text-white uppercase tracking-widest">Publishing...</p>
+                                <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0A66C2]/90 backdrop-blur-sm shadow-sm border border-white/20 animate-pulse">
+                                    <Sparkles className="w-3 h-3 text-white" />
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Publishing...</span>
                                 </div>
                             )}
                         </>
@@ -1071,11 +1069,9 @@ export const PosterJobCard = ({ job, onDelete, onView, onRegenerate, onPostNow, 
                         />
 
                         {isPublishing && (
-                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-30">
-                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse border border-white/30">
-                                    <Sparkles className="w-5 h-5 text-white" />
-                                </div>
-                                <p className="mt-2 text-[10px] font-black text-white uppercase tracking-widest">Publishing...</p>
+                            <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm shadow-sm border border-white/20 animate-pulse">
+                                <Sparkles className="w-3 h-3 text-white" />
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Publishing...</span>
                             </div>
                         )}
                         
