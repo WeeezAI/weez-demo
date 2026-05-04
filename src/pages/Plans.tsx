@@ -28,14 +28,45 @@ const Plans = () => {
     const [apiPlans, setApiPlans] = useState<any[]>([]);
     const [isLoadingPlans, setIsLoadingPlans] = useState(true);
     const [selectedCountry, setSelectedCountry] = useState<string>("");
+    const [isPaddleReady, setIsPaddleReady] = useState(false);
 
     // Initialize Paddle
     useEffect(() => {
-        if ((window as any).Paddle) {
-            (window as any).Paddle.Initialize({ 
-                token: import.meta.env.VITE_PADDLE_CLIENT_TOKEN || "" 
-            });
-        }
+        const initPaddle = () => {
+            try {
+                if (!(window as any).Paddle) {
+                    console.debug("Paddle SDK not found on window");
+                    return;
+                }
+
+                const token = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
+                const environment = import.meta.env.VITE_PADDLE_ENVIRONMENT || 'production';
+
+                // Stricter validation
+                const isRealToken = token && 
+                                   typeof token === 'string' && 
+                                   token.length > 20 && 
+                                   token !== 'your_paddle_client_token_here' &&
+                                   (token.startsWith('plt_') || token.startsWith('pst_'));
+
+                if (isRealToken) {
+                    (window as any).Paddle.Initialize({ 
+                        token: token,
+                        environment: token.startsWith('pst_') ? 'sandbox' : environment
+                    });
+                    setIsPaddleReady(true);
+                    console.log("Paddle initialized successfully");
+                } else {
+                    console.warn("Paddle initialization skipped: No valid token provided. International payments will be disabled.");
+                    setIsPaddleReady(false);
+                }
+            } catch (error) {
+                console.error("Paddle initialization failed:", error);
+                setIsPaddleReady(false);
+            }
+        };
+        
+        initPaddle();
     }, []);
 
     // Load available plans
@@ -92,6 +123,14 @@ const Plans = () => {
             const order = await weezAPI.createPaymentOrder(apiPlan.id, selectedCountry);
 
             if (order.gateway === 'paddle') {
+                if (!isPaddleReady || !(window as any).Paddle) {
+                    toast({
+                        title: "Payment Gateway Offline",
+                        description: "The international payment gateway is not configured. Please contact support.",
+                        variant: "destructive"
+                    });
+                    return;
+                }
                 // 2. Open Paddle Checkout
                 (window as any).Paddle.Checkout.open({
                     settings: {
@@ -259,15 +298,17 @@ const Plans = () => {
         return '$';
     };
 
-    // Plans to display (sorted by price)
-    const displayPlans = apiPlans.sort((a, b) => a.price - b.price).map(plan => {
+    // Plans to display (sorted by price) - Safe non-mutating sort
+    const displayPlans = (Array.isArray(apiPlans) ? [...apiPlans] : [])
+        .sort((a, b) => (a.price || 0) - (b.price || 0))
+        .map(plan => {
         const isFree = plan.price === 0;
         const isMonthly = plan.billing_cycle === 'monthly';
         const isYearly = plan.billing_cycle === 'yearly';
 
-        // Determine highlighting - typically middle plan or 'Monthly' paid plan
-        // Adjust logic as preferred. Here highlighting the first paid monthly plan.
-        const highlight = !isFree && isMonthly;
+        // Determine highlighting - typically middle plan or 'Yearly' paid plan
+        // Adjust logic as preferred. Here highlighting the paid yearly plan for max value.
+        const highlight = !isFree && isYearly;
 
         return {
             ...plan,
@@ -278,7 +319,7 @@ const Plans = () => {
             cta: isFree ? 'Current Level' : (isYearly ? 'Execute Mastery' : 'Activate Scale'),
             // Icons based on tier
             iconType: isFree ? 'zap' : (isYearly ? 'cpu' : 'rocket'),
-            badge: !isFree ? "Premium Intelligence" : null,
+            badge: isYearly ? "2 Months Free" : (!isFree ? "Premium Intelligence" : null),
             // Features
             uiFeatures: getFeatures(plan)
         };
