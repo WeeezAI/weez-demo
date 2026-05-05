@@ -48,7 +48,7 @@ const Eyebrow = ({ children }: any) => (
 const H2 = ({ children, className = "" }: any) => (
   <motion.h2
     variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-    className={`font-agrandir text-4xl md:text-6xl tracking-tight text-white leading-[1.05] ${className}`}
+    className={`font-agrandir font-bold text-4xl md:text-6xl tracking-tight text-white leading-[1.05] ${className}`}
   >
     {children}
   </motion.h2>
@@ -279,7 +279,7 @@ const Landing = () => {
           <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
           <motion.h1
             variants={fadeUp} custom={1} initial="hidden" animate="show"
-            className="mt-6 font-agrandir text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
+            className="mt-6 font-agrandir font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
           >
             Marketing that <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
@@ -378,7 +378,7 @@ const Landing = () => {
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white shadow-lg shadow-fuchsia-900/40">
                   {s.i}
                 </div>
-                <span className="font-agrandir text-5xl text-white/10">{s.n}</span>
+                <span className="font-agrandir font-bold text-5xl text-white/10">{s.n}</span>
               </div>
               <h3 className="text-xl font-semibold text-white">{s.t}</h3>
               <p className="text-white/60 text-sm mt-2 leading-relaxed">{s.d}</p>
@@ -406,7 +406,7 @@ const Landing = () => {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
               <div className="relative">
                 <Sparkles className="w-6 h-6 text-white/80 mb-5" />
-                <h3 className="font-agrandir text-3xl text-white leading-tight">{c.t}</h3>
+                <h3 className="font-agrandir font-bold text-3xl text-white leading-tight">{c.t}</h3>
                 <p className="text-white/70 mt-3 max-w-md">{c.d}</p>
               </div>
             </motion.div>
@@ -510,7 +510,7 @@ const Landing = () => {
           ].map((s, i) => (
             <motion.div key={s.l} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
               className="p-7 rounded-2xl border border-white/10 bg-white/[0.03] text-center">
-              <div className="font-agrandir text-5xl bg-clip-text text-transparent bg-gradient-to-br from-fuchsia-300 to-cyan-300">
+              <div className="font-agrandir font-bold text-5xl bg-clip-text text-transparent bg-gradient-to-br from-fuchsia-300 to-cyan-300">
                 {s.v}
               </div>
               <div className="text-sm text-white/60 mt-2">{s.l}</div>
