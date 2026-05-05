@@ -79,7 +79,7 @@ const HiringChatWidget = () => {
             } else {
                 setIsProcessing(true);
                 try {
-                    const res = await weezAPI.hiringChat(text);
+                    const res = await (weezAPI as any).hiringChat(text);
                     addBotMessage(res.reply);
                 } catch (err) {
                     addBotMessage("I'm here to help with hiring! To see available roles, just type 'jobs' or click the button.");
@@ -104,7 +104,7 @@ const HiringChatWidget = () => {
     const fetchJobs = async () => {
         setIsProcessing(true);
         try {
-            const jobList = await weezAPI.getHiringJobs();
+            const jobList = await (weezAPI as any).getHiringJobs();
             setJobs(jobList);
             setStep('jobs');
             if (jobList.length === 0) {
@@ -133,7 +133,7 @@ const HiringChatWidget = () => {
         setUserEmail(email);
         setIsProcessing(true);
         try {
-            const res = await weezAPI.applyHiring({
+            const res = await (weezAPI as any).applyHiring({
                 job_id: selectedJob.id,
                 name: "Candidate",
                 email: email,
@@ -166,7 +166,7 @@ const HiringChatWidget = () => {
         ));
 
         try {
-            const res = await weezAPI.uploadResume(candidateId, file);
+            const res = await (weezAPI as any).uploadResume(candidateId, file);
             setResults(res);
             setStep('results');
             addBotMessage("Great! I've analyzed your background and the matching report has been sent to your email.");

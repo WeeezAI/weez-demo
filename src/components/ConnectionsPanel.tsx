@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cable, Check, Share2 } from "lucide-react";
+import { Cable, Check, Share2, Database, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
