@@ -1,517 +1,598 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Sparkles as SparklesIcon, ArrowRight, Instagram, BrainCircuit, Search, Zap, LayoutGrid, Palette, BarChart3, Clock, Rocket, MessageSquare, Check as CheckIcon, Menu } from "lucide-react";
-import { AnimatedSection, StaggeredChildren } from "@/components/AnimatedSection";
-import { Badge } from "@/components/ui/badge";
-import { Gravity, MatterBody } from "@/components/ui/gravity";
-import AuroraHero from "@/components/AuroraHero";
-import logo from "@/assets/weez-logo.png";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
+  Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
+  Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
+} from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import logo from "@/assets/weez-logo.png";
 
-const comparisonRows = [
-  {
-    feature: "Content Strategy",
-    traditional: "Manual planning required",
-    ai: "Only suggests ideas",
-    agencies: "Strategy created by human team",
-    weez: "AI automatically creates a full campaign strategy",
-  },
-  {
-    feature: "Content Creation",
-    traditional: "Manual design required",
-    ai: "Generates captions or text",
-    agencies: "Human designers create posts",
-    weez: "AI generates complete posters automatically",
-  },
-  {
-    feature: "Content Planning",
-    traditional: "Manual scheduling calendar",
-    ai: "Not included",
-    agencies: "Planned by human team",
-    weez: "AI builds a full 30-day content calendar",
-  },
-  {
-    feature: "Automatic Posting",
-    traditional: "Only scheduling tools",
-    ai: "Not available",
-    agencies: "Posted by account managers",
-    weez: "Fully automated publishing system",
-  },
-  {
-    feature: "Comment Replies",
-    traditional: "Manual replies",
-    ai: "Not supported",
-    agencies: "Human social media managers reply",
-    weez: "AI automatically responds to comments",
-  },
-  {
-    feature: "Performance Monitoring",
-    traditional: "Basic analytics dashboards",
-    ai: "Not available",
-    agencies: "Manual performance reports",
-    weez: "AI tracks and analyzes performance automatically",
-  },
-  {
-    feature: "Strategy Optimization",
-    traditional: "Manual adjustments required",
-    ai: "No optimization system",
-    agencies: "Humans adjust campaigns",
-    weez: "AI continuously improves marketing strategy",
-  },
-  {
-    feature: "Marketing Execution",
-    traditional: "Requires human management",
-    ai: "Only assists with content",
-    agencies: "Done by hired teams",
-    weez: "Fully autonomous marketing execution",
-  },
-  {
-    feature: "Cost",
-    traditional: "Monthly subscription tools",
-    ai: "Monthly subscription tools",
-    agencies: "Very expensive (thousands per month)",
-    weez: "Fraction of agency cost",
-  },
-  {
-    feature: "Human Effort Required",
-    traditional: "High effort required",
-    ai: "Moderate effort required",
-    agencies: "Low effort but expensive",
-    weez: "Minimal human involvement required",
+/* =============== Reusable bits =============== */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { duration: 0.7, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
+
+const GlowOrb = ({ className = "", color = "from-violet-500/40" }: any) => (
+  <div className={`pointer-events-none absolute rounded-full blur-[120px] ${className}`}>
+    <div className={`w-full h-full bg-gradient-to-br ${color} to-transparent rounded-full`} />
+  </div>
+);
+
+const GridBG = () => (
+  <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
+);
+
+const Section = ({ id, children, className = "" }: any) => (
+  <section id={id} className={`relative py-28 px-6 ${className}`}>
+    <div className="max-w-7xl mx-auto relative">{children}</div>
+  </section>
+);
+
+const Eyebrow = ({ children }: any) => (
+  <motion.div
+    variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
+    className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur text-xs font-medium text-white/70"
+  >
+    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
+    {children}
+  </motion.div>
+);
+
+const H2 = ({ children, className = "" }: any) => (
+  <motion.h2
+    variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
+    className={`font-agrandir text-4xl md:text-6xl tracking-tight text-white leading-[1.05] ${className}`}
+  >
+    {children}
+  </motion.h2>
+);
+
+const Sub = ({ children, className = "" }: any) => (
+  <motion.p
+    variants={fadeUp} custom={1} initial="hidden" whileInView="show" viewport={{ once: true }}
+    className={`text-base md:text-lg text-white/60 max-w-2xl ${className}`}
+  >
+    {children}
+  </motion.p>
+);
+
+const GradientButton = ({ children, onClick, variant = "primary" }: any) => {
+  if (variant === "ghost") {
+    return (
+      <button
+        onClick={onClick}
+        className="group relative inline-flex items-center gap-2 h-12 px-6 rounded-full border border-white/15 bg-white/5 backdrop-blur text-white text-sm font-medium hover:bg-white/10 transition"
+      >
+        {children}
+      </button>
+    );
   }
-];
+  return (
+    <button
+      onClick={onClick}
+      className="group relative inline-flex items-center gap-2 h-12 px-6 rounded-full text-white text-sm font-semibold overflow-hidden"
+    >
+      <span className="absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400" />
+      <span className="absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 blur-xl opacity-60 group-hover:opacity-90 transition" />
+      <span className="relative flex items-center gap-2">
+        {children}
+        <ArrowRight className="w-4 h-4 transition group-hover:translate-x-0.5" />
+      </span>
+    </button>
+  );
+};
+
+/* =============== Hero Visual =============== */
+
+const HeroVisual = () => {
+  const posts = [
+    { p: "Instagram", c: "from-fuchsia-500 to-rose-500", t: "Launching today 🚀" },
+    { p: "LinkedIn", c: "from-cyan-500 to-blue-600", t: "How AI is changing GTM…" },
+    { p: "Meta Ads", c: "from-violet-500 to-indigo-600", t: "30% lower CPL this week" },
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.4 }}
+      className="relative mx-auto w-full max-w-5xl"
+    >
+      <div className="relative rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-900/30">
+        <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-fuchsia-400/70 to-transparent" />
+        {/* Top bar */}
+        <div className="flex items-center justify-between pb-5 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
+            <span className="ml-3 text-xs text-white/50 font-mono">weez.ai / autopilot</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-emerald-300/90">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Generating campaign…
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 pt-5">
+          {/* Generation column */}
+          <div className="md:col-span-1 rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-4">
+            <div className="text-[11px] uppercase tracking-widest text-white/40 mb-3">Brief</div>
+            <div className="space-y-2">
+              {["Get 100 SaaS demos", "Target founders", "LinkedIn + Instagram"].map((t, i) => (
+                <motion.div key={t}
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 + i * 0.2 }}
+                  className="flex items-center gap-2 text-sm text-white/80">
+                  <Check className="w-4 h-4 text-emerald-400" /> {t}
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-5 h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: "100%" }}
+                transition={{ duration: 3, delay: 1, repeat: Infinity, repeatType: "reverse" }}
+                className="h-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400" />
+            </div>
+            <div className="mt-2 text-[11px] text-white/40">AI is creating 12 assets…</div>
+          </div>
+
+          {/* Posts column */}
+          <div className="md:col-span-2 grid grid-cols-3 gap-3">
+            {posts.map((post, i) => (
+              <motion.div key={post.p}
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 + i * 0.25, duration: 0.6 }}
+                className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden"
+              >
+                <div className={`h-24 bg-gradient-to-br ${post.c} relative`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.4),transparent_60%)]" />
+                  <div className="absolute bottom-2 left-2 text-[10px] font-medium text-white/90 backdrop-blur bg-black/20 px-2 py-0.5 rounded-full">
+                    {post.p}
+                  </div>
+                </div>
+                <div className="p-2.5">
+                  <div className="text-[11px] text-white/80 leading-tight line-clamp-2">{post.t}</div>
+                  <div className="mt-2 flex gap-1">
+                    {[...Array(3)].map((_, j) => (
+                      <div key={j} className="h-1 flex-1 rounded-full bg-white/10">
+                        <motion.div initial={{ width: 0 }} animate={{ width: "100%" }}
+                          transition={{ delay: 1.5 + i * 0.2 + j * 0.1, duration: 0.8 }}
+                          className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-cyan-400" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Stats row */}
+            <div className="col-span-3 grid grid-cols-3 gap-3 mt-1">
+              {[
+                { l: "Reach", v: "284k", up: "+38%" },
+                { l: "Leads", v: "1,204", up: "+62%" },
+                { l: "CPL", v: "$3.40", up: "-41%" },
+              ].map((s, i) => (
+                <motion.div key={s.l}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.8 + i * 0.15 }}
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider">{s.l}</div>
+                  <div className="flex items-baseline justify-between mt-0.5">
+                    <span className="text-lg font-semibold text-white">{s.v}</span>
+                    <span className="text-[10px] text-emerald-300">{s.up}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating chips */}
+      <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity }}
+        className="absolute -left-4 top-12 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 bg-black/40 backdrop-blur text-xs text-white">
+        <Wand2 className="w-3.5 h-3.5 text-fuchsia-300" /> Caption generated
+      </motion.div>
+      <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 6, repeat: Infinity }}
+        className="absolute -right-4 bottom-16 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 bg-black/40 backdrop-blur text-xs text-white">
+        <TrendingUp className="w-3.5 h-3.5 text-emerald-300" /> CTR up 24%
+      </motion.div>
+    </motion.div>
+  );
+};
+
+/* =============== Page =============== */
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { scrollYProgress } = useScroll();
+  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
   const features = [
-    {
-      icon: <BrainCircuit className="w-6 h-6" />,
-      title: "Smart Content Ideas",
-      description: "Get endless post ideas tailored to your brand's voice and industry trends automatically."
-    },
-    {
-      icon: <Instagram className="w-6 h-6" />,
-      title: "One-Click Publishing",
-      description: "Connect your Instagram and post generated content instantly without leaving the platform."
-    },
-    {
-      icon: <Palette className="w-6 h-6" />,
-      title: "On-Brand Visuals",
-      description: "Generate professional images and graphics that perfectly match your brand's style guide."
-    },
-    {
-      icon: <LayoutGrid className="w-6 h-6" />,
-      title: "Workspace Management",
-      description: "Organize different brands or projects in separate, secure workspaces."
-    },
-    {
-      icon: <BarChart3 className="w-6 h-6" />,
-      title: "Simple Analytics",
-      description: "Track what's working with clear, actionable insights on your top performing content."
-    },
-    {
-      icon: <Clock className="w-6 h-6" />,
-      title: "Time Saving",
-      description: "Reduce hours of content planning into minutes of automated generation."
-    }
+    { icon: <Wand2 />, title: "AI-Powered Content Creation", desc: "Generate posts, ads, and creatives instantly." },
+    { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
+    { icon: <BarChart3 />, title: "Deep Analytics & Insights", desc: "Actionable recommendations on every metric." },
   ];
 
+  const audiences = [
+    { icon: <Building2 />, title: "SaaS Founders", desc: "Scale marketing without hiring a team." },
+    { icon: <Users />, title: "Growth Teams", desc: "Automate execution and focus on strategy." },
+    { icon: <Briefcase />, title: "Startups", desc: "Drive consistent user acquisition." },
+  ];
+
+  const integrations = ["LinkedIn", "Instagram", "Meta Ads", "Google Ads", "HubSpot", "Salesforce", "Notion", "Slack"];
+
   return (
-    <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans selection:bg-primary/10">
+    <div className="min-h-screen bg-[#070314] text-white font-sans selection:bg-fuchsia-500/30 overflow-x-hidden">
+      {/* Global ambient gradient */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.25),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(34,211,238,0.15),transparent_50%)]" />
+      </div>
 
-
-
-      {/* Zen Navigation */}
-      <header className="fixed top-0 w-full z-50 backdrop-blur-xl bg-white/70 border-b border-border/40 transition-all duration-300">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+      {/* Nav */}
+      <header className="fixed top-0 w-full z-50 backdrop-blur-xl bg-black/30 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <img src={logo} alt="Weez AI" className="h-8 w-auto" />
+            <img src={logo} alt="Weez AI" className="h-7 w-auto invert brightness-0" style={{ filter: "invert(1) brightness(2)" }} />
           </div>
-
-          <div className="flex items-center gap-4 sm:gap-6">
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
-              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-            </nav>
-            <div className="h-4 w-px bg-border hidden md:block" />
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/auth')}
-                className="hidden sm:flex font-bold hover:bg-secondary rounded-xl"
-              >
-                Log In
-              </Button>
-              <Button
-                onClick={() => navigate('/auth')}
-                className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-95 text-xs sm:text-sm"
-              >
-                Get Started
-              </Button>
-
-              {/* Mobile Menu Trigger */}
-              <div className="md:hidden">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-secondary">
-                      <Menu className="w-5 h-5 text-foreground" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] pt-20 bg-white border-l border-border/40">
-                    <nav className="flex flex-col gap-6">
-                      <a href="#features" className="text-2xl font-black uppercase tracking-tight text-foreground hover:text-primary transition-colors">Features</a>
-                      <a href="#pricing" className="text-2xl font-black uppercase tracking-tight text-foreground hover:text-primary transition-colors">Pricing</a>
-                      <div className="h-px bg-border/40 my-2" />
-                      <button
-                        onClick={() => navigate('/auth')}
-                        className="text-left text-2xl font-black uppercase tracking-tight text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        Log In
-                      </button>
-                    </nav>
-                  </SheetContent>
-                </Sheet>
-              </div>
+          <nav className="hidden md:flex items-center gap-8 text-sm text-white/70">
+            <a href="#how" className="hover:text-white transition">How it works</a>
+            <a href="#features" className="hover:text-white transition">Features</a>
+            <a href="#integrations" className="hover:text-white transition">Integrations</a>
+            <a href="#vision" className="hover:text-white transition">Vision</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/auth')} className="hidden sm:inline-flex text-white/80 hover:text-white hover:bg-white/5 rounded-full">Log in</Button>
+            <GradientButton onClick={() => navigate('/auth')}>Start Free</GradientButton>
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white"><Menu /></Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="bg-[#0b0620] border-white/10 text-white pt-20">
+                  <nav className="flex flex-col gap-5 text-lg">
+                    <a href="#how">How it works</a>
+                    <a href="#features">Features</a>
+                    <a href="#integrations">Integrations</a>
+                    <a href="#vision">Vision</a>
+                    <button onClick={() => navigate('/auth')} className="text-left">Log in</button>
+                  </nav>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-40 pb-32 px-6 relative overflow-hidden">
-        {/* Living Background */}
-        <AuroraHero />
+      {/* 1. HERO */}
+      <section className="relative pt-40 pb-28 px-6">
+        <GridBG />
+        <GlowOrb className="w-[600px] h-[600px] -top-40 -left-40" color="from-violet-600/50" />
+        <GlowOrb className="w-[500px] h-[500px] top-20 right-0" color="from-fuchsia-500/40" />
+        <GlowOrb className="w-[400px] h-[400px] bottom-0 left-1/3" color="from-cyan-500/30" />
 
-        <div className="max-w-5xl mx-auto text-center relative z-10 space-y-8">
-          <AnimatedSection animation="fade-up">
-            <Badge className="bg-secondary text-primary border-primary/10 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-              <SparklesIcon className="w-3.5 h-3.5 mr-2" />
-              The Autonomous Marketing Workforce
-            </Badge>
-          </AnimatedSection>
+        <motion.div style={{ y: heroY }} className="relative max-w-7xl mx-auto text-center">
+          <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
+          <motion.h1
+            variants={fadeUp} custom={1} initial="hidden" animate="show"
+            className="mt-6 font-agrandir text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
+          >
+            Marketing that <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
+              Runs Itself
+            </span>
+          </motion.h1>
+          <motion.p
+            variants={fadeUp} custom={2} initial="hidden" animate="show"
+            className="mt-6 text-lg md:text-xl text-white/60 max-w-2xl mx-auto"
+          >
+            Weez AI plans, creates, launches, and optimizes your marketing — so you get leads without hiring a team.
+          </motion.p>
+          <motion.div
+            variants={fadeUp} custom={3} initial="hidden" animate="show"
+            className="mt-9 flex items-center justify-center gap-3 flex-wrap"
+          >
+            <GradientButton onClick={() => navigate('/auth')}>Start Automating Marketing</GradientButton>
+            <GradientButton variant="ghost"><Play className="w-4 h-4" /> Watch Demo</GradientButton>
+          </motion.div>
 
-          <AnimatedSection animation="fade-up" delay={100}>
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-foreground leading-[0.95]">
-              Marketing that <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">Runs Itself.</span>
-            </h1>
-          </AnimatedSection>
-
-          <AnimatedSection animation="fade-up" delay={200}>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-medium">
-              Weez AI learns your brand, generates premium content, and manages your social presence automatically. Stop micromanaging and start scaling.
-            </p>
-          </AnimatedSection>
-
-          <AnimatedSection animation="fade-up" delay={300} className="pt-8">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button
-                size="lg"
-                onClick={() => navigate('/auth')}
-                className="h-16 px-10 rounded-[2rem] bg-foreground text-background text-lg font-bold shadow-2xl hover:bg-foreground/90 transition-all active:scale-95 min-w-[200px]"
-              >
-                Start for Free
-              </Button>
-              <Button
-                variant="outline"
-                className="h-16 px-10 rounded-[2rem] border-2 bg-transparent text-lg font-bold hover:bg-secondary transition-all min-w-[200px]"
-              >
-                How it Works
-              </Button>
-            </div>
-            <p className="mt-6 text-sm text-muted-foreground font-medium">
-              No credit card required · Cancel anytime
-            </p>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Floating UI Demo */}
-      <section className="pb-32 px-6">
-        <div className="max-w-[1200px] mx-auto">
-          <AnimatedSection animation="fade-up" delay={400}>
-            <div className="relative rounded-[3rem] overflow-hidden border border-borderShadow shadow-[0_100px_200px_-50px_rgba(0,0,0,0.1)] bg-[#FCFCFC]">
-              <div className="absolute inset-0 bg-grid-black/[0.02] -z-10" />
-              <div className="p-12 md:p-20 relative h-[600px] flex items-center justify-center overflow-hidden">
-                {/* Floating Element 1 - Left */}
-                <div className="absolute left-[10%] top-[20%] p-6 bg-white rounded-[2rem] shadow-xl border border-black/5 w-64 animate-float">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600">
-                      <Instagram className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-muted-foreground uppercase">Schedule</div>
-                      <div className="text-sm font-black">Post Published</div>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full w-full bg-green-500 rounded-full" />
-                  </div>
-                </div>
-
-                {/* Floating Element 2 - Right */}
-                <div className="absolute right-[10%] bottom-[30%] p-6 bg-white rounded-[2rem] shadow-xl border border-black/5 w-72 animate-float-delayed">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                      <SparklesIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-muted-foreground uppercase">Generation</div>
-                      <div className="text-sm font-black">3 New Ideas Ready</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-12 w-full bg-slate-100 rounded-xl" />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Center Main UI Representation */}
-                <div className="relative z-10 bg-white rounded-[2.5rem] shadow-2xl border border-black/5 p-8 w-full max-w-xl">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-black">Content Calendar</h3>
-                    <Badge variant="outline" className="rounded-full">October</Badge>
-                  </div>
-                  <div className="grid grid-cols-7 gap-4 text-center mb-4">
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => (
-                      <div key={d} className="text-xs font-bold text-muted-foreground">{d}</div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-4">
-                    {[...Array(14)].map((_, i) => (
-                      <div key={i} className={`aspect-square rounded-2xl flex items-center justify-center text-sm font-medium transition-colors ${i === 3 || i === 8 || i === 12 ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-secondary/50 text-muted-foreground'}`}>
-                        {i === 3 || i === 8 || i === 12 ? <CheckIcon className="w-4 h-4" /> : i + 1}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="py-32 px-6 bg-secondary/30" id="features">
-        <div className="max-w-[1200px] mx-auto space-y-24">
-          <div className="text-center max-w-3xl mx-auto space-y-4">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">
-              Everything Included.
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Weez AI replaces disconnected tools with one unified creative operating system.
-            </p>
+          <div className="mt-16">
+            <HeroVisual />
           </div>
+        </motion.div>
+      </section>
 
-          <StaggeredChildren staggerDelay={100} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((f, i) => (
-              <div key={i} className="group p-8 rounded-[2.5rem] bg-white border border-transparent hover:border-primary/10 hover:shadow-xl transition-all duration-500">
-                <div className="w-14 h-14 rounded-2xl bg-primary/5 text-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  {f.icon}
-                </div>
-                <h3 className="text-xl font-bold mb-3 tracking-tight">{f.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{f.description}</p>
-              </div>
+      {/* 2. PROBLEM */}
+      <Section>
+        <div className="grid lg:grid-cols-2 gap-14 items-center">
+          <div>
+            <Eyebrow>The Problem</Eyebrow>
+            <H2 className="mt-5">Marketing is slow, expensive,<br/> and hard to scale.</H2>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              "Founders don't have time to run marketing consistently",
+              "Hiring marketers or agencies is expensive",
+              "Campaigns take weeks to execute",
+              "Results are unpredictable and hard to optimize",
+            ].map((t, i) => (
+              <motion.div key={t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+                className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur">
+                <div className="text-rose-300 text-xs font-mono mb-2">PROBLEM 0{i + 1}</div>
+                <p className="text-white/80 text-sm leading-relaxed">{t}</p>
+              </motion.div>
             ))}
-          </StaggeredChildren>
+          </div>
         </div>
-      </section>
+      </Section>
 
-      {/* Comparison Section */}
-      <section className="py-32 px-6 bg-white" id="comparison">
-        <div className="max-w-[1200px] mx-auto space-y-16">
-          <div className="text-center max-w-3xl mx-auto space-y-4">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">
-              How Weez AI Is Different
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Most tools help you manage marketing. Weez AI actually runs it.
-            </p>
+      {/* 3. SOLUTION */}
+      <Section>
+        <div className="text-center mb-14">
+          <Eyebrow>The Solution</Eyebrow>
+          <H2 className="mt-5">Weez AI runs your marketing<br/> end-to-end.</H2>
+        </div>
+        <div className="grid md:grid-cols-4 gap-4">
+          {[
+            { i: <Target />, t: "Plans campaigns", d: "Based on your goals." },
+            { i: <Wand2 />, t: "Creates content", d: "Posts, ads, creatives." },
+            { i: <Rocket />, t: "Launches everywhere", d: "Across every platform." },
+            { i: <LineChart />, t: "Optimizes results", d: "Improves automatically." },
+          ].map((s, i) => (
+            <motion.div key={s.t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="relative p-6 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent overflow-hidden group">
+              <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-violet-500/20 blur-3xl group-hover:bg-fuchsia-500/30 transition" />
+              <div className="relative">
+                <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-fuchsia-300 mb-4">
+                  {s.i}
+                </div>
+                <h3 className="font-semibold text-white">{s.t}</h3>
+                <p className="text-sm text-white/60 mt-1">{s.d}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 4. HOW IT WORKS */}
+      <Section id="how">
+        <div className="text-center mb-16">
+          <Eyebrow>How it Works</Eyebrow>
+          <H2 className="mt-5">From strategy to results — automatically.</H2>
+        </div>
+        <div className="relative grid lg:grid-cols-3 gap-6">
+          {/* connecting line */}
+          <div className="hidden lg:block absolute top-16 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-fuchsia-400/40 to-transparent" />
+          {[
+            { n: "01", t: "Set Your Goal", d: "Tell Weez what you want — leads, growth, or engagement.", i: <Target /> },
+            { n: "02", t: "Launch Instantly", d: "AI generates content and runs campaigns across platforms.", i: <Rocket /> },
+            { n: "03", t: "Optimize Forever", d: "Tracks performance and improves results over time.", i: <TrendingUp /> },
+          ].map((s, i) => (
+            <motion.div key={s.n} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="relative p-7 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white shadow-lg shadow-fuchsia-900/40">
+                  {s.i}
+                </div>
+                <span className="font-agrandir text-5xl text-white/10">{s.n}</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white">{s.t}</h3>
+              <p className="text-white/60 text-sm mt-2 leading-relaxed">{s.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 5. FEATURES */}
+      <Section id="features">
+        <div className="text-center mb-14">
+          <Eyebrow>Capabilities</Eyebrow>
+          <H2 className="mt-5">Power up your marketing<br/> with next-gen automation.</H2>
+          <Sub className="mt-5 mx-auto">Weez AI combines intelligence and execution to run campaigns that actually perform.</Sub>
+        </div>
+
+        {/* Big cards */}
+        <div className="grid md:grid-cols-2 gap-5 mb-5">
+          {[
+            { t: "All-in-One Marketing Automation", d: "Plan, create, and launch campaigns across platforms — all from one place.", g: "from-violet-600/30 to-fuchsia-500/20" },
+            { t: "Smarter Campaigns. Better Results.", d: "AI analyzes performance, optimizes in real-time, and scales what works.", g: "from-cyan-500/30 to-blue-600/20" },
+          ].map((c, i) => (
+            <motion.div key={c.t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className={`relative p-8 md:p-10 rounded-3xl border border-white/10 bg-gradient-to-br ${c.g} overflow-hidden min-h-[260px]`}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+              <div className="relative">
+                <Sparkles className="w-6 h-6 text-white/80 mb-5" />
+                <h3 className="font-agrandir text-3xl text-white leading-tight">{c.t}</h3>
+                <p className="text-white/70 mt-3 max-w-md">{c.d}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Small cards */}
+        <div className="grid md:grid-cols-3 gap-5">
+          {features.map((f, i) => (
+            <motion.div key={f.title} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="p-6 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition">
+              <div className="w-10 h-10 rounded-lg bg-fuchsia-500/15 text-fuchsia-300 flex items-center justify-center mb-4">
+                {f.icon}
+              </div>
+              <h4 className="font-semibold text-white">{f.title}</h4>
+              <p className="text-sm text-white/60 mt-1">{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 6. WHO IT'S FOR */}
+      <Section>
+        <div className="text-center mb-14">
+          <Eyebrow>Who It's For</Eyebrow>
+          <H2 className="mt-5">Built for founders & teams who want<br/> marketing on autopilot.</H2>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {audiences.map((a, i) => (
+            <motion.div key={a.title} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="p-7 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 flex items-center justify-center text-fuchsia-200 mb-4">
+                {a.icon}
+              </div>
+              <h3 className="text-xl font-semibold text-white">{a.title}</h3>
+              <p className="text-white/60 text-sm mt-2">{a.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 7. INTEGRATIONS */}
+      <Section id="integrations">
+        <div className="grid lg:grid-cols-2 gap-14 items-center">
+          <div>
+            <Eyebrow>Ecosystem</Eyebrow>
+            <H2 className="mt-5">Works with the tools<br/> you already use.</H2>
+            <Sub className="mt-5">Plug Weez AI into your existing stack — and let it do the heavy lifting across LinkedIn, Instagram, Meta Ads, Google Ads, and your CRM.</Sub>
+            <div className="mt-7">
+              <GradientButton variant="ghost">View All Integrations</GradientButton>
+            </div>
           </div>
 
-          <AnimatedSection animation="fade-up" delay={200}>
-            <div className="relative rounded-[2.5rem] bg-white border border-border overflow-hidden shadow-xl max-w-full">
-              <div className="overflow-x-auto w-full pb-4">
-                <div className="min-w-[1000px] w-full">
-                  {/* Header */}
-                  <div className="grid grid-cols-5 border-b border-border bg-secondary/30">
-                    <div className="p-8 font-bold text-muted-foreground">Feature</div>
-                    <div className="p-8 font-bold text-muted-foreground">Traditional Social Media Tools</div>
-                    <div className="p-8 font-bold text-muted-foreground">AI Content Generators</div>
-                    <div className="p-8 font-bold text-muted-foreground">Marketing Agencies</div>
-                    <div className="p-8 font-black text-primary bg-primary/5 rounded-t-[2rem] border-x border-t border-primary/20 relative z-10 flex items-center justify-center">
-                      Weez AI
+          {/* Orbit visual */}
+          <div className="relative h-[400px]">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                className="absolute w-[280px] h-[280px] rounded-full border border-white/10" />
+              <motion.div animate={{ rotate: -360 }} transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                className="absolute w-[400px] h-[400px] rounded-full border border-white/5" />
+              {/* central brain */}
+              <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-2xl shadow-fuchsia-900/60">
+                <BrainCircuit className="w-10 h-10 text-white" />
+                <div className="absolute inset-0 rounded-full bg-fuchsia-400/40 blur-xl animate-pulse" />
+              </div>
+
+              {integrations.slice(0, 6).map((name, i) => {
+                const angle = (i / 6) * Math.PI * 2;
+                const r = 140;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                return (
+                  <motion.div key={name}
+                    initial={{ opacity: 0, scale: 0.5 }} whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.1 }} viewport={{ once: true }}
+                    className="absolute"
+                    style={{ transform: `translate(${x}px, ${y}px)` }}>
+                    <div className="px-3 py-1.5 rounded-full border border-white/15 bg-black/50 backdrop-blur text-xs text-white/90 whitespace-nowrap">
+                      {name}
                     </div>
-                  </div>
-
-                  {/* Rows */}
-                  <div className="flex flex-col">
-                    {comparisonRows.map((row, i) => (
-                      <div key={i} className={`grid grid-cols-5 border-b border-border/50 ${i === comparisonRows.length - 1 ? 'border-b-0' : ''} ${i % 2 === 0 ? 'bg-white' : 'bg-secondary/10'}`}>
-                        <div className="p-6 font-bold text-foreground flex items-center pl-8">{row.feature}</div>
-                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.traditional}</div>
-                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.ai}</div>
-                        <div className="p-6 text-sm text-muted-foreground flex items-center leading-relaxed pr-8">{row.agencies}</div>
-                        <div className="p-6 text-sm font-bold text-foreground bg-primary/5 border-x border-primary/20 relative z-10 flex items-center gap-3">
-                          <CheckIcon className="w-5 h-5 text-primary shrink-0" />
-                          <span className="leading-relaxed">{row.weez}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bottom Highlight extension matching the bg-white or secondary */}
-                  <div className="grid grid-cols-5 bg-white">
-                    <div className="col-span-4 h-4"></div>
-                    <div className="bg-primary/5 border-x border-b border-primary/20 rounded-b-[2rem] h-4 relative z-10 -mt-[1px]"></div>
-                  </div>
-                </div>
-              </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </AnimatedSection>
+          </div>
+        </div>
+      </Section>
 
-          <AnimatedSection animation="fade-up" delay={400} className="text-center pt-8">
-            <p className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
-              Stop managing marketing tools. Start working with an autonomous marketing workforce.
+      {/* 8. PROOF */}
+      <Section>
+        <div className="text-center mb-14">
+          <Eyebrow>Results</Eyebrow>
+          <H2 className="mt-5">Real results, not just features.</H2>
+        </div>
+        <div className="grid md:grid-cols-4 gap-5">
+          {[
+            { v: "5x", l: "Faster campaign creation" },
+            { v: "+62%", l: "Engagement uplift" },
+            { v: "-41%", l: "Lower marketing costs" },
+            { v: "1.2k+", l: "Pilot users & waitlist" },
+          ].map((s, i) => (
+            <motion.div key={s.l} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="p-7 rounded-2xl border border-white/10 bg-white/[0.03] text-center">
+              <div className="font-agrandir text-5xl bg-clip-text text-transparent bg-gradient-to-br from-fuchsia-300 to-cyan-300">
+                {s.v}
+              </div>
+              <div className="text-sm text-white/60 mt-2">{s.l}</div>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 9. VISION */}
+      <Section id="vision">
+        <div className="relative max-w-4xl mx-auto text-center p-12 md:p-16 rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-violet-900/30 via-fuchsia-900/20 to-cyan-900/20 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.25),transparent_60%)]" />
+          <div className="relative">
+            <Eyebrow>Vision</Eyebrow>
+            <H2 className="mt-6">The future of marketing<br/> is autonomous.</H2>
+            <p className="mt-6 text-white/70 max-w-2xl mx-auto">
+              Weez AI is building the world's first fully automated marketing system —
+              where campaigns run, learn, and improve without manual effort.
             </p>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="py-32 px-6" id="pricing">
-        <div className="max-w-[1200px] mx-auto space-y-20">
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight">Simple Pricing.</h2>
-            <p className="text-lg text-muted-foreground">Start for free, scale when you're ready.</p>
           </div>
+        </div>
+      </Section>
 
-          <div className="grid md:grid-cols-3 gap-8 items-center">
-            {/* Free */}
-            <div className="p-10 rounded-[3rem] border border-border bg-white hover:shadow-lg transition-all">
-              <div className="space-y-6">
-                <h3 className="text-2xl font-black">Free</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black">$0</span>
-                  <span className="text-muted-foreground font-medium">/mo</span>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">Perfect for trying out the platform.</p>
-                <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Get Started</Button>
-                <ul className="space-y-4 pt-4">
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 1 Brand Workspace</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 10 AI Generations</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Basic Analytics</li>
-                </ul>
+      {/* 10. FINAL CTA */}
+      <Section>
+        <div className="relative text-center py-16">
+          <GlowOrb className="w-[500px] h-[300px] -top-20 left-1/2 -translate-x-1/2" color="from-fuchsia-500/40" />
+          <H2 className="relative">Start running your marketing<br/> on autopilot.</H2>
+          <div className="relative mt-9 flex items-center justify-center gap-3 flex-wrap">
+            <GradientButton onClick={() => navigate('/auth')}>Get Started Free</GradientButton>
+            <GradientButton variant="ghost" onClick={() => navigate('/auth')}>Run Your First Campaign</GradientButton>
+          </div>
+        </div>
+      </Section>
+
+      {/* Footer */}
+      <footer className="relative border-t border-white/5 py-12 px-6">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
               </div>
+              <span className="font-poppins font-bold text-white">Weez AI</span>
             </div>
-
-            {/* Pro - Featured */}
-            <div className="relative p-10 rounded-[3.5rem] bg-[#1a1a1a] text-white shadow-2xl scale-105 z-10">
-              <div className="absolute top-6 right-8">
-                <Badge className="bg-primary hover:bg-primary border-none text-white px-3 py-1">POPULAR</Badge>
-              </div>
-              <div className="space-y-6">
-                <h3 className="text-2xl font-black">Monthly</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black">$29</span>
-                  <span className="text-white/60 font-medium">/mo</span>
-                </div>
-                <p className="text-sm text-white/60 font-medium">For growing brands and creators.</p>
-                <Button onClick={() => navigate('/auth')} className="w-full h-14 rounded-2xl bg-white text-black hover:bg-white/90 font-bold">Start Free Trial</Button>
-                <ul className="space-y-4 pt-4 text-white/80">
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Unlimited Workspaces</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Unlimited Generations</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Advanced SEO Tools</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Priority Support</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Yearly */}
-            <div className="p-10 rounded-[3rem] border border-border bg-white hover:shadow-lg transition-all">
-              <div className="space-y-6">
-                <h3 className="text-2xl font-black">Yearly</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black">$299</span>
-                  <span className="text-muted-foreground font-medium">/yr</span>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">Best value for long-term growth.</p>
-                <Button onClick={() => navigate('/auth')} variant="outline" className="w-full h-14 rounded-2xl font-bold">Choose Yearly</Button>
-                <ul className="space-y-4 pt-4">
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Everything in Monthly</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> 2 Months Free</li>
-                  <li className="flex items-center gap-3 text-sm font-medium"><CheckIcon className="w-4 h-4 text-primary" /> Early Access features</li>
-                </ul>
-              </div>
+            <p className="text-sm text-white/50">Marketing that runs itself. Built by Dexraflow.</p>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-widest text-white/40 mb-3">Product</div>
+            <ul className="space-y-2 text-sm text-white/70">
+              <li><a href="#features" className="hover:text-white">Features</a></li>
+              <li><span onClick={() => navigate('/plans')} className="cursor-pointer hover:text-white">Pricing</span></li>
+              <li><a href="#integrations" className="hover:text-white">Integrations</a></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-widest text-white/40 mb-3">Company</div>
+            <ul className="space-y-2 text-sm text-white/70">
+              <li><a href="mailto:support@dexraflow.com" className="hover:text-white">Contact</a></li>
+              <li><span onClick={() => navigate('/privacy-policy')} className="cursor-pointer hover:text-white">Privacy</span></li>
+              <li><span onClick={() => navigate('/terms-conditions')} className="cursor-pointer hover:text-white">Terms</span></li>
+              <li><span onClick={() => navigate('/data-deletion')} className="cursor-pointer hover:text-white">Delete Account</span></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-widest text-white/40 mb-3">Social</div>
+            <div className="flex gap-3">
+              {[Linkedin, Instagram].map((Icon, i) => (
+                <a key={i} href="#" className="w-9 h-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition">
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
             </div>
           </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto bg-primary rounded-[4rem] text-center p-12 md:p-24 text-white shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-          <div className="relative z-10 space-y-8">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight">Ready to automate?</h2>
-            <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
-              Join thousands of brands using Weez AI to scale their content without the burnout.
-            </p>
-            <Button
-              onClick={() => navigate('/auth')}
-              size="lg"
-              className="h-20 px-12 rounded-[2rem] bg-white text-primary text-lg font-black uppercase tracking-widest hover:bg-white/90 shadow-xl"
-            >
-              Get Started Now
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Minimal Footer */}
-      <footer className="py-20 px-6 border-t border-border/40">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-              <SparklesIcon className="w-4 h-4 text-background" />
-            </div>
-            <span className="font-bold tracking-tight">WEEZ INC.</span>
-          </div>
-          <div className="flex gap-8 text-sm font-medium">
-            <span onClick={() => navigate('/privacy-policy')} className="cursor-pointer hover:text-foreground transition-colors">Privacy</span>
-            <span onClick={() => navigate('/terms-conditions')} className="cursor-pointer hover:text-foreground transition-colors">Terms</span>
-            <span onClick={() => navigate('/data-deletion')} className="cursor-pointer hover:text-foreground transition-colors">Delete Account</span>
-          </div>
-          <div className="text-sm font-medium">
-            © 2024 Weez AI. All rights reserved.
-          </div>
+        <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-white/5 flex items-center justify-between text-xs text-white/40">
+          <span>© {new Date().getFullYear()} Weez AI · Dexraflow Inc.</span>
+          <span>Made with ⚡ for autonomous marketers</span>
         </div>
       </footer>
-
     </div>
   );
 };
-
-// Helper for checkmarks
-const Check = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
 
 export default Landing;
