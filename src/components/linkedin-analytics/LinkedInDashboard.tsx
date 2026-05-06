@@ -13,7 +13,8 @@ import {
 import { toast } from "sonner";
 import {
   BrainCircuit, Cpu, RefreshCw, Loader2, Linkedin,
-  User, Building2, BarChart3, Lightbulb, Target, WifiOff, Trophy, Video, Clock, PenLine, type LucideIcon
+  User, Building2, BarChart3, Lightbulb, Target, WifiOff, Trophy,
+  Video, Clock, PenLine, MessageSquareReply, type LucideIcon
 } from "lucide-react";
 
 import TimePeriodSelector from "./TimePeriodSelector";
@@ -25,6 +26,9 @@ import BestTimeHeatmap from "./BestTimeHeatmap";
 import DemographicsBreakdown from "./DemographicsBreakdown";
 import EngagementBenchmark from "./EngagementBenchmark";
 import LeadIntelligencePanel from "./LeadIntelligencePanel";
+import ReviewQueue from "@/components/comment-response/ReviewQueue";
+import CommentAnalytics from "@/components/comment-response/CommentAnalytics";
+import AutoReplySettings from "@/components/comment-response/AutoReplySettings";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BrainCircuit,
@@ -45,6 +49,7 @@ const LinkedInDashboard = () => {
   const [customStart, setCustomStart] = useState<string>();
   const [customEnd, setCustomEnd] = useState<string>();
   const [error, setError] = useState<string | null>(null);
+  const [commentSubTab, setCommentSubTab] = useState<"queue" | "analytics" | "settings">("queue");
 
   const loadDashboard = useCallback(async () => {
     if (!currentSpace?.id) return;
@@ -252,6 +257,13 @@ const LinkedInDashboard = () => {
             <Target className="w-3.5 h-3.5 mr-2" />
             Intelligence
           </TabsTrigger>
+          <TabsTrigger
+            value="comments"
+            className="rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-foreground data-[state=active]:text-background"
+          >
+            <MessageSquareReply className="w-3.5 h-3.5 mr-2" />
+            Comments
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Individual ──────────────────────────────────── */}
@@ -401,6 +413,44 @@ const LinkedInDashboard = () => {
                 })}
               </div>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* ── Tab: Comments (Auto-Reply System) ───────────────── */}
+        <TabsContent value="comments" className="space-y-8">
+          {/* Sub-navigation for Comments */}
+          <div className="flex items-center gap-2 p-1 bg-muted/20 rounded-2xl w-fit">
+            {(
+              [
+                { key: "queue" as const, label: "Review Queue", Icon: MessageSquareReply },
+                { key: "analytics" as const, label: "Analytics", Icon: BarChart3 },
+                { key: "settings" as const, label: "Settings", Icon: Cpu },
+              ]
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setCommentSubTab(tab.key)}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                  commentSubTab === tab.key
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground/50 hover:text-foreground/70"
+                )}
+              >
+                <tab.Icon className="w-3 h-3" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {commentSubTab === "queue" && (
+            <ReviewQueue brandId={data.brand_id} />
+          )}
+          {commentSubTab === "analytics" && (
+            <CommentAnalytics brandId={data.brand_id} />
+          )}
+          {commentSubTab === "settings" && (
+            <AutoReplySettings brandId={data.brand_id} />
           )}
         </TabsContent>
       </Tabs>
