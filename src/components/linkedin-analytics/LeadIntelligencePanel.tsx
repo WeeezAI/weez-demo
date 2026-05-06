@@ -1,11 +1,33 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Sparkles } from "lucide-react";
+import {
+  Lock,
+  Sparkles,
+  Target,
+  Star,
+  Phone,
+  Tent,
+  Trophy,
+  BrainCircuit,
+  BarChart3,
+  type LucideIcon
+} from "lucide-react";
 import type { ValueInsight } from "@/services/linkedinAnalyticsAPI";
+import { cn } from "@/lib/utils";
 
 interface LeadIntelligencePanelProps {
   insights: ValueInsight[];
 }
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Target,
+  Star,
+  Phone,
+  Tent,
+  Trophy,
+  BrainCircuit,
+  BarChart3,
+};
 
 const LeadIntelligencePanel = ({ insights }: LeadIntelligencePanelProps) => {
   return (
@@ -34,13 +56,15 @@ const LeadIntelligencePanel = ({ insights }: LeadIntelligencePanelProps) => {
         {/* Preview metrics (grayed out) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-40">
           {[
-            { label: "Total Leads", value: "—", icon: "🎯" },
-            { label: "Lead Quality", value: "—", icon: "⭐" },
-            { label: "Avg Days to Call", value: "—", icon: "📞" },
-            { label: "ICP Match Rate", value: "—", icon: "🎪" },
+            { label: "Total Leads", value: "—", Icon: Target },
+            { label: "Lead Quality", value: "—", Icon: Star },
+            { label: "Avg Days to Call", value: "—", Icon: Phone },
+            { label: "ICP Match Rate", value: "—", Icon: Tent },
           ].map((item) => (
             <div key={item.label} className="p-4 rounded-2xl bg-white/5 backdrop-blur">
-              <span className="text-lg">{item.icon}</span>
+              <div className="p-1.5 rounded-lg bg-white/10 w-fit">
+                <item.Icon className="w-4 h-4 text-white/60" />
+              </div>
               <div className="text-xl font-black text-white mt-2">{item.value}</div>
               <div className="text-[9px] font-black uppercase tracking-widest text-white/30 mt-1">
                 {item.label}
@@ -61,15 +85,20 @@ const LeadIntelligencePanel = ({ insights }: LeadIntelligencePanelProps) => {
           </div>
 
           <div className="space-y-4">
-            {insights.map((insight, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-4 p-4 bg-white/60 rounded-2xl backdrop-blur"
-              >
-                <span className="text-2xl">{insight.icon}</span>
-                <p className="text-sm font-bold text-foreground/80">{insight.text}</p>
-              </div>
-            ))}
+            {insights.map((insight, idx) => {
+              const IconComp = ICON_MAP[insight.icon] || Sparkles;
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-4 p-4 bg-white/60 rounded-2xl backdrop-blur"
+                >
+                  <div className="p-2 rounded-xl bg-white text-purple-500 shadow-sm">
+                    <IconComp className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground/80">{insight.text}</p>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}

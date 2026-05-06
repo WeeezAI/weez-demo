@@ -2,8 +2,11 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ContentBreakdown } from "@/services/linkedinAnalyticsAPI";
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
 } from "recharts";
+import {
+  FileText, Image, Video, Newspaper, BarChart3, File, type LucideIcon,
+} from "lucide-react";
 
 interface ContentTypeBreakdownProps {
   data: ContentBreakdown[];
@@ -11,13 +14,13 @@ interface ContentTypeBreakdownProps {
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
 
-const contentTypeEmoji: Record<string, string> = {
-  text: "📝",
-  image: "🖼️",
-  video: "🎬",
-  article: "📰",
-  poll: "📊",
-  document: "📄",
+const contentTypeIcons: Record<string, LucideIcon> = {
+  text: FileText,
+  image: Image,
+  video: Video,
+  article: Newspaper,
+  poll: BarChart3,
+  document: File,
 };
 
 const ContentTypeBreakdownChart = ({ data }: ContentTypeBreakdownProps) => {
@@ -78,38 +81,42 @@ const ContentTypeBreakdownChart = ({ data }: ContentTypeBreakdownProps) => {
 
         {/* Breakdown list */}
         <div className="space-y-3">
-          {data.map((item, idx) => (
-            <div
-              key={item.content_type}
-              className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/30 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                />
-                <span className="text-sm font-bold capitalize">
-                  {contentTypeEmoji[item.content_type] || "📋"} {item.content_type}
-                </span>
-                <span className="text-[10px] font-bold text-muted-foreground/40">
-                  {item.count} posts
-                </span>
+          {data.map((item, idx) => {
+            const IconComp = contentTypeIcons[item.content_type] || FileText;
+            return (
+              <div
+                key={item.content_type}
+                className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                  />
+                  <IconComp className="w-3.5 h-3.5 text-muted-foreground/50" />
+                  <span className="text-sm font-bold capitalize">
+                    {item.content_type}
+                  </span>
+                  <span className="text-[10px] font-bold text-muted-foreground/40">
+                    {item.count} posts
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span
+                    className={cn(
+                      "text-sm font-black",
+                      item.avg_engagement_rate > 2 ? "text-emerald-500" : "text-foreground/70"
+                    )}
+                  >
+                    {item.avg_engagement_rate}%
+                  </span>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
+                    Avg Eng
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <span
-                  className={cn(
-                    "text-sm font-black",
-                    item.avg_engagement_rate > 2 ? "text-emerald-500" : "text-foreground/70"
-                  )}
-                >
-                  {item.avg_engagement_rate}%
-                </span>
-                <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
-                  Avg Eng
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </Card>

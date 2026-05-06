@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { HeatmapEntry } from "@/services/linkedinAnalyticsAPI";
+import { CalendarDays } from "lucide-react";
 
 interface BestTimeHeatmapProps {
   data: HeatmapEntry[];
@@ -44,8 +45,9 @@ const BestTimeHeatmap = ({ data, bestDay }: BestTimeHeatmapProps) => {
           </p>
         </div>
         <div className="px-4 py-2 rounded-2xl bg-emerald-500/10">
-          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
-            📅 Best: {bestDay}
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5">
+            <CalendarDays className="w-3.5 h-3.5" />
+            Best: {bestDay}
           </span>
         </div>
       </div>

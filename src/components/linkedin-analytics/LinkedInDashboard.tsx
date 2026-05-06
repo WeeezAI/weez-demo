@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import {
   BrainCircuit, Cpu, RefreshCw, Loader2, Linkedin,
-  User, Building2, BarChart3, Lightbulb, Target
+  User, Building2, BarChart3, Lightbulb, Target, WifiOff, Trophy, Video, Clock, PenLine, type LucideIcon
 } from "lucide-react";
 
 import TimePeriodSelector from "./TimePeriodSelector";
@@ -25,6 +25,16 @@ import BestTimeHeatmap from "./BestTimeHeatmap";
 import DemographicsBreakdown from "./DemographicsBreakdown";
 import EngagementBenchmark from "./EngagementBenchmark";
 import LeadIntelligencePanel from "./LeadIntelligencePanel";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  BrainCircuit,
+  Trophy,
+  Target,
+  Video,
+  Clock,
+  PenLine,
+  TrendingUp: BarChart3, // Map trending to barchart as fallback or similar
+};
 
 const LinkedInDashboard = () => {
   const { currentSpace } = useAuth();
@@ -122,13 +132,15 @@ const LinkedInDashboard = () => {
   if (error) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-20 gap-6">
-        <div className="text-6xl">🔌</div>
-        <h3 className="text-2xl font-black tracking-tight text-center">
-          {error.includes("not connected") ? "LinkedIn Not Connected" : "Analytics Unavailable"}
+        <div className="p-6 rounded-[2.5rem] bg-muted/20">
+          <WifiOff className="w-16 h-16 text-muted-foreground/30" />
+        </div>
+        <h3 className="text-2xl font-black tracking-tight text-center uppercase">
+          {error.includes("not connected") ? "LinkedIn Not Connected." : "Analytics Unavailable."}
         </h3>
         <p className="text-sm text-muted-foreground/60 text-center max-w-md">
           {error.includes("not connected")
-            ? "Connect your LinkedIn account from Settings → Connectors to unlock analytics."
+            ? "Connect your LinkedIn account from Settings → Connectors to unlock real-time intelligence."
             : error}
         </p>
         <Button
@@ -323,7 +335,9 @@ const LinkedInDashboard = () => {
           {data.top_post && (
             <Card className="border-none bg-gradient-to-br from-amber-50 to-orange-50 rounded-[2.5rem] p-8 shadow-sm">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">🏆</div>
+                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600">
+                  <Trophy className="w-8 h-8" />
+                </div>
                 <div className="flex-1">
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/60 mb-1">
                     Top Performing Post
@@ -366,20 +380,25 @@ const LinkedInDashboard = () => {
                 </h3>
               </div>
               <div className="space-y-4">
-                {data.recommendations.map((rec, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-4 p-5 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors"
-                  >
-                    <span className="text-2xl">{rec.icon}</span>
-                    <div>
-                      <h4 className="text-sm font-black text-foreground/80">{rec.title}</h4>
-                      <p className="text-xs text-muted-foreground/60 mt-1 leading-relaxed">
-                        {rec.description}
-                      </p>
+                {data.recommendations.map((rec, idx) => {
+                  const IconComp = ICON_MAP[rec.icon] || Lightbulb;
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-4 p-5 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="p-2 rounded-xl bg-white text-primary shadow-sm">
+                        <IconComp className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-foreground/80">{rec.title}</h4>
+                        <p className="text-xs text-muted-foreground/60 mt-1 leading-relaxed">
+                          {rec.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           )}

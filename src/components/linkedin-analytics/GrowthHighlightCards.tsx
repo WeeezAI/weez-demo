@@ -1,7 +1,33 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { HighlightCard } from "@/services/linkedinAnalyticsAPI";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+  TrendingUp, TrendingDown, Minus,
+  Link2, Users, Eye, MessageSquare, Heart, Repeat2,
+  Target, BarChart3, Trophy, BrainCircuit, CalendarDays, type LucideIcon,
+} from "lucide-react";
+
+// Map backend icon name strings to lucide components
+const ICON_MAP: Record<string, LucideIcon> = {
+  Link2, Users, Eye, TrendingUp, MessageSquare, Heart,
+  Repeat2, Target, BarChart3, Trophy, BrainCircuit, CalendarDays,
+};
+
+// Subtle color associations per metric
+const ICON_COLORS: Record<string, string> = {
+  Link2: "text-blue-500 bg-blue-500/10",
+  Users: "text-violet-500 bg-violet-500/10",
+  Eye: "text-cyan-500 bg-cyan-500/10",
+  TrendingUp: "text-emerald-500 bg-emerald-500/10",
+  MessageSquare: "text-sky-500 bg-sky-500/10",
+  Heart: "text-rose-500 bg-rose-500/10",
+  Repeat2: "text-green-500 bg-green-500/10",
+  Target: "text-orange-500 bg-orange-500/10",
+  BarChart3: "text-indigo-500 bg-indigo-500/10",
+  Trophy: "text-amber-500 bg-amber-500/10",
+  BrainCircuit: "text-purple-500 bg-purple-500/10",
+  CalendarDays: "text-teal-500 bg-teal-500/10",
+};
 
 interface GrowthHighlightCardsProps {
   highlights: HighlightCard[];
@@ -22,6 +48,8 @@ const GrowthHighlightCards = ({ highlights }: GrowthHighlightCardsProps) => {
       {highlights.map((card, idx) => {
         const isPositive = card.direction === "up";
         const isNegative = card.direction === "down";
+        const IconComponent = ICON_MAP[card.icon] || BarChart3;
+        const colorClass = ICON_COLORS[card.icon] || "text-muted-foreground bg-muted";
 
         return (
           <Card
@@ -35,8 +63,10 @@ const GrowthHighlightCards = ({ highlights }: GrowthHighlightCardsProps) => {
           >
             <div className="flex flex-col h-full gap-4">
               {/* Icon + Label */}
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{card.icon}</span>
+              <div className="flex items-center gap-2.5">
+                <div className={cn("p-1.5 rounded-xl", colorClass)}>
+                  <IconComponent className="w-3.5 h-3.5" />
+                </div>
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-tight">
                   {card.label}
                 </span>

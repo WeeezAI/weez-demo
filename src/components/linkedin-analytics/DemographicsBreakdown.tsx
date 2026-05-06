@@ -1,5 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import {
+  BrainCircuit,
+  UserCheck,
+  Building2,
+  Settings,
+  Ruler,
+  Globe,
+  BarChart3,
+  type LucideIcon,
+} from "lucide-react";
 
 interface DemographicsBreakdownProps {
   demographics: Record<string, Record<string, number>>;
@@ -14,12 +24,12 @@ const dimensionLabels: Record<string, string> = {
   byGeo: "By Geography",
 };
 
-const dimensionEmojis: Record<string, string> = {
-  bySeniority: "👔",
-  byIndustry: "🏢",
-  byFunction: "⚙️",
-  byCompanySize: "📏",
-  byGeo: "🌍",
+const dimensionIcons: Record<string, LucideIcon> = {
+  bySeniority: UserCheck,
+  byIndustry: Building2,
+  byFunction: Settings,
+  byCompanySize: Ruler,
+  byGeo: Globe,
 };
 
 const DEMO_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899", "#6366f1", "#14b8a6"];
@@ -41,7 +51,9 @@ const DemographicsBreakdown = ({ demographics, decisionMakerPct }: DemographicsB
       {decisionMakerPct > 0 && (
         <Card className="border-none bg-gradient-to-br from-purple-50 to-blue-50 rounded-[2.5rem] p-8 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="text-4xl">🧠</div>
+            <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-600">
+              <BrainCircuit className="w-8 h-8" />
+            </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-purple-500/60">
                 ICP Validation
@@ -67,10 +79,14 @@ const DemographicsBreakdown = ({ demographics, decisionMakerPct }: DemographicsB
             .sort((a, b) => b[1] - a[1])
             .slice(0, 8); // Top 8
 
+          const IconComp = dimensionIcons[dimension] || BarChart3;
+
           return (
             <Card key={dimension} className="border-none bg-white rounded-[2.5rem] p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-5">
-                <span className="text-lg">{dimensionEmojis[dimension] || "📊"}</span>
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground">
+                  <IconComp className="w-3.5 h-3.5" />
+                </div>
                 <h4 className="text-sm font-black uppercase tracking-wider">
                   {dimensionLabels[dimension] || dimension}
                 </h4>

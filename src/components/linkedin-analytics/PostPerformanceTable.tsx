@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { PostMetric } from "@/services/linkedinAnalyticsAPI";
-import { Trophy, MessageSquare, Heart, Share2, Eye } from "lucide-react";
+import { Trophy, MessageSquare, Heart, Share2, Eye, FileText } from "lucide-react";
 
 interface PostPerformanceTableProps {
   posts: PostMetric[];
@@ -23,7 +23,9 @@ const PostPerformanceTable = ({ posts, avgEngagementRate }: PostPerformanceTable
     return (
       <Card className="border-none bg-white rounded-[2.5rem] p-10">
         <div className="text-center py-16 space-y-4">
-          <div className="text-5xl">📝</div>
+          <div className="p-4 rounded-2xl bg-muted/30 inline-flex">
+            <FileText className="w-10 h-10 text-muted-foreground/30" />
+          </div>
           <h3 className="text-lg font-black text-muted-foreground/40">No posts in this period</h3>
           <p className="text-xs text-muted-foreground/30">Start posting to see performance data here.</p>
         </div>
