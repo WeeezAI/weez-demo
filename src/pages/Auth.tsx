@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import logo from "@/assets/weez-logo.png";
 
 const Auth = () => {
@@ -22,123 +21,103 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/spaces");
-    }
+    if (isAuthenticated) navigate("/spaces");
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      let result;
-      if (isLogin) {
-        result = await login(email, password);
-      } else {
-        result = await register(name, email, password);
-      }
+      const result = isLogin
+        ? await login(email, password)
+        : await register(name, email, password);
 
       if (result.success) {
         if (isLogin) {
-          toast({
-            title: "System Access Granted",
-            description: "Welcome back to the grid.",
-          });
+          toast({ title: "Welcome back", description: "You're signed in." });
           navigate("/spaces");
         } else {
-          toast({
-            title: "Identity Created",
-            description: "Verification signal sent to your email.",
-          });
-          setTimeout(() => {
-            navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-          }, 500);
+          toast({ title: "Account created", description: "Check your email to verify." });
+          setTimeout(() => navigate(`/verify-email?email=${encodeURIComponent(email)}`), 400);
         }
       } else {
-        toast({
-          title: "Access Denied",
-          description: result.error || "Invalid credentials.",
-          variant: "destructive",
-        });
+        toast({ title: "Sign in failed", description: result.error || "Invalid credentials.", variant: "destructive" });
       }
-    } catch (error) {
-      toast({
-        title: "System Error",
-        description: "Connection protocol failed.",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBFF] text-foreground font-sans flex overflow-hidden">
-
-      {/* Left: Tactical Form Section */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-between p-10 md:p-14 relative z-10">
-
-
-
+    <div className="min-h-screen bg-[#FAFAF7] text-foreground font-sans flex">
+      {/* Left: Form */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 md:p-12">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <img src={logo} alt="Weez AI" className="h-8 w-auto" />
-          <span className="text-sm font-black tracking-tighter uppercase text-muted-foreground/50">// CORE</span>
+        <div className="flex items-center justify-between">
+          <button onClick={() => navigate("/")} className="flex items-center gap-2">
+            <img src={logo} alt="Weez AI" className="h-7 w-auto" />
+            <span className="text-base font-semibold tracking-tight">Weez AI</span>
+          </button>
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isLogin ? "Create account" : "Sign in"}
+          </button>
         </div>
 
-        {/* Main Form */}
-        <div className="max-w-md w-full mx-auto space-y-12">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary rounded-full border border-border/50">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[9px] font-black uppercase tracking-widest opacity-60">
-                {isLogin ? "Secure Login" : "New Operator"}
-              </span>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.9] uppercase text-foreground">
-              {isLogin ? "Welcome" : "Join the"} <br />
-              <span className="text-muted-foreground/30">
-                {isLogin ? "Back." : "Grid."}
-              </span>
+        {/* Form */}
+        <div className="max-w-sm w-full mx-auto">
+          <div className="space-y-2 mb-10">
+            <h1 className="text-4xl font-semibold tracking-tight">
+              {isLogin ? "Welcome back" : "Create your account"}
             </h1>
-            <p className="text-lg font-medium text-muted-foreground/60 leading-relaxed max-w-sm">
+            <p className="text-muted-foreground">
               {isLogin
-                ? "Enter your credentials to access the autonomous marketing workforce."
-                : "Initialize your brand workspace and begin scaling."}
+                ? "Sign in to continue to your workspace."
+                : "Start automating your marketing in minutes."}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div className="space-y-3 group">
-                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-focus-within:text-primary transition-colors">Full Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Name</Label>
                 <Input
                   id="name"
-                  placeholder="Operator Name"
+                  placeholder="Your name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-16 px-6 rounded-[1.5rem] bg-white border-2 border-transparent focus:border-primary/10 text-lg font-bold placeholder:text-muted-foreground/20 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+                  className="h-12 rounded-xl bg-white border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
                   required
                 />
               </div>
             )}
 
-            <div className="space-y-3 group">
-              <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-focus-within:text-primary transition-colors">Email Address</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="name@company.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-16 px-6 rounded-[1.5rem] bg-white border-2 border-transparent focus:border-primary/10 text-lg font-bold placeholder:text-muted-foreground/20 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+                className="h-12 rounded-xl bg-white border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
                 required
               />
             </div>
 
-            <div className="space-y-3 group">
-              <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-focus-within:text-primary transition-colors">Password</Label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
+                {isLogin && (
+                  <button type="button" className="text-xs text-muted-foreground hover:text-foreground">
+                    Forgot?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -146,15 +125,15 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-16 px-6 pr-14 rounded-[1.5rem] bg-white border-2 border-transparent focus:border-primary/10 text-lg font-bold placeholder:text-muted-foreground/20 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+                  className="h-12 pr-11 rounded-xl bg-white border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors p-2"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -162,77 +141,62 @@ const Auth = () => {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-20 rounded-[2rem] bg-foreground text-white text-sm font-black uppercase tracking-[0.25em] hover:bg-primary transition-all active:scale-95 shadow-2xl shadow-black/10 flex gap-4 group/btn"
+              className="w-full h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 text-sm font-medium gap-2 group"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {isLogin ? "Initialize Session" : "Create Account"}
-                  <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                  {isLogin ? "Sign in" : "Create account"}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
             </Button>
-          </form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors py-2"
-            >
-              {isLogin ? "Need an account? Sign up" : "Already have access? Log in"}
-            </button>
-          </div>
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              By continuing, you agree to our{" "}
+              <a href="/terms" className="underline hover:text-foreground">Terms</a> &{" "}
+              <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+            </p>
+          </form>
         </div>
 
-        {/* Footer */}
-        <div className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-          © 2024 Weez AI Systems.
+        <div className="text-xs text-muted-foreground">
+          © 2026 Weez AI
         </div>
       </div>
 
-      {/* Right: Visual Cinematic Section */}
-      <div className="hidden lg:flex flex-1 bg-black relative m-4 rounded-[3rem] overflow-hidden shadow-2xl">
-        {/* Looping Video Background */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="https://secretimages.blob.core.windows.net/images/Untitled%20design%20(2)%20(1).mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      {/* Right: Visual */}
+      <div className="hidden lg:flex flex-1 p-3">
+        <div className="relative w-full h-full rounded-3xl overflow-hidden bg-black">
+          <video
+            autoPlay loop muted playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-90"
+          >
+            <source src="https://secretimages.blob.core.windows.net/images/Untitled%20design%20(2)%20(1).mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-        <div className="relative z-10 w-full h-full flex flex-col justify-end p-20">
-          <div className="space-y-8">
-            <div className="space-y-4 max-w-xl">
-              <h2 className="text-5xl font-black tracking-tighter text-white leading-tight">
-                Autonomous <br />
-                Creative Power.
+          <div className="relative z-10 h-full flex flex-col justify-end p-12">
+            <div className="max-w-md space-y-4">
+              <h2 className="text-4xl font-semibold tracking-tight text-white leading-tight">
+                Marketing that runs itself.
               </h2>
-              <p className="text-lg font-medium text-white/60 leading-relaxed">
-                Unlock the full potential of your marketing strategy with AI-driven content generation and surgical analytics.
+              <p className="text-white/70 leading-relaxed">
+                Plan, create, launch and optimize campaigns — all on autopilot.
               </p>
             </div>
-
-            <div className="flex items-center gap-4 pt-8">
-              <div className="flex -space-x-4">
+            <div className="flex items-center gap-3 mt-8">
+              <div className="flex -space-x-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="w-12 h-12 rounded-full border-2 border-black bg-white/20 backdrop-blur-sm" />
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-white/20 backdrop-blur" />
                 ))}
               </div>
-              <div className="flex flex-col">
-                <span className="text-white font-bold">2,000+ Brands</span>
-                <span className="text-white/40 text-xs font-medium">Scaling on Weez AI</span>
-              </div>
+              <span className="text-sm text-white/70">Trusted by 2,000+ brands</span>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };
