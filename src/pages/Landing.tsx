@@ -6,6 +6,7 @@ import {
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
   Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
 } from "lucide-react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 
@@ -210,6 +211,7 @@ const HeroVisual = () => {
 const Landing = () => {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
   const features = [
@@ -243,6 +245,7 @@ const Landing = () => {
             <a href="#how" className="hover:text-zinc-900 transition">How it works</a>
             <a href="#features" className="hover:text-zinc-900 transition">Features</a>
             <a href="#integrations" className="hover:text-zinc-900 transition">Integrations</a>
+            <a href="#pricing" className="hover:text-zinc-900 transition">Pricing</a>
             <a href="#vision" className="hover:text-zinc-900 transition">Vision</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -560,6 +563,121 @@ const Landing = () => {
             </p>
           </div>
         </div>
+      </Section>
+
+      {/* PRICING */}
+      <Section id="pricing">
+        <div className="text-center max-w-3xl mx-auto">
+          <Eyebrow>Pricing</Eyebrow>
+          <H2 className="mt-6">Simple, transparent pricing.</H2>
+          <Sub className="mt-5 mx-auto">
+            Replace your marketing workflow — not just a tool.
+          </Sub>
+        </div>
+
+        {/* Billing toggle */}
+        <div className="mt-10 flex justify-center">
+          <div className="inline-flex items-center p-1 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur shadow-sm">
+            <button
+              onClick={() => setBilling("monthly")}
+              className={`px-5 h-10 rounded-full text-sm font-medium transition ${
+                billing === "monthly" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBilling("yearly")}
+              className={`px-5 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+                billing === "yearly" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              Yearly
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                billing === "yearly" ? "bg-emerald-400/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"
+              }`}>
+                Save 25%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Pricing card */}
+        <motion.div
+          variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
+          className="relative mt-12 max-w-3xl mx-auto"
+        >
+          <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-violet-500/30 via-fuchsia-500/30 to-cyan-400/30 blur-2xl" />
+          <div className="relative rounded-[2rem] border border-zinc-900/10 bg-white/90 backdrop-blur-xl shadow-[0_30px_80px_-30px_rgba(139,92,246,0.35)] overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+            {/* Top ribbon */}
+            <div className="absolute top-5 right-5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 shadow-md">
+                <Sparkles className="w-3 h-3" /> Recommended
+              </span>
+            </div>
+
+            <div className="p-8 md:p-12">
+              <div className="text-sm font-medium text-violet-600">Growth Plan</div>
+              <div className="mt-1 font-agrandir font-bold text-2xl text-zinc-900">
+                Everything you need to run marketing on autopilot
+              </div>
+
+              {/* Price */}
+              <div className="mt-8 flex items-end gap-3 flex-wrap">
+                <div className="font-agrandir font-bold text-6xl md:text-7xl tracking-tight text-zinc-900 leading-none">
+                  ${billing === "yearly" ? 59 : 79}
+                </div>
+                <div className="pb-2 text-zinc-600">
+                  <div className="text-sm">/ month</div>
+                  <div className="text-xs text-zinc-500">
+                    {billing === "yearly" ? "billed annually ($708/year)" : "billed monthly"}
+                  </div>
+                </div>
+                {billing === "yearly" && (
+                  <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <TrendingUp className="w-3 h-3" /> Save $240/year (25% off)
+                  </span>
+                )}
+              </div>
+
+              {/* CTA */}
+              <div className="mt-8 flex flex-col items-start gap-2">
+                <GradientButton onClick={() => navigate('/auth')}>Start 14-Day Free Trial</GradientButton>
+                <div className="text-xs text-zinc-500">No credit card required</div>
+              </div>
+
+              <div className="my-10 h-px bg-gradient-to-r from-transparent via-zinc-900/10 to-transparent" />
+
+              {/* Features grouped */}
+              <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+                {[
+                  { title: "Core Automation", icon: <Zap className="w-4 h-4" />, items: ["Run LinkedIn marketing on autopilot", "AI-generated posts, articles & creatives", "Auto-publishing and scheduling"] },
+                  { title: "Growth Engine", icon: <Rocket className="w-4 h-4" />, items: ["Founder-led & company-led distribution", "Automated engagement (comments, interactions)", "Lead generation system"] },
+                  { title: "CRM & Pipeline", icon: <Target className="w-4 h-4" />, items: ["HubSpot integration", "Automatic lead capture", "Pipeline tracking"] },
+                  { title: "Analytics & Intelligence", icon: <BarChart3 className="w-4 h-4" />, items: ["Deep performance analytics", "Industry benchmark comparison", "Best time to post insights", "Decision-maker engagement tracking"] },
+                  { title: "System Capabilities", icon: <BrainCircuit className="w-4 h-4" />, items: ["Multi-account support", "Campaign automation", "Continuous optimization"] },
+                ].map((g) => (
+                  <div key={g.title}>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/15 to-fuchsia-500/15 text-violet-600 flex items-center justify-center">
+                        {g.icon}
+                      </span>
+                      {g.title}
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      {g.items.map((it) => (
+                        <li key={it} className="flex items-start gap-2 text-sm text-zinc-700">
+                          <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                          <span>{it}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </Section>
 
       {/* 10. FINAL CTA */}
