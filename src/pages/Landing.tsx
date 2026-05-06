@@ -211,6 +211,7 @@ const HeroVisual = () => {
 const Landing = () => {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
   const features = [
