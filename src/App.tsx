@@ -18,6 +18,7 @@ import Gallery from "./pages/Gallery";
 import Analytics from "./pages/Analytics";
 import OneClickPost from "./pages/OneClickPost";
 import AutonomousMarketing from "./pages/AutonomousMarketing";
+import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -86,6 +87,7 @@ const AppContent = () => {
               <Route path="/analytics/:spaceId" element={<Analytics />} />
               <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
+              <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
 
               {/* Legal pages */}

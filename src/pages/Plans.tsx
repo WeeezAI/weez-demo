@@ -338,6 +338,19 @@ const Plans = () => {
             </header>
 
             <main className="max-w-[1400px] mx-auto px-10 py-32">
+                {/* Paddle Status Notice */}
+                {!isPaddleReady && (
+                    <div className="mb-12 p-6 rounded-3xl border border-amber-200 bg-amber-50/50 backdrop-blur-xl flex items-center gap-4 text-amber-800 animate-in fade-in slide-in-from-top-4 duration-1000">
+                        <div className="h-10 w-10 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                            <Shield className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-bold uppercase tracking-widest mb-1">Payment System Notice</p>
+                            <p className="text-sm opacity-80 font-medium">International payment gateway is currently in maintenance mode. Please use domestic options or contact support if the problem persists.</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="text-center space-y-8 mb-32">
                     <Badge className="bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.3em] px-6 py-2.5 rounded-full border-none">
                         Intelligence Tiers
