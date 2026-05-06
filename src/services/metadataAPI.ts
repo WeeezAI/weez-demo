@@ -426,7 +426,7 @@ export const pollJobProgress = async (
   onError?: (error: Error) => void,
   intervalMs = 2000
 ): Promise<() => void> => {
-  let intervalId: NodeJS.Timeout;
+  let intervalId: ReturnType<typeof setInterval>;
   let isCancelled = false;
 
   const poll = async () => {
