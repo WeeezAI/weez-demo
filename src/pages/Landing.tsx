@@ -303,7 +303,25 @@ const Landing = () => {
             <GradientButton variant="ghost"><Play className="w-4 h-4" /> Watch Demo</GradientButton>
           </motion.div>
 
-          <div className="mt-16">
+          <motion.div
+            variants={fadeUp} custom={4} initial="hidden" animate="show"
+            className="mt-6 flex justify-center"
+          >
+            <a
+              href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                alt="Weez AI - Where Marketing Runs Itself | Product Hunt"
+                width="250"
+                height="54"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=light&t=1778051193830"
+              />
+            </a>
+          </motion.div>
+
+          <div className="mt-12">
             <HeroVisual />
           </div>
         </motion.div>
