@@ -245,6 +245,7 @@ const Landing = () => {
             <a href="#how" className="hover:text-zinc-900 transition">How it works</a>
             <a href="#features" className="hover:text-zinc-900 transition">Features</a>
             <a href="#integrations" className="hover:text-zinc-900 transition">Integrations</a>
+            <a href="#pricing" className="hover:text-zinc-900 transition">Pricing</a>
             <a href="#vision" className="hover:text-zinc-900 transition">Vision</a>
           </nav>
           <div className="flex items-center gap-2">
