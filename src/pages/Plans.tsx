@@ -30,32 +30,43 @@ const Plans = () => {
     const [selectedCountry, setSelectedCountry] = useState<string>("");
     const [isPaddleReady, setIsPaddleReady] = useState(false);
 
-    // Initialize Paddle
+    // Initialize Paddle (with retry for async SDK loading)
     useEffect(() => {
+        let attempts = 0;
+        const maxAttempts = 10; // Retry up to 10 times (5 seconds total)
+        let timer: ReturnType<typeof setTimeout>;
+
         const initPaddle = () => {
             try {
                 if (!(window as any).Paddle) {
-                    console.debug("Paddle SDK not found on window");
+                    // SDK hasn't loaded yet — retry
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        console.debug(`Paddle SDK not loaded yet, retrying... (${attempts}/${maxAttempts})`);
+                        timer = setTimeout(initPaddle, 500);
+                        return;
+                    }
+                    console.warn("Paddle SDK failed to load after multiple attempts");
+                    setIsPaddleReady(false);
                     return;
                 }
 
                 const token = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
-                const environment = import.meta.env.VITE_PADDLE_ENVIRONMENT || 'production';
+                const environment = import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox';
 
-                // Stricter validation
+                // Validate token exists and has reasonable length
                 const isRealToken = token && 
                                    typeof token === 'string' && 
-                                   token.length > 20 && 
-                                   token !== 'your_paddle_client_token_here' &&
-                                   (token.startsWith('plt_') || token.startsWith('pst_'));
+                                   token.trim().length > 10 &&
+                                   token !== 'your_paddle_client_token_here';
 
                 if (isRealToken) {
                     (window as any).Paddle.Initialize({ 
-                        token: token,
-                        environment: token.startsWith('pst_') ? 'sandbox' : environment
+                        token: token.trim(),
+                        environment: environment
                     });
                     setIsPaddleReady(true);
-                    console.log("Paddle initialized successfully");
+                    console.log("✅ Paddle initialized successfully");
                 } else {
                     console.warn("Paddle initialization skipped: No valid token provided. International payments will be disabled.");
                     setIsPaddleReady(false);
@@ -67,6 +78,7 @@ const Plans = () => {
         };
         
         initPaddle();
+        return () => clearTimeout(timer);
     }, []);
 
     // Load available plans
