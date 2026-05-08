@@ -658,24 +658,6 @@ const Landing = () => {
                 )}
               </div>
 
-              {/* INR Price */}
-              <div className="mt-3 flex items-end gap-3 flex-wrap">
-                <div className="font-agrandir font-bold text-3xl md:text-4xl tracking-tight text-zinc-700 leading-none">
-                  ₹{billing === "yearly" ? "3,999" : "4,999"}
-                </div>
-                <div className="pb-1 text-zinc-500">
-                  <div className="text-sm">/ month</div>
-                  <div className="text-xs text-zinc-400">
-                    {billing === "yearly" ? "billed annually (₹47,988/year)" : "billed monthly"}
-                  </div>
-                </div>
-                {billing === "yearly" && (
-                  <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50/70 text-emerald-700 border border-emerald-200/60">
-                    <TrendingUp className="w-3 h-3" /> Save ₹12,000/year (25% off)
-                  </span>
-                )}
-              </div>
-
               {/* CTA */}
               <div className="mt-8 flex flex-col items-start gap-2">
                 <GradientButton onClick={() => navigate('/auth')}>Start 14-Day Free Trial</GradientButton>
