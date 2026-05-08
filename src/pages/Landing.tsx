@@ -599,8 +599,47 @@ const Landing = () => {
           </Sub>
         </div>
 
-        {/* Billing toggle */}
+        {/* Currency toggle */}
         <div className="mt-10 flex justify-center">
+          <div className="inline-flex items-center p-1 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur shadow-sm">
+            <button
+              onClick={() => setCurrency("USD")}
+              className={`px-4 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+                currency === "USD" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <svg className="w-5 h-5 rounded-sm" viewBox="0 0 20 16" xmlns="http://www.w3.org/2000/svg">
+                <rect width="20" height="16" fill="#B22234"/>
+                <rect y="1.23" width="20" height="1.23" fill="white"/>
+                <rect y="3.69" width="20" height="1.23" fill="white"/>
+                <rect y="6.15" width="20" height="1.23" fill="white"/>
+                <rect y="8.62" width="20" height="1.23" fill="white"/>
+                <rect y="11.08" width="20" height="1.23" fill="white"/>
+                <rect y="13.54" width="20" height="1.23" fill="white"/>
+                <rect width="8" height="8.62" fill="#3C3B6E"/>
+              </svg>
+              USD
+            </button>
+            <button
+              onClick={() => setCurrency("INR")}
+              className={`px-4 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+                currency === "INR" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <svg className="w-5 h-5 rounded-sm" viewBox="0 0 20 16" xmlns="http://www.w3.org/2000/svg">
+                <rect width="20" height="5.33" fill="#FF9932"/>
+                <rect y="5.33" width="20" height="5.33" fill="white"/>
+                <rect y="10.67" width="20" height="5.33" fill="#138808"/>
+                <circle cx="10" cy="8" r="1.6" fill="#000080"/>
+                <circle cx="10" cy="8" r="1.3" fill="none" stroke="#000080" strokeWidth="0.15"/>
+              </svg>
+              INR
+            </button>
+          </div>
+        </div>
+
+        {/* Billing toggle */}
+        <div className="mt-4 flex justify-center">
           <div className="inline-flex items-center p-1 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur shadow-sm">
             <button
               onClick={() => setBilling("monthly")}
@@ -623,29 +662,7 @@ const Landing = () => {
                 Save 25%
               </span>
             </button>
-        </div>
-
-        {/* Currency toggle */}
-        <div className="mt-4 flex justify-center">
-          <div className="inline-flex items-center p-1 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur shadow-sm">
-            <button
-              onClick={() => setCurrency("USD")}
-              className={`px-4 h-9 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
-                currency === "USD" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              <span className="text-base leading-none">🇺🇸</span> USD
-            </button>
-            <button
-              onClick={() => setCurrency("INR")}
-              className={`px-4 h-9 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
-                currency === "INR" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              <span className="text-base leading-none">🇮🇳</span> INR
-            </button>
           </div>
-        </div>
         </div>
 
         {/* Pricing card */}
