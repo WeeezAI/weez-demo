@@ -212,6 +212,12 @@ const Landing = () => {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
   const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
+  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const priceTable = {
+    USD: { symbol: "$", monthly: 79, yearly: 59, yearlyTotal: 708, savings: 240 },
+    INR: { symbol: "₹", monthly: 4999, yearly: 3999, yearlyTotal: 47988, savings: 12000 },
+  } as const;
+  const fmt = (n: number) => n.toLocaleString(currency === "INR" ? "en-IN" : "en-US");
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
   const features = [
