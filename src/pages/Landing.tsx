@@ -664,7 +664,6 @@ const Landing = () => {
             </button>
           </div>
         </div>
-      </div>
 
         {/* Pricing card */}
         <motion.div
