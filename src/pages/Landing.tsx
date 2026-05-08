@@ -623,7 +623,29 @@ const Landing = () => {
                 Save 25%
               </span>
             </button>
+        </div>
+
+        {/* Currency toggle */}
+        <div className="mt-4 flex justify-center">
+          <div className="inline-flex items-center p-1 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur shadow-sm">
+            <button
+              onClick={() => setCurrency("USD")}
+              className={`px-4 h-9 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+                currency === "USD" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <span className="text-base leading-none">🇺🇸</span> USD
+            </button>
+            <button
+              onClick={() => setCurrency("INR")}
+              className={`px-4 h-9 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+                currency === "INR" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <span className="text-base leading-none">🇮🇳</span> INR
+            </button>
           </div>
+        </div>
         </div>
 
         {/* Pricing card */}
