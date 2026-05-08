@@ -671,17 +671,19 @@ const Landing = () => {
               {/* Price */}
               <div className="mt-8 flex items-end gap-3 flex-wrap">
                 <div className="font-agrandir font-bold text-6xl md:text-7xl tracking-tight text-zinc-900 leading-none">
-                  ${billing === "yearly" ? 59 : 79}
+                  {priceTable[currency].symbol}{fmt(billing === "yearly" ? priceTable[currency].yearly : priceTable[currency].monthly)}
                 </div>
                 <div className="pb-2 text-zinc-600">
                   <div className="text-sm">/ month</div>
                   <div className="text-xs text-zinc-500">
-                    {billing === "yearly" ? "billed annually ($708/year)" : "billed monthly"}
+                    {billing === "yearly"
+                      ? `billed annually (${priceTable[currency].symbol}${fmt(priceTable[currency].yearlyTotal)}/year)`
+                      : "billed monthly"}
                   </div>
                 </div>
                 {billing === "yearly" && (
                   <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <TrendingUp className="w-3 h-3" /> Save $240/year (25% off)
+                    <TrendingUp className="w-3 h-3" /> Save {priceTable[currency].symbol}{fmt(priceTable[currency].savings)}/year (25% off)
                   </span>
                 )}
               </div>
