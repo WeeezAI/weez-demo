@@ -282,6 +282,14 @@ const Landing = () => {
   const fmt = (n: number) => n.toLocaleString(currency === "INR" ? "en-IN" : "en-US");
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
+  // Rotating hero word
+  const rotatingWords = ["Runs Itself", "Plans Itself", "Creates Itself", "Launches Itself", "Optimizes Itself"];
+  const [wordIdx, setWordIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setWordIdx((i) => (i + 1) % rotatingWords.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+
   const features = [
     { icon: <Wand2 />, title: "AI-Powered Content Creation", desc: "Generate posts, ads, and creatives instantly." },
     { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
