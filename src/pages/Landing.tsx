@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
@@ -282,6 +282,14 @@ const Landing = () => {
   const fmt = (n: number) => n.toLocaleString(currency === "INR" ? "en-IN" : "en-US");
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
+  // Rotating hero word
+  const rotatingWords = ["Runs Itself", "Plans Itself", "Creates Itself", "Launches Itself", "Optimizes Itself"];
+  const [wordIdx, setWordIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setWordIdx((i) => (i + 1) % rotatingWords.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+
   const features = [
     { icon: <Wand2 />, title: "AI-Powered Content Creation", desc: "Generate posts, ads, and creatives instantly." },
     { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
@@ -353,8 +361,19 @@ const Landing = () => {
             className="mt-6 font-agrandir font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
           >
             Marketing that <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500">
-              Runs Itself
+            <span className="relative inline-block align-baseline overflow-hidden" style={{ minWidth: "8ch" }}>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={rotatingWords[wordIdx]}
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: "0%", opacity: 1 }}
+                  exit={{ y: "-100%", opacity: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500"
+                >
+                  {rotatingWords[wordIdx]}
+                </motion.span>
+              </AnimatePresence>
             </span>
           </motion.h1>
           <motion.p
