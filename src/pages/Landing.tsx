@@ -6,7 +6,7 @@ import {
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
   Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 
@@ -93,18 +93,14 @@ const GradientButton = ({ children, onClick, variant = "primary" }: any) => {
 /* =============== Hero Visual =============== */
 
 const HeroVisual = () => {
+  const navigate = useNavigate();
   const prompts = [
     "Run my Marketing for 30 days",
     "Maximize my engagement for 30 days",
     "Do content posting for 30 days",
     "Do rapid marketing for 30 days",
   ];
-  const chips = [
-    "Do content posting for 30 days",
-    "Do rapid marketing for 30 days",
-    "Run my Marketing for 30 days",
-    "Maximize my engagement for 30 days",
-  ];
+  const chips = prompts;
   const tabs = [
     { label: "Chat", icon: <MessageSquare className="w-3.5 h-3.5" /> },
     { label: "Content Planner", icon: <BarChart3 className="w-3.5 h-3.5" /> },
@@ -114,8 +110,11 @@ const HeroVisual = () => {
   const [typed, setTyped] = useState("");
   const [promptIdx, setPromptIdx] = useState(0);
   const [phase, setPhase] = useState<"typing" | "pause" | "deleting">("typing");
+  const [userTyping, setUserTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (userTyping) return;
     const full = prompts[promptIdx];
     let timeout: any;
     if (phase === "typing") {
@@ -133,13 +132,26 @@ const HeroVisual = () => {
       }
     }
     return () => clearTimeout(timeout);
-  }, [typed, phase, promptIdx]);
+  }, [typed, phase, promptIdx, userTyping]);
+
+  const goAuth = () => navigate("/auth");
+
+  // Container scroll animation
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"],
+  });
+  const rotateX = useTransform(scrollYProgress, [0, 0.5], [22, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.5], [0.92, 1]);
+  const translateY = useTransform(scrollYProgress, [0, 0.5], [40, 0]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.4 }}
-      className="relative mx-auto w-full max-w-5xl"
-    >
+    <div ref={containerRef} className="relative mx-auto w-full max-w-5xl" style={{ perspective: "1200px" }}>
+      <motion.div
+        style={{ rotateX, scale, y: translateY, transformStyle: "preserve-3d" }}
+        className="relative"
+      >
       <div className="relative rounded-3xl border border-zinc-900/10 bg-white/70 backdrop-blur-2xl shadow-2xl shadow-violet-900/20 overflow-hidden">
         <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-fuchsia-400/70 to-transparent" />
 
@@ -151,7 +163,6 @@ const HeroVisual = () => {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
             <span className="ml-3 text-xs text-zinc-500 font-mono">weez.ai / autopilot</span>
           </div>
-          {/* Tabs */}
           <div className="flex items-center gap-1">
             {tabs.map((t, i) => (
               <div
@@ -171,7 +182,6 @@ const HeroVisual = () => {
 
         {/* Body */}
         <div className="px-6 sm:px-10 py-10 sm:py-14 bg-gradient-to-b from-violet-50/40 via-white to-cyan-50/30">
-          {/* Eyebrow */}
           <div className="flex justify-center">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100/70 text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-700">
               <Zap className="w-3 h-3" />
@@ -179,7 +189,6 @@ const HeroVisual = () => {
             </div>
           </div>
 
-          {/* Headline */}
           <h3 className="mt-5 text-center text-2xl sm:text-4xl font-semibold tracking-tight text-zinc-900">
             What shall we architect for<br />
             <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">
@@ -191,27 +200,44 @@ const HeroVisual = () => {
             Deploy conversion-optimized artifacts and strategic narratives with absolute brand alignment.
           </p>
 
-          {/* Input */}
-          <div className="mt-8 rounded-2xl bg-white border border-zinc-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-4">
-            <div className="min-h-[44px] flex items-center text-sm text-zinc-400">
-              {typed || <span className="text-zinc-300">Ask Weez anything…</span>}
-              <span className="ml-0.5 inline-block w-[2px] h-4 bg-violet-500 animate-pulse" />
+          {/* Editable Input */}
+          <form
+            onSubmit={(e) => { e.preventDefault(); goAuth(); }}
+            className="mt-8 rounded-2xl bg-white border border-zinc-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-4 cursor-text"
+            onClick={() => inputRef.current?.focus()}
+          >
+            <div className="min-h-[44px] flex items-center">
+              <input
+                ref={inputRef}
+                value={typed}
+                onFocus={() => { if (!userTyping) { setUserTyping(true); setTyped(""); } }}
+                onChange={(e) => { setUserTyping(true); setTyped(e.target.value); }}
+                placeholder="Ask Weez anything…"
+                className="w-full bg-transparent border-0 outline-none text-sm text-zinc-700 placeholder:text-zinc-300"
+              />
+              {!userTyping && (
+                <span className="ml-0.5 inline-block w-[2px] h-4 bg-violet-500 animate-pulse" />
+              )}
             </div>
             <div className="flex items-center justify-end pt-3 border-t border-zinc-900/5">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-zinc-600 bg-zinc-50 border border-zinc-900/5">
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-zinc-600 bg-zinc-50 border border-zinc-900/5 hover:bg-zinc-100 transition"
+              >
                 <Wand2 className="w-3 h-3" />
                 Configure Workspace
               </button>
             </div>
-          </div>
+          </form>
 
-          {/* CTA */}
-          <button className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-4 text-sm font-semibold uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-xl shadow-violet-600/30">
+          <button
+            onClick={goAuth}
+            className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-4 text-sm font-semibold uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-xl shadow-violet-600/30 hover:shadow-violet-600/50 transition-shadow"
+          >
             <Rocket className="w-4 h-4" />
             Run Autonomous Campaign
           </button>
 
-          {/* Prompt chips */}
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {chips.map((c, i) => (
               <motion.button
@@ -219,7 +245,7 @@ const HeroVisual = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 + i * 0.1 }}
-                onClick={() => { setTyped(""); setPromptIdx(prompts.indexOf(c)); setPhase("typing"); }}
+                onClick={goAuth}
                 className="px-3.5 py-1.5 rounded-full bg-zinc-900 text-white text-[11px] font-medium hover:scale-[1.03] transition-transform"
               >
                 {c}
@@ -229,7 +255,6 @@ const HeroVisual = () => {
         </div>
       </div>
 
-      {/* Floating chips */}
       <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity }}
         className="absolute -left-4 top-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white shadow-lg text-xs text-zinc-900">
         <Wand2 className="w-3.5 h-3.5 text-fuchsia-500" /> Caption generated
@@ -238,7 +263,8 @@ const HeroVisual = () => {
         className="absolute -right-4 bottom-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white shadow-lg text-xs text-zinc-900">
         <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> CTR up 24%
       </motion.div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 };
 
