@@ -6,7 +6,7 @@ import {
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
   Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 
