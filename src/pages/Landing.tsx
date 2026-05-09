@@ -361,8 +361,19 @@ const Landing = () => {
             className="mt-6 font-agrandir font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
           >
             Marketing that <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500">
-              Runs Itself
+            <span className="relative inline-block align-baseline overflow-hidden" style={{ minWidth: "8ch" }}>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={rotatingWords[wordIdx]}
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: "0%", opacity: 1 }}
+                  exit={{ y: "-100%", opacity: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500"
+                >
+                  {rotatingWords[wordIdx]}
+                </motion.span>
+              </AnimatePresence>
             </span>
           </motion.h1>
           <motion.p
