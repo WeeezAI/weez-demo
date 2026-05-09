@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import {
   Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
