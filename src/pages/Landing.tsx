@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
 import {
   Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
   Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 
