@@ -6,7 +6,7 @@ import {
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
   Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 
@@ -93,114 +93,150 @@ const GradientButton = ({ children, onClick, variant = "primary" }: any) => {
 /* =============== Hero Visual =============== */
 
 const HeroVisual = () => {
-  const posts = [
-    { p: "Instagram", c: "from-fuchsia-500 to-rose-500", t: "Launching today 🚀" },
-    { p: "LinkedIn", c: "from-cyan-500 to-blue-600", t: "How AI is changing GTM…" },
-    { p: "Meta Ads", c: "from-violet-500 to-indigo-600", t: "30% lower CPL this week" },
+  const prompts = [
+    "Run my Marketing for 30 days",
+    "Maximize my engagement for 30 days",
+    "Do content posting for 30 days",
+    "Do rapid marketing for 30 days",
   ];
+  const chips = [
+    "Do content posting for 30 days",
+    "Do rapid marketing for 30 days",
+    "Run my Marketing for 30 days",
+    "Maximize my engagement for 30 days",
+  ];
+  const tabs = [
+    { label: "Chat", icon: <MessageSquare className="w-3.5 h-3.5" /> },
+    { label: "Content Planner", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { label: "Connectors", icon: <Zap className="w-3.5 h-3.5" /> },
+  ];
+
+  const [typed, setTyped] = useState("");
+  const [promptIdx, setPromptIdx] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "pause" | "deleting">("typing");
+
+  useEffect(() => {
+    const full = prompts[promptIdx];
+    let timeout: any;
+    if (phase === "typing") {
+      if (typed.length < full.length) {
+        timeout = setTimeout(() => setTyped(full.slice(0, typed.length + 1)), 55);
+      } else {
+        timeout = setTimeout(() => setPhase("deleting"), 1400);
+      }
+    } else if (phase === "deleting") {
+      if (typed.length > 0) {
+        timeout = setTimeout(() => setTyped(typed.slice(0, -1)), 28);
+      } else {
+        setPromptIdx((i) => (i + 1) % prompts.length);
+        setPhase("typing");
+      }
+    }
+    return () => clearTimeout(timeout);
+  }, [typed, phase, promptIdx]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.4 }}
       className="relative mx-auto w-full max-w-5xl"
     >
-      <div className="relative rounded-3xl border border-zinc-900/10 bg-zinc-900/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-900/30">
+      <div className="relative rounded-3xl border border-zinc-900/10 bg-white/70 backdrop-blur-2xl shadow-2xl shadow-violet-900/20 overflow-hidden">
         <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-fuchsia-400/70 to-transparent" />
+
         {/* Top bar */}
-        <div className="flex items-center justify-between pb-5 border-b border-zinc-900/10">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-900/5">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
             <span className="ml-3 text-xs text-zinc-500 font-mono">weez.ai / autopilot</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-emerald-300/90">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Generating campaign…
+          {/* Tabs */}
+          <div className="flex items-center gap-1">
+            {tabs.map((t, i) => (
+              <div
+                key={t.label}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider ${
+                  i === 0
+                    ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
+                    : "text-zinc-400"
+                }`}
+              >
+                {t.icon}
+                <span className="hidden sm:inline">{t.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 pt-5">
-          {/* Generation column */}
-          <div className="md:col-span-1 rounded-2xl border border-zinc-900/10 bg-gradient-to-b from-white/5 to-transparent p-4">
-            <div className="text-[11px] uppercase tracking-widest text-zinc-500 mb-3">Brief</div>
-            <div className="space-y-2">
-              {["Get 100 SaaS demos", "Target founders", "LinkedIn + Instagram"].map((t, i) => (
-                <motion.div key={t}
-                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + i * 0.2 }}
-                  className="flex items-center gap-2 text-sm text-zinc-800">
-                  <Check className="w-4 h-4 text-emerald-400" /> {t}
-                </motion.div>
-              ))}
+        {/* Body */}
+        <div className="px-6 sm:px-10 py-10 sm:py-14 bg-gradient-to-b from-violet-50/40 via-white to-cyan-50/30">
+          {/* Eyebrow */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100/70 text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-700">
+              <Zap className="w-3 h-3" />
+              Autonomous Marketing Workforce
             </div>
-            <div className="mt-5 h-1.5 bg-zinc-900/[0.04] rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: "100%" }}
-                transition={{ duration: 3, delay: 1, repeat: Infinity, repeatType: "reverse" }}
-                className="h-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400" />
-            </div>
-            <div className="mt-2 text-[11px] text-zinc-500">AI is creating 12 assets…</div>
           </div>
 
-          {/* Posts column */}
-          <div className="md:col-span-2 grid grid-cols-3 gap-3">
-            {posts.map((post, i) => (
-              <motion.div key={post.p}
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 + i * 0.25, duration: 0.6 }}
-                className="rounded-xl border border-zinc-900/10 bg-zinc-900/[0.03] overflow-hidden"
-              >
-                <div className={`h-24 bg-gradient-to-br ${post.c} relative`}>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.4),transparent_60%)]" />
-                  <div className="absolute bottom-2 left-2 text-[10px] font-medium text-zinc-900 backdrop-blur bg-zinc-900/10 px-2 py-0.5 rounded-full">
-                    {post.p}
-                  </div>
-                </div>
-                <div className="p-2.5">
-                  <div className="text-[11px] text-zinc-800 leading-tight line-clamp-2">{post.t}</div>
-                  <div className="mt-2 flex gap-1">
-                    {[...Array(3)].map((_, j) => (
-                      <div key={j} className="h-1 flex-1 rounded-full bg-zinc-900/[0.06]">
-                        <motion.div initial={{ width: 0 }} animate={{ width: "100%" }}
-                          transition={{ delay: 1.5 + i * 0.2 + j * 0.1, duration: 0.8 }}
-                          className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-cyan-400" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          {/* Headline */}
+          <h3 className="mt-5 text-center text-2xl sm:text-4xl font-semibold tracking-tight text-zinc-900">
+            What shall we architect for<br />
+            <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">
+              Acme Grade
+            </span>{" "}
+            today?
+          </h3>
+          <p className="mt-3 text-center text-xs sm:text-sm text-zinc-500 max-w-xl mx-auto">
+            Deploy conversion-optimized artifacts and strategic narratives with absolute brand alignment.
+          </p>
 
-            {/* Stats row */}
-            <div className="col-span-3 grid grid-cols-3 gap-3 mt-1">
-              {[
-                { l: "Reach", v: "284k", up: "+38%" },
-                { l: "Leads", v: "1,204", up: "+62%" },
-                { l: "CPL", v: "$3.40", up: "-41%" },
-              ].map((s, i) => (
-                <motion.div key={s.l}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.8 + i * 0.15 }}
-                  className="rounded-xl border border-zinc-900/10 bg-zinc-900/[0.02] p-3">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{s.l}</div>
-                  <div className="flex items-baseline justify-between mt-0.5">
-                    <span className="text-lg font-semibold text-zinc-900">{s.v}</span>
-                    <span className="text-[10px] text-emerald-300">{s.up}</span>
-                  </div>
-                </motion.div>
-              ))}
+          {/* Input */}
+          <div className="mt-8 rounded-2xl bg-white border border-zinc-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-4">
+            <div className="min-h-[44px] flex items-center text-sm text-zinc-400">
+              {typed || <span className="text-zinc-300">Ask Weez anything…</span>}
+              <span className="ml-0.5 inline-block w-[2px] h-4 bg-violet-500 animate-pulse" />
             </div>
+            <div className="flex items-center justify-end pt-3 border-t border-zinc-900/5">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-zinc-600 bg-zinc-50 border border-zinc-900/5">
+                <Wand2 className="w-3 h-3" />
+                Configure Workspace
+              </button>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-4 text-sm font-semibold uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-xl shadow-violet-600/30">
+            <Rocket className="w-4 h-4" />
+            Run Autonomous Campaign
+          </button>
+
+          {/* Prompt chips */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {chips.map((c, i) => (
+              <motion.button
+                key={c}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + i * 0.1 }}
+                onClick={() => { setTyped(""); setPromptIdx(prompts.indexOf(c)); setPhase("typing"); }}
+                className="px-3.5 py-1.5 rounded-full bg-zinc-900 text-white text-[11px] font-medium hover:scale-[1.03] transition-transform"
+              >
+                {c}
+              </motion.button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Floating chips */}
       <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity }}
-        className="absolute -left-4 top-12 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur text-xs text-zinc-900">
-        <Wand2 className="w-3.5 h-3.5 text-fuchsia-300" /> Caption generated
+        className="absolute -left-4 top-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white shadow-lg text-xs text-zinc-900">
+        <Wand2 className="w-3.5 h-3.5 text-fuchsia-500" /> Caption generated
       </motion.div>
       <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 6, repeat: Infinity }}
-        className="absolute -right-4 bottom-16 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white/80 backdrop-blur text-xs text-zinc-900">
-        <TrendingUp className="w-3.5 h-3.5 text-emerald-300" /> CTR up 24%
+        className="absolute -right-4 bottom-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-zinc-900/10 bg-white shadow-lg text-xs text-zinc-900">
+        <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> CTR up 24%
       </motion.div>
     </motion.div>
   );
