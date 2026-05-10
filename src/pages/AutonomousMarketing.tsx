@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, KeyboardEvent, ChangeEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowUp,
     BrainCircuit,
