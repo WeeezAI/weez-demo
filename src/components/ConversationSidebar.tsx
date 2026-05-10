@@ -47,24 +47,6 @@ const ConversationSidebar = ({
       color: "text-violet-500"
     },
     {
-      label: "Create",
-      path: `/one-click-post/${spaceId}`,
-      icon: LayoutDashboard,
-      color: "text-blue-500"
-    },
-    {
-      label: "Gallery",
-      path: `/gallery/${spaceId}`,
-      icon: Sparkles,
-      color: "text-purple-500"
-    },
-    {
-      label: "Stats",
-      path: `/analytics/${spaceId}`,
-      icon: Activity,
-      color: "text-emerald-500"
-    },
-    {
       label: "LinkedIn",
       path: `/linkedin-analytics/${spaceId}`,
       icon: Linkedin,
