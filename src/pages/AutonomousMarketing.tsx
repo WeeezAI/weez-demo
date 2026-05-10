@@ -834,10 +834,11 @@ export default function AutonomousMarketing() {
     const [activeStatus, setActiveStatus] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
     
-    // Check for setup flag to prioritize connectors
+    // Check for setup flag or tab param to prioritize connectors
     const [params] = useSearchParams();
     const isSetupMode = params.get("setup") === "true";
-    const [activeTab, setActiveTab] = useState<"chat" | "planner" | "connectors">(isSetupMode ? "connectors" : "chat");
+    const forcedTab = params.get("tab") as "chat" | "planner" | "connectors" | null;
+    const [activeTab, setActiveTab] = useState<"chat" | "planner" | "connectors">(forcedTab || (isSetupMode ? "connectors" : "chat"));
     
     const [performanceReports, setPerformanceReports] = useState<any[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);

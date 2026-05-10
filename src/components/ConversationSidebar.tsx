@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { getHubSpotStatus } from "@/services/salesAPI";
+import { getHubSpotStatus, getHubSpotAuthorizeUrl } from "@/services/salesAPI";
 import logo from "@/assets/weez-logo.png";
 
 interface ConversationSidebarProps {
@@ -160,41 +160,39 @@ const ConversationSidebar = ({
                     if (hubspotConnected) {
                       navigate(`/sales/${spaceId}`);
                     } else {
-                      // Open HubSpot OAuth directly — one-click connect
-                      window.location.href = `${
-                        import.meta.env.VITE_WEEZ_BASE_URL || "https://weez-backend-production.up.railway.app/api/v1"
-                      }/hubspot/authorize?brand_id=${spaceId}`;
+                      // Navigate to the connectors tab in Autonomous Marketing
+                      navigate(`/autonomous-marketing/${spaceId}?tab=connectors`);
                     }
                   }}
                   className={cn(
-                    "flex items-center justify-between w-full group rounded-lg px-2 py-2 -mx-2 transition-all duration-200",
+                    "flex items-center justify-between w-full group rounded-2xl px-3 py-3 transition-all duration-300",
                     hubspotConnected
                       ? "hover:bg-secondary/40"
-                      : "hover:bg-orange-500/5 border border-transparent hover:border-orange-500/20"
+                      : "bg-orange-500/[0.03] border border-orange-500/10 hover:bg-orange-500/[0.06] hover:border-orange-500/20"
                   )}
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-6 h-6 rounded-md flex items-center justify-center transition-all",
+                      "w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm",
                       hubspotConnected
-                        ? "bg-orange-500/10"
-                        : "bg-orange-500/5 group-hover:bg-orange-500/15"
+                        ? "bg-emerald-500/10"
+                        : "bg-orange-500/10 group-hover:scale-110"
                     )}>
-                      <Link2 className={cn(
-                        "w-3 h-3 transition-colors",
-                        hubspotConnected ? "text-orange-500" : "text-orange-400/50 group-hover:text-orange-500"
+                      <Target className={cn(
+                        "w-4 h-4 transition-colors",
+                        hubspotConnected ? "text-emerald-500" : "text-orange-500"
                       )} />
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className="text-[10px] font-bold text-foreground/60">HubSpot CRM</span>
+                      <span className="text-[11px] font-black text-foreground/80 tracking-tight">HubSpot CRM</span>
                       <span className={cn(
-                        "text-[8px] font-bold uppercase tracking-wider",
+                        "text-[9px] font-black uppercase tracking-widest transition-all",
                         hubspotConnected
-                          ? "text-emerald-500"
-                          : "text-orange-400/70 group-hover:text-orange-500"
+                          ? "text-emerald-500/80"
+                          : "text-orange-500 group-hover:translate-x-0.5"
                       )}>
                         {hubspotConnected === null
-                          ? "Checking…"
+                          ? "Syncing…"
                           : hubspotConnected
                             ? "Connected"
                             : "Click to Connect →"}
@@ -202,10 +200,10 @@ const ConversationSidebar = ({
                     </div>
                   </div>
                   <div className={cn(
-                    "w-1.5 h-1.5 rounded-full shadow-sm transition-all",
+                    "w-2 h-2 rounded-full transition-all",
                     hubspotConnected
-                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
-                      : "bg-orange-400/60 group-hover:bg-orange-500 group-hover:shadow-[0_0_6px_rgba(249,115,22,0.4)]"
+                      ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                      : "bg-orange-400 animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.4)]"
                   )} />
                 </button>
               </div>
