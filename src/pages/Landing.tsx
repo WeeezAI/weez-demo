@@ -546,7 +546,7 @@ const Landing = () => {
           {audiences.map((a, i) => (
             <motion.div key={a.title} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
               className="p-7 rounded-3xl border border-slate-900/10 bg-gradient-to-b from-white/[0.04] to-transparent text-center">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/30 to-blue-500/30 flex items-center justify-center text-fuchsia-200 mb-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/30 to-blue-500/30 flex items-center justify-center text-blue-200 mb-4">
                 {a.icon}
               </div>
               <h3 className="text-xl font-semibold text-slate-900">{a.title}</h3>
@@ -612,7 +612,7 @@ const Landing = () => {
 
         {/* Email performance updates banner */}
         <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-          className="mt-10 relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-r from-blue-50 via-white to-fuchsia-50 p-8 md:p-10">
+          className="mt-10 relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-8 md:p-10">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center shadow-xl shadow-blue-500/30 shrink-0">
               <MessageSquare className="w-7 h-7 text-white" />
@@ -657,7 +657,7 @@ const Landing = () => {
 
       {/* 9. VISION */}
       <Section id="vision">
-        <div className="relative max-w-4xl mx-auto text-center p-12 md:p-16 rounded-[2.5rem] border border-slate-900/10 bg-gradient-to-br from-blue-200/60 via-fuchsia-200/50 to-cyan-200/40 overflow-hidden">
+        <div className="relative max-w-4xl mx-auto text-center p-12 md:p-16 rounded-[2.5rem] border border-slate-900/10 bg-gradient-to-br from-blue-200/60 via-blue-200/50 to-sky-200/40 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.18),transparent_60%)]" />
           <div className="relative">
             <Eyebrow>Vision</Eyebrow>
