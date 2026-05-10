@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin } from "lucide-react";
+import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,6 +58,12 @@ const ConversationSidebar = ({
       path: `/linkedin-analytics/${spaceId}`,
       icon: Linkedin,
       color: "text-blue-600"
+    },
+    {
+      label: "Sales",
+      path: `/sales/${spaceId}`,
+      icon: Target,
+      color: "text-orange-500"
     },
   ];
 
