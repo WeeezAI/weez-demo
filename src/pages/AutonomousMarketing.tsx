@@ -833,7 +833,12 @@ export default function AutonomousMarketing() {
     const [isStarting, setIsStarting] = useState(false);
     const [activeStatus, setActiveStatus] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
-    const [activeTab, setActiveTab] = useState<"chat" | "planner" | "connectors">("chat");
+    
+    // Check for setup flag to prioritize connectors
+    const [params] = useSearchParams();
+    const isSetupMode = params.get("setup") === "true";
+    const [activeTab, setActiveTab] = useState<"chat" | "planner" | "connectors">(isSetupMode ? "connectors" : "chat");
+    
     const [performanceReports, setPerformanceReports] = useState<any[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [isPollingConversation, setIsPollingConversation] = useState(false);
@@ -897,6 +902,14 @@ export default function AutonomousMarketing() {
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, isThinking, plannerData]);
+
+    useEffect(() => {
+        if (isSetupMode) {
+            toast.message("Welcome to your new Space!", {
+                description: "Connect your website and social channels first to calibrate your brand intelligence.",
+            });
+        }
+    }, [isSetupMode]);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -1295,6 +1308,8 @@ export default function AutonomousMarketing() {
                         ].map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
+                            const isConnectors = tab.id === "connectors";
+                            
                             return (
                                 <button
                                     key={tab.id}
@@ -1304,7 +1319,8 @@ export default function AutonomousMarketing() {
                                     className={cn(
                                         "relative flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-colors",
                                         isActive ? "text-white" : "text-zinc-600 hover:text-zinc-900",
-                                        tab.disabled && "opacity-40 cursor-not-allowed hover:text-zinc-600"
+                                        tab.disabled && "opacity-40 cursor-not-allowed hover:text-zinc-600",
+                                        isConnectors && isSetupMode && !isActive && "animate-pulse ring-2 ring-indigo-500/30"
                                     )}
                                 >
                                     {isActive && (
@@ -1314,8 +1330,11 @@ export default function AutonomousMarketing() {
                                             transition={{ type: "spring", stiffness: 380, damping: 32 }}
                                         />
                                     )}
-                                    <Icon className="relative w-3.5 h-3.5" />
+                                    <Icon className={cn("relative w-3.5 h-3.5", isConnectors && isSetupMode && !isActive && "text-indigo-600")} />
                                     <span className="relative">{tab.label}</span>
+                                    {isConnectors && isSetupMode && !isActive && (
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-600 rounded-full border-2 border-white animate-bounce" />
+                                    )}
                                 </button>
                             );
                         })}

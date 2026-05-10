@@ -112,6 +112,9 @@ const Spaces = () => {
       setNewSpaceName("");
       setIsCreateDialogOpen(false);
       toast({ title: "Space Created", description: `"${newSpaceName}" is ready.` });
+      // Select the space and navigate to setup flow
+      selectSpace(result.data);
+      navigate(`/autonomous-marketing/${result.data.id}?setup=true`);
     }
   };
 

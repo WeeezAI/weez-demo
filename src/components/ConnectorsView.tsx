@@ -11,10 +11,12 @@ import {
     ExternalLink,
     Loader2,
     Check,
-    Clock
+    Clock,
+    Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { weezAPI } from "@/services/weezAPI";
+import { getHubSpotStatus, getHubSpotAuthorizeUrl, disconnectHubSpot } from "@/services/salesAPI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,11 +44,25 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
         try {
             setIsLoading(true);
             const data = await weezAPI.getConnectorsStatus(brandId);
-            setConnectors(data.connectors || []);
+            const allConnectors = data.connectors || [];
 
             // Set website URL if already connected
-            const web = data.connectors.find((c: any) => c.type === "website");
+            const web = allConnectors.find((c: any) => c.type === "website");
             if (web?.identifier) setWebsiteUrl(web.identifier);
+
+            // Also fetch HubSpot status and merge into connectors list
+            try {
+                const hsStatus = await getHubSpotStatus(brandId);
+                allConnectors.push({
+                    type: "hubspot",
+                    connected: hsStatus.connected,
+                    identifier: hsStatus.connected ? "HubSpot CRM" : undefined,
+                });
+            } catch {
+                allConnectors.push({ type: "hubspot", connected: false });
+            }
+
+            setConnectors(allConnectors);
         } catch (err) {
             console.error("Failed to fetch connectors status:", err);
             toast.error("Could not load connector status");
@@ -83,6 +99,10 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
         window.location.href = authUrl;
     };
 
+    const handleConnectHubSpot = () => {
+        window.location.href = getHubSpotAuthorizeUrl(brandId);
+    };
+
     const handleResyncAll = async () => {
         try {
             setIsResyncing(true);
@@ -104,6 +124,9 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
             if (platformId === "linkedin") {
                 await weezAPI.disconnectLinkedIn(brandId);
                 toast.success("LinkedIn disconnected successfully.");
+            } else if (platformId === "hubspot") {
+                await disconnectHubSpot(brandId);
+                toast.success("HubSpot CRM disconnected.");
             }
             fetchStatus();
         } catch (err: any) {
@@ -144,6 +167,18 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
             color: "text-pink-500",
             bg: "bg-pink-500/10",
             action: handleConnectInstagram,
+            comingSoon: false,
+            isOptional: true,
+            isPrimary: false
+        },
+        {
+            id: "hubspot",
+            name: "HubSpot CRM",
+            description: "Your sales intelligence layer. Connect HubSpot to auto-sync discovered leads as contacts, log LinkedIn interactions as notes, and track deal conversions.",
+            icon: Target,
+            color: "text-orange-500",
+            bg: "bg-orange-500/10",
+            action: handleConnectHubSpot,
             comingSoon: false,
             isOptional: true,
             isPrimary: false

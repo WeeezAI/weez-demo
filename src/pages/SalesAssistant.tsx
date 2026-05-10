@@ -130,6 +130,50 @@ export default function SalesAssistant() {
             ))}
           </div>
         )}
+        {/* HubSpot Connection Banner — shown when not connected */}
+        {hubspot && !hubspot.connected && !loading && (
+          <div style={{
+            marginBottom: 20, padding: "24px 28px",
+            background: "linear-gradient(135deg, rgba(255,146,43,.06), rgba(255,146,43,.02))",
+            border: "1px solid rgba(255,146,43,.2)",
+            borderRadius: 16,
+            display: "flex", alignItems: "center", gap: 20,
+            animation: "fadeIn .4s",
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14,
+              background: "linear-gradient(135deg, rgba(255,146,43,.15), rgba(255,146,43,.05))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <Link2 size={24} color="#ff922b" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#fff" }}>
+                Connect HubSpot CRM
+              </h3>
+              <p style={{ margin: 0, fontSize: 13, color: "#999", lineHeight: 1.5 }}>
+                Link your HubSpot account to automatically sync discovered leads as contacts,
+                log LinkedIn interactions as notes, and track deal conversions — all without leaving Dexraflow.
+              </p>
+            </div>
+            <a
+              href={getHubSpotAuthorizeUrl(brandId)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "12px 24px", fontSize: 13, fontWeight: 600,
+                background: "linear-gradient(135deg, #ff922b, #f76707)",
+                color: "#fff", border: "none", borderRadius: 10,
+                textDecoration: "none", cursor: "pointer",
+                whiteSpace: "nowrap",
+                boxShadow: "0 4px 16px rgba(255,146,43,.25)",
+                transition: "all .2s",
+              }}
+            >
+              <Link2 size={16} /> Connect HubSpot
+            </a>
+          </div>
+        )}
 
         {/* Stats cards */}
         {stats && <StatsCards stats={stats} />}

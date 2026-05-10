@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target } from "lucide-react";
+import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { getHubSpotStatus } from "@/services/salesAPI";
 import logo from "@/assets/weez-logo.png";
 
 interface ConversationSidebarProps {
@@ -22,6 +23,16 @@ const ConversationSidebar = ({
   const { exitSpace } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // HubSpot connection status
+  const [hubspotConnected, setHubspotConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!spaceId) return;
+    getHubSpotStatus(spaceId)
+      .then((res) => setHubspotConnected(res.connected))
+      .catch(() => setHubspotConnected(false));
+  }, [spaceId, location.pathname]); // Re-check when navigating back from OAuth
 
   const handleBackToSpaces = () => {
     exitSpace();
@@ -136,6 +147,67 @@ const ConversationSidebar = ({
                   </div>
                   <span className="text-[8px] font-mono opacity-30">Ready</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Integrations */}
+            <div className="space-y-3 pt-4 border-t border-border/20">
+              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">Integrations</p>
+
+              <div className="px-3 space-y-3">
+                <button
+                  onClick={() => {
+                    if (hubspotConnected) {
+                      navigate(`/sales/${spaceId}`);
+                    } else {
+                      // Open HubSpot OAuth directly — one-click connect
+                      window.location.href = `${
+                        import.meta.env.VITE_WEEZ_BASE_URL || "https://weez-backend-production.up.railway.app/api/v1"
+                      }/hubspot/authorize?brand_id=${spaceId}`;
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center justify-between w-full group rounded-lg px-2 py-2 -mx-2 transition-all duration-200",
+                    hubspotConnected
+                      ? "hover:bg-secondary/40"
+                      : "hover:bg-orange-500/5 border border-transparent hover:border-orange-500/20"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "w-6 h-6 rounded-md flex items-center justify-center transition-all",
+                      hubspotConnected
+                        ? "bg-orange-500/10"
+                        : "bg-orange-500/5 group-hover:bg-orange-500/15"
+                    )}>
+                      <Link2 className={cn(
+                        "w-3 h-3 transition-colors",
+                        hubspotConnected ? "text-orange-500" : "text-orange-400/50 group-hover:text-orange-500"
+                      )} />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] font-bold text-foreground/60">HubSpot CRM</span>
+                      <span className={cn(
+                        "text-[8px] font-bold uppercase tracking-wider",
+                        hubspotConnected
+                          ? "text-emerald-500"
+                          : "text-orange-400/70 group-hover:text-orange-500"
+                      )}>
+                        {hubspotConnected === null
+                          ? "Checking…"
+                          : hubspotConnected
+                            ? "Connected"
+                            : "Click to Connect →"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full shadow-sm transition-all",
+                    hubspotConnected
+                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
+                      : "bg-orange-400/60 group-hover:bg-orange-500 group-hover:shadow-[0_0_6px_rgba(249,115,22,0.4)]"
+                  )} />
+                </button>
               </div>
             </div>
 
