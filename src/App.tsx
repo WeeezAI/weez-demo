@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import { TutorialSpotlight } from "./components/tutorial/TutorialSpotlight";
 import { TutorialTooltip } from "./components/tutorial/TutorialTooltip";
+import { Loader2 } from "lucide-react";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
