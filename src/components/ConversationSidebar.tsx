@@ -29,10 +29,19 @@ const ConversationSidebar = ({
 
   useEffect(() => {
     if (!spaceId) return;
-    getHubSpotStatus(spaceId)
-      .then((res) => setHubspotConnected(res.connected))
-      .catch(() => setHubspotConnected(false));
-  }, [spaceId, location.pathname]); // Re-check when navigating back from OAuth
+    
+    const checkStatus = () => {
+      getHubSpotStatus(spaceId)
+        .then((res) => setHubspotConnected(res.connected))
+        .catch(() => setHubspotConnected(false));
+    };
+
+    checkStatus();
+
+    // Refresh status when user returns to the tab (e.g. after OAuth)
+    window.addEventListener("focus", checkStatus);
+    return () => window.removeEventListener("focus", checkStatus);
+  }, [spaceId, location.pathname]); 
 
   const handleBackToSpaces = () => {
     exitSpace();

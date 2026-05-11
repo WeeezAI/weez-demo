@@ -7,7 +7,7 @@ import {
   disconnectHubSpot, connectLeadWebSocket,
   type Lead, type LeadStats, type HubSpotStatus,
 } from "@/services/salesAPI";
-import { ArrowLeft, Search, Filter, RefreshCw, Plus, ExternalLink, Check, X, Zap, Target, Users, TrendingUp, AlertCircle, Link2, Unlink, ChevronDown, Star, MessageSquare, UserCheck, Archive, Mail, Linkedin } from "lucide-react";
+import { ArrowLeft, Search, Filter, RefreshCw, Plus, ExternalLink, Check, X, Zap, Target, Users, TrendingUp, AlertCircle, Link2, Unlink, ChevronDown, Star, MessageSquare, UserCheck, Archive, Mail, Linkedin, BrainCircuit } from "lucide-react";
 
 /* ── Priority / Status helpers ─────────────────────────────────────── */
 const PRIORITY_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
@@ -54,7 +54,12 @@ export default function SalesAssistant() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }, [brandId, filters, page]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    // Refresh status when user returns to the tab (e.g. after OAuth)
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [refresh]);
 
   /* WebSocket for P1 real-time */
   useEffect(() => {
@@ -67,7 +72,7 @@ export default function SalesAssistant() {
     });
     wsRef.current = ws;
     return () => { ws.close(); };
-  }, [brandId]);
+  }, [brandId, refresh]);
 
   /* actions */
   const handleScan = async () => {
@@ -130,6 +135,42 @@ export default function SalesAssistant() {
             ))}
           </div>
         )}
+
+        {/* Lead Discovery Explanation — show when very few leads or empty */}
+        {leads.length < 3 && !loading && (
+          <div style={{ 
+            marginBottom: 20, padding: "32px", 
+            background: "linear-gradient(165deg, rgba(167,139,250,.08), rgba(129,140,248,.03))",
+            border: "1px solid rgba(167,139,250,.15)",
+            borderRadius: 24,
+            display: "flex", flexDirection: "column", gap: 20
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(167,139,250,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <BrainCircuit size={24} color="#a78bfa" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#fff" }}>Autonomous Lead Discovery</h3>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#999" }}>How we find and score your high-intent prospects</p>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
+              <div style={{ spaceY: 2 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>1. Exclusion Gate</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>The AI automatically filters out 1st degree connections, colleagues, and generic "great post" engagers to ensure zero clutter in your CRM.</p>
+              </div>
+              <div style={{ spaceY: 2 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>2. ICP Alignment</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Every commenter is cross-referenced with your Ideal Customer Profile. We check job titles, industries, and company size before scoring.</p>
+              </div>
+              <div style={{ spaceY: 2 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>3. Intent Classification</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Leads are classified into P1 (High Intent), P2 (Referral), or P3 (Question). High intent leads trigger immediate real-time sync to HubSpot.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* HubSpot Connection Banner — shown when not connected */}
         {hubspot && !hubspot.connected && !loading && (
           <div style={{
@@ -201,8 +242,19 @@ export default function SalesAssistant() {
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: "#666" }}>Loading leads…</div>
         ) : leads.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 60 }}>
-            <Users size={48} color="#333" style={{ marginBottom: 12 }} />
+          <div style={{ textAlign: "center", padding: 80, background: "rgba(255,255,255,.02)", border: "1px dashed rgba(255,255,255,.08)", borderRadius: 32 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <Users size={32} color="#444" />
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Your Lead Pipeline is Warming Up</h3>
+            <p style={{ color: "#888", fontSize: 14, maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.6 }}>
+              Once you deploy a campaign, the platform will automatically monitor engagement and surface qualified leads here.
+            </p>
+            <button onClick={handleScan} disabled={scanning} style={{ ...btnStyle, padding: "12px 24px", background: "linear-gradient(135deg,#a78bfa,#818cf8)", border: "none", color: "#fff", fontWeight: 700 }}>
+              <RefreshCw size={16} className={scanning ? "spin" : ""} /> {scanning ? "Analyzing Content Engagement…" : "Scan Historical Engagement"}
+            </button>
+          </div>
+        ) : (size={48} color="#333" style={{ marginBottom: 12 }} />
             <p style={{ color: "#666", fontSize: 14 }}>No leads yet. Click "Scan Leads" to discover leads from your LinkedIn engagement.</p>
           </div>
         ) : (
