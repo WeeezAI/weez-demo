@@ -139,9 +139,11 @@ const PlatformCallback = () => {
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-black uppercase tracking-tighter">Connection Active 🎉</h1>
           <p className="text-muted-foreground font-medium text-lg">
-            {isLinkedIn
+            {provider === "linkedin"
               ? "Your LinkedIn profile is now connected and ready for B2B publishing."
-              : "Your brand identity is now synchronized and live."}
+              : provider === "hubspot"
+                ? "Your HubSpot CRM is now synced for real-time lead automation."
+                : "Your brand identity is now synchronized and live."}
           </p>
         </div>
 

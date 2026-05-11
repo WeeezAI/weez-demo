@@ -31,6 +31,27 @@ import VerificationSuccess from "./pages/VerificationSuccess";
 import VerificationFailed from "./pages/VerificationFailed";
 import PremiumModal from "./components/PremiumModal";
 import { differenceInDays, parseISO } from "date-fns";
+import CONFIG from "./services/config";
+
+const HubSpotCallbackRedirect = () => {
+  const [params] = useSearchParams();
+  useEffect(() => {
+    const code = params.get("code");
+    const state = params.get("state");
+    if (code && state) {
+      window.location.replace(`${CONFIG.WEEZ_BASE_URL}/hubspot/callback?code=${code}&state=${state}`);
+    }
+  }, [params]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#FDFBFF]">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">Finalizing CRM Sync</p>
+      </div>
+    </div>
+  );
+};
 
 const queryClient = new QueryClient();
 
@@ -91,6 +112,7 @@ const AppContent = () => {
               <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />
               <Route path="/sales/:spaceId" element={<SalesAssistant />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
+              <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
 
               {/* Legal pages */}
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
