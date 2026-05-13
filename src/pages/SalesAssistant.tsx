@@ -155,7 +155,7 @@ export default function SalesAssistant() {
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-              <div style={{ spaceY: 2 }}>
+              <div>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>1. Exclusion Gate</p>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>The AI automatically filters out 1st degree connections, colleagues, and generic "great post" engagers to ensure zero clutter in your CRM.</p>
               </div>
