@@ -159,11 +159,11 @@ export default function SalesAssistant() {
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>1. Exclusion Gate</p>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>The AI automatically filters out 1st degree connections, colleagues, and generic "great post" engagers to ensure zero clutter in your CRM.</p>
               </div>
-              <div style={{ spaceY: 2 }}>
+              <div>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>2. ICP Alignment</p>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Every commenter is cross-referenced with your Ideal Customer Profile. We check job titles, industries, and company size before scoring.</p>
               </div>
-              <div style={{ spaceY: 2 }}>
+              <div>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>3. Intent Classification</p>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Leads are classified into P1 (High Intent), P2 (Referral), or P3 (Question). High intent leads trigger immediate real-time sync to HubSpot.</p>
               </div>
