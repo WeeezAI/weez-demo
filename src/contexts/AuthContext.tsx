@@ -38,7 +38,7 @@ interface AuthContextType {
   selectSpace: (space: Space) => void;
   exitSpace: () => void;
 
-  createSpace: (name: string) => Promise<{ success: boolean; error?: string }>;
+  createSpace: (name: string) => Promise<{ success: boolean; data?: any; error?: string }>;
   deleteSpace: (space_id: string) => Promise<{ success: boolean; error?: string }>;
   renameSpace: (space_id: string, name: string) => Promise<{ success: boolean; error?: string }>;
   refreshSpaces: () => Promise<void>; // Manual refresh function
@@ -197,9 +197,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const createSpace = async (name: string) => {
     if (!token) return { success: false, error: "Not authenticated" };
     try {
-      await spaceApi.createSpace(name, token);
+      const newSpace = await spaceApi.createSpace(name, token);
       await fetchSpaces(true); // Force refresh after creating
-      return { success: true };
+      return { success: true, data: newSpace };
     } catch (err: any) {
       return { success: false, error: err?.message };
     }
