@@ -1067,6 +1067,7 @@ export default function AutonomousMarketing() {
                 }, 1000);
             }
         };
+        checkStatus();
     }, [spaceId]);
 
     // Polling hook to detect brand memory/voice synthesis in background
