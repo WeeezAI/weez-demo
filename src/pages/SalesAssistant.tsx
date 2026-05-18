@@ -254,9 +254,6 @@ export default function SalesAssistant() {
               <RefreshCw size={16} className={scanning ? "spin" : ""} /> {scanning ? "Analyzing Content Engagement…" : "Scan Historical Engagement"}
             </button>
           </div>
-        ) : (size={48} color="#333" style={{ marginBottom: 12 }} />
-            <p style={{ color: "#666", fontSize: 14 }}>No leads yet. Click "Scan Leads" to discover leads from your LinkedIn engagement.</p>
-          </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {leads.map(lead => (

@@ -114,6 +114,21 @@ export interface LinkedInDashboardData {
   };
   recommendations: Recommendation[];
   top_post: PostMetric | null;
+  last_synced_at?: string;
+}
+
+export interface DashboardSummary {
+  highlights: HighlightCard[];
+  individual: {
+    post_count: number;
+    total_impressions: number;
+    total_reactions: number;
+    total_comments: number;
+    total_shares: number;
+  };
+  top_post: PostMetric | null;
+  benchmark: BenchmarkData;
+  last_synced_at: string;
 }
 
 export type Period = "7d" | "30d" | "90d" | "custom";
@@ -136,6 +151,27 @@ export const linkedinAnalyticsAPI = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed to load dashboard" }));
       throw new Error(err.detail || "Dashboard load failed");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Lightweight polling endpoint — returns only highlights + key aggregates.
+   * Used for auto-refresh without re-fetching the entire dashboard.
+   */
+  getDashboardSummary: async (
+    brandId: string,
+    period: Period = "30d",
+    customStart?: string,
+    customEnd?: string
+  ): Promise<DashboardSummary> => {
+    let url = `${WEEZ_BASE_URL}/linkedin-analytics/${brandId}/dashboard/summary?period=${period}`;
+    if (period === "custom" && customStart && customEnd) {
+      url += `&custom_start=${customStart}&custom_end=${customEnd}`;
+    }
+    const response = await fetchWithBypass(url);
+    if (!response.ok) {
+      throw new Error("Failed to fetch dashboard summary");
     }
     return await response.json();
   },

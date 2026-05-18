@@ -806,6 +806,133 @@ function VisionLoadingScreen() {
     );
 }
 
+// --- Premium Brand Voice Generation Loading Animation ---
+function BrandVoiceGenerationLoader() {
+    return (
+        <div className="w-full max-w-3xl mx-auto p-8 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <style>{`
+                @keyframes shimmer-loading {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .animate-shimmer-loading-custom {
+                    animation: shimmer-loading 1.8s infinite linear;
+                }
+                @keyframes pulse-slow-custom {
+                    0%, 100% { opacity: 0.15; }
+                    50% { opacity: 0.35; }
+                }
+                .animate-pulse-slow-custom {
+                    animation: pulse-slow-custom 3s infinite ease-in-out;
+                }
+                @keyframes float-custom {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+                .animate-float-custom {
+                    animation: float-custom 3s infinite ease-in-out;
+                }
+            `}</style>
+
+            {/* Header / Brand Voice Synthesis Branding */}
+            <div className="text-center space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Brand Memory Calibration</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-zinc-950 uppercase leading-none">
+                    Synthesizing Your <br />
+                    <span className="bg-gradient-to-r from-indigo-600 via-indigo-400 to-cyan-500 bg-clip-text text-transparent">Digital Brand Persona</span>
+                </h1>
+                <p className="text-zinc-500 text-sm font-semibold max-w-lg mx-auto leading-relaxed italic">
+                    "Analyzing site topology, desktop visual styles, and product layouts to construct your unified B2B Brand Identity."
+                </p>
+            </div>
+
+            {/* Central Animated Card */}
+            <div className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-3xl blur opacity-15 animate-pulse-slow-custom transition duration-1000"></div>
+                <div className="relative glass-panel bg-white/70 backdrop-blur-3xl rounded-[2rem] border border-white/40 shadow-2xl p-8 md:p-10 overflow-hidden flex flex-col md:flex-row items-center gap-10">
+                    
+                    {/* Left: Glowing Scanner Animation */}
+                    <div className="relative shrink-0 flex items-center justify-center">
+                        <div className="absolute w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl animate-pulse" />
+                        <div className="relative w-28 h-28 rounded-[2.2rem] bg-white border border-indigo-500/10 shadow-2xl flex items-center justify-center overflow-hidden">
+                            {/* Linear shiny overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50/50 to-transparent" />
+                            <BrainCircuit className="w-14 h-14 text-indigo-600 animate-float-custom" />
+                        </div>
+                        {/* Orbiting style tags */}
+                        <div className="absolute -top-3 -right-3 w-10 h-10 rounded-xl bg-white shadow-lg border border-indigo-100 flex items-center justify-center animate-bounce">
+                            <Sparkles className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div className="absolute -bottom-2 -left-2 w-9 h-9 rounded-lg bg-white shadow-lg border border-indigo-100 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-indigo-500 animate-pulse" />
+                        </div>
+                    </div>
+
+                    {/* Right: Crawler Status Pipeline */}
+                    <div className="flex-1 w-full space-y-6">
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-black text-zinc-900 uppercase tracking-tight">CRAWLER STATUS</h3>
+                            <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Calibration process takes about 2-3 minutes</p>
+                        </div>
+
+                        {/* Status Check List */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-black text-zinc-900 uppercase tracking-wider leading-none">Scraped Website Text Details</span>
+                                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">Primary business intent analyzed</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-600 shrink-0">
+                                    <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />
+                                </div>
+                                <div className="flex flex-col animate-pulse">
+                                    <span className="text-xs font-black text-indigo-600 uppercase tracking-wider leading-none">Capturing Brand Visual Snapshots</span>
+                                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">Headless browser rendering page layout style...</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 opacity-40">
+                                <div className="w-5 h-5 rounded-full bg-zinc-100 flex items-center justify-center border border-zinc-200 text-zinc-400 shrink-0">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-black text-zinc-950 uppercase tracking-wider leading-none">Synthesizing Vision Persona Facts</span>
+                                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">Publishing unified Brand Memory Object</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Premium linear shiny loading bar */}
+                        <div className="space-y-2 pt-2">
+                            <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden relative">
+                                <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 rounded-full w-full animate-shimmer-loading-custom" style={{ transformOrigin: 'left' }} />
+                            </div>
+                            <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-zinc-400">
+                                <span>Playwright Scraper L2 Engine</span>
+                                <span className="animate-pulse">Active analysis</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Ghost copy bottom footer */}
+            <div className="text-center text-[9px] font-bold text-zinc-400 uppercase tracking-[0.25em] animate-pulse">
+                Do not refresh this page. Prompting panel will automatically activate.
+            </div>
+        </div>
+    );
+}
+
 export default function AutonomousMarketing() {
     // ... (rest of the component state)
     const { spaceId } = useParams<{ spaceId: string }>();
@@ -844,6 +971,7 @@ export default function AutonomousMarketing() {
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [isPollingConversation, setIsPollingConversation] = useState(false);
     const [isPageLoading, setIsPageLoading] = useState(true);
+    const [isBrandVoiceGenerating, setIsBrandVoiceGenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Campaign Configuration State
@@ -939,7 +1067,37 @@ export default function AutonomousMarketing() {
                 }, 1000);
             }
         };
-        checkStatus();
+    }, [spaceId]);
+
+    // Polling hook to detect brand memory/voice synthesis in background
+    useEffect(() => {
+        if (!spaceId) return;
+
+        let active = true;
+        const checkBrandVoiceStatus = async () => {
+            try {
+                const res = await weezAPI.getConnectorsStatus(spaceId);
+                if (!active) return;
+                
+                if (res.brand_memory_generating) {
+                    setIsBrandVoiceGenerating(true);
+                } else {
+                    setIsBrandVoiceGenerating(false);
+                }
+            } catch (err) {
+                console.error("Failed to check brand voice status", err);
+            }
+        };
+
+        checkBrandVoiceStatus();
+
+        // Check status every 10 seconds to auto-transition the UI once crawling is complete
+        const interval = setInterval(checkBrandVoiceStatus, 10000);
+
+        return () => {
+            active = false;
+            clearInterval(interval);
+        };
     }, [spaceId]);
 
     useEffect(() => {
@@ -1384,20 +1542,24 @@ export default function AutonomousMarketing() {
                                 <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[40%] bg-cyan-500/5 rounded-full blur-[150px]" />
                             </div>
 
-                            <DexraflowCampaignChat
-                                value={input}
-                                setValue={setInput}
-                                onGenerate={() => handleSend(input)}
-                                onAutonomousCampaign={() => handleSend(input)}
-                                campaignDuration={campaignDuration}
-                                setCampaignDuration={setCampaignDuration}
-                                campaignType={campaignType}
-                                setCampaignType={setCampaignType}
-                                marketingMode={marketingMode}
-                                setMarketingMode={setMarketingMode}
-                                onMicClick={handleMicClick}
-                                isRecording={isRecording}
-                            />
+                            {isBrandVoiceGenerating ? (
+                                <BrandVoiceGenerationLoader />
+                            ) : (
+                                <DexraflowCampaignChat
+                                    value={input}
+                                    setValue={setInput}
+                                    onGenerate={() => handleSend(input)}
+                                    onAutonomousCampaign={() => handleSend(input)}
+                                    campaignDuration={campaignDuration}
+                                    setCampaignDuration={setCampaignDuration}
+                                    campaignType={campaignType}
+                                    setCampaignType={setCampaignType}
+                                    marketingMode={marketingMode}
+                                    setMarketingMode={setMarketingMode}
+                                    onMicClick={handleMicClick}
+                                    isRecording={isRecording}
+                                />
+                            )}
                         </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto relative z-10 px-8 pt-8 pb-10">

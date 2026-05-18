@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,20 @@ const ICON_MAP: Record<string, LucideIcon> = {
   TrendingUp: BarChart3, // Map trending to barchart as fallback or similar
 };
 
+// Auto-refresh interval: 5 minutes
+const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+const formatTimeAgo = (isoString?: string): string => {
+  if (!isoString) return "";
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
+
 const LinkedInDashboard = () => {
   const { currentSpace } = useAuth();
   const [data, setData] = useState<LinkedInDashboardData | null>(null);
@@ -50,6 +64,8 @@ const LinkedInDashboard = () => {
   const [customEnd, setCustomEnd] = useState<string>();
   const [error, setError] = useState<string | null>(null);
   const [commentSubTab, setCommentSubTab] = useState<"queue" | "analytics" | "settings">("queue");
+  const [lastUpdated, setLastUpdated] = useState<string | undefined>();
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDashboard = useCallback(async () => {
     if (!currentSpace?.id) return;
@@ -61,6 +77,7 @@ const LinkedInDashboard = () => {
         currentSpace.id, period, customStart, customEnd
       );
       setData(dashboardData);
+      setLastUpdated(dashboardData.last_synced_at || new Date().toISOString());
     } catch (e: any) {
       setError(e.message || "Failed to load LinkedIn analytics");
       console.error("Dashboard load error:", e);
@@ -69,9 +86,50 @@ const LinkedInDashboard = () => {
     }
   }, [currentSpace?.id, period, customStart, customEnd]);
 
+  // Silent background polling — updates highlights + key metrics without loading state
+  const pollSummary = useCallback(async () => {
+    if (!currentSpace?.id || isLoading || isSyncing) return;
+    try {
+      const summary = await linkedinAnalyticsAPI.getDashboardSummary(
+        currentSpace.id, period, customStart, customEnd
+      );
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          highlights: summary.highlights,
+          individual: {
+            ...prev.individual,
+            total_impressions: summary.individual.total_impressions,
+            total_reactions: summary.individual.total_reactions,
+            total_comments: summary.individual.total_comments,
+            total_shares: summary.individual.total_shares,
+            post_count: summary.individual.post_count,
+          },
+          top_post: summary.top_post || prev.top_post,
+          benchmark: summary.benchmark || prev.benchmark,
+          last_synced_at: summary.last_synced_at,
+        };
+      });
+      setLastUpdated(summary.last_synced_at);
+    } catch {
+      // Silent fail on polling — don't disrupt the user
+      console.warn("Background poll failed, will retry next interval");
+    }
+  }, [currentSpace?.id, period, customStart, customEnd, isLoading, isSyncing]);
+
+  // Initial load
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  // Auto-refresh polling (every 5 minutes)
+  useEffect(() => {
+    pollIntervalRef.current = setInterval(pollSummary, AUTO_REFRESH_INTERVAL_MS);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [pollSummary]);
 
   const handleSync = async () => {
     if (!currentSpace?.id) return;
@@ -205,6 +263,17 @@ const LinkedInDashboard = () => {
 
         <div className="flex items-center gap-3">
           <TimePeriodSelector value={period} onChange={handlePeriodChange} />
+
+          {/* Last Updated Indicator */}
+          {lastUpdated && (
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/10">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
+                Updated {formatTimeAgo(lastUpdated)}
+              </span>
+            </div>
+          )}
+
           <Button
             onClick={handleSync}
             disabled={isSyncing}
