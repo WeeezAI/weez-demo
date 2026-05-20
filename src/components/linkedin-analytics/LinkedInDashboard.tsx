@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
+  HeatmapEntry,
   linkedinAnalyticsAPI,
+  PostMetric,
   type LinkedInDashboardData,
   type Period,
 } from "@/services/linkedinAnalyticsAPI";
@@ -250,7 +252,7 @@ const LinkedInDashboard = () => {
         grid[key].totalRate += p.engagement_rate || 0;
         grid[key].count++;
       });
-      
+
       const heatmapData: HeatmapEntry[] = [];
       const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
       for (let d = 0; d < 7; d++) {
@@ -296,12 +298,12 @@ const LinkedInDashboard = () => {
       const personalEngagements = ci.total_reactions + ci.total_comments + ci.total_shares;
       const personalEngRate = personalImpressions > 0 ? +((personalEngagements / personalImpressions) * 100).toFixed(2) : 0;
       const personalMultiplier = +(personalEngRate / 2.0).toFixed(1);
-      
+
       const personalPosts = ci.posts || [];
       const personalHeatmap = buildHeatmap(personalPosts);
       const personalBestDay = getBestDayFromHeatmap(personalHeatmap);
-      
-      const personalTopPost = personalPosts.length > 0 
+
+      const personalTopPost = personalPosts.length > 0
         ? personalPosts.reduce((max, p) => (p.impressions || 0) > (max.impressions || 0) ? p : max, personalPosts[0])
         : null;
       const personalTopPostReach = personalTopPost ? personalTopPost.impressions : 0;
@@ -389,11 +391,11 @@ const LinkedInDashboard = () => {
         benchmark_rate: 2.0,
         multiplier: personalMultiplier,
         status: personalEngRate > 2.2 ? ("above" as const) : (personalEngRate < 1.8 ? ("below" as const) : ("at" as const)),
-        label: personalEngRate > 2.2 
+        label: personalEngRate > 2.2
           ? `Your profile engagement is ${personalMultiplier}x the industry average!`
           : personalEngRate < 1.8
-          ? `Room to grow — your profile is at ${personalEngRate}% vs 2.0% industry avg.`
-          : `Your profile is right at the industry average of 2.0%.`,
+            ? `Room to grow — your profile is at ${personalEngRate}% vs 2.0% industry avg.`
+            : `Your profile is right at the industry average of 2.0%.`,
       };
 
       return {
@@ -422,12 +424,12 @@ const LinkedInDashboard = () => {
       const orgEngagements = (co.share_stats?.totals?.reactions || 0) + (co.share_stats?.totals?.comments || 0) + (co.share_stats?.totals?.shares || 0);
       const orgEngRate = orgImpressions > 0 ? +((orgEngagements / orgImpressions) * 100).toFixed(2) : 0;
       const orgMultiplier = +(orgEngRate / 2.0).toFixed(1);
-      
+
       const orgPosts = co.posts || [];
       const orgHeatmap = buildHeatmap(orgPosts);
       const orgBestDay = getBestDayFromHeatmap(orgHeatmap);
-      
-      const orgTopPost = orgPosts.length > 0 
+
+      const orgTopPost = orgPosts.length > 0
         ? orgPosts.reduce((max, p) => (p.impressions || 0) > (max.impressions || 0) ? p : max, orgPosts[0])
         : null;
       const orgTopPostReach = orgTopPost ? orgTopPost.impressions : 0;
@@ -526,11 +528,11 @@ const LinkedInDashboard = () => {
         benchmark_rate: 2.0,
         multiplier: orgMultiplier,
         status: orgEngRate > 2.2 ? ("above" as const) : (orgEngRate < 1.8 ? ("below" as const) : ("at" as const)),
-        label: orgEngRate > 2.2 
+        label: orgEngRate > 2.2
           ? `Your company page engagement is ${orgMultiplier}x the industry average!`
           : orgEngRate < 1.8
-          ? `Room to grow — your company page is at ${orgEngRate}% vs 2.0% industry avg.`
-          : `Your company page is right at the industry average of 2.0%.`,
+            ? `Room to grow — your company page is at ${orgEngRate}% vs 2.0% industry avg.`
+            : `Your company page is right at the industry average of 2.0%.`,
       };
 
       return {
@@ -637,9 +639,9 @@ const LinkedInDashboard = () => {
 
   const avgEngRate = data.individual?.posts?.length
     ? +(
-        data.individual.posts.reduce((a: number, p: any) => a + (p.engagement_rate || 0), 0) /
-        data.individual.posts.length
-      ).toFixed(2)
+      data.individual.posts.reduce((a: number, p: any) => a + (p.engagement_rate || 0), 0) /
+      data.individual.posts.length
+    ).toFixed(2)
     : 0;
 
   return (
@@ -672,7 +674,7 @@ const LinkedInDashboard = () => {
                 { id: "combined", label: "Overview", Icon: Cpu },
                 { id: "personal", label: "Profile", Icon: User },
                 ...(data.org_urn ? [{ id: "org", label: "Page", Icon: Building2 }] : []),
-              ] as const
+              ] as { id: "combined" | "personal" | "org"; label: string; Icon: any }[]
             ).map((ctx) => {
               const isActive = viewContext === ctx.id;
               return (
@@ -827,11 +829,11 @@ const LinkedInDashboard = () => {
                 avgEngagementRate={
                   data.organization.posts.length > 0
                     ? +(
-                        data.organization.posts.reduce(
-                          (a: number, p: any) => a + (p.engagement_rate || 0),
-                          0
-                        ) / data.organization.posts.length
-                      ).toFixed(2)
+                      data.organization.posts.reduce(
+                        (a: number, p: any) => a + (p.engagement_rate || 0),
+                        0
+                      ) / data.organization.posts.length
+                    ).toFixed(2)
                     : 0
                 }
               />

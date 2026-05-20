@@ -197,23 +197,71 @@ export const CampaignPerformanceSection = ({
     currentEngagement,
     progress,
     metrics,
-    chartData: dynamicChartData
+    chartData: dynamicChartData,
+    accountType
 }: {
     targetEngagement: string;
     currentEngagement: string;
     progress: number;
     metrics?: any;
     chartData?: any[];
-}) => (
+    accountType?: string;
+}) => {
+    const [activeTab, setActiveTab] = useState<"personal" | "org">(
+        accountType === "org" ? "org" : "personal"
+    );
+
+    // Derive segmented metrics from the backend payload
+    const personalMetrics = metrics?.personal || {};
+    const orgMetrics = metrics?.org || {};
+
+    // Build display metrics based on active tab
+    const tabMetrics = activeTab === "personal" ? [
+        { icon: Eye, label: "Impressions", value: (personalMetrics.impressions || 0).toLocaleString(), colorClass: "text-blue-600" },
+        { icon: Eye, label: "Profile Views", value: (personalMetrics.profile_views || 0).toLocaleString(), colorClass: "text-violet-600" },
+        { icon: MessageCircle, label: "Comments", value: (personalMetrics.comments || 0).toLocaleString(), colorClass: "text-amber-600" },
+        { icon: Share2, label: "Engagement", value: ((personalMetrics.reactions || 0) + (personalMetrics.shares || 0)).toLocaleString(), colorClass: "text-emerald-600" },
+    ] : [
+        { icon: Eye, label: "Impressions", value: (orgMetrics.impressions || 0).toLocaleString(), colorClass: "text-blue-600" },
+        { icon: Users, label: "Unique Visitors", value: (orgMetrics.unique_visitors || 0).toLocaleString(), colorClass: "text-violet-600" },
+        { icon: MessageCircle, label: "Comments", value: (orgMetrics.comments || 0).toLocaleString(), colorClass: "text-amber-600" },
+        { icon: Share2, label: "Engagement", value: ((orgMetrics.reactions || 0) + (orgMetrics.shares || 0)).toLocaleString(), colorClass: "text-emerald-600" },
+    ];
+
+    return (
     <Card className="border-white/20 bg-white/30 backdrop-blur-3xl shadow-sm rounded-xl overflow-hidden mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100">
         <CardHeader className="px-6 pt-6 pb-2 border-none flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/10">
                     <TrendingUp className="w-4 h-4 text-indigo-600" />
                 </div>
-                <CardTitle className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground">Campaign Performance</CardTitle>
+                <CardTitle className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground">LinkedIn Performance</CardTitle>
             </div>
-            <MoreHorizontal className="w-4 h-4 text-muted-foreground/30 cursor-pointer hover:text-foreground transition-colors" />
+            {/* Glassmorphic Pill Switcher */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/50 backdrop-blur-xl border border-white/30 shadow-sm">
+                <button
+                    onClick={() => setActiveTab("personal")}
+                    className={cn(
+                        "px-3.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+                        activeTab === "personal"
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                            : "text-muted-foreground hover:text-foreground hover:bg-white/60"
+                    )}
+                >
+                    Personal
+                </button>
+                <button
+                    onClick={() => setActiveTab("org")}
+                    className={cn(
+                        "px-3.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+                        activeTab === "org"
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                            : "text-muted-foreground hover:text-foreground hover:bg-white/60"
+                    )}
+                >
+                    Organization
+                </button>
+            </div>
         </CardHeader>
         <CardContent className="p-6 pt-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -237,11 +285,32 @@ export const CampaignPerformanceSection = ({
                         <Progress value={progress} className="h-1.5 bg-indigo-500/10 rounded-full overflow-hidden [&>div]:bg-indigo-600" />
                     </div>
 
+                    {/* Dynamic LinkedIn Metrics Grid */}
                     <div className="grid grid-cols-2 gap-y-6 pt-2">
-                        <StatMetric icon={Eye} label="Impressions" value={metrics?.impressions?.toLocaleString() || "0"} colorClass="text-blue-600" />
-                        <StatMetric icon={Users} label="Reach" value={metrics?.reach?.toLocaleString() || "0"} colorClass="text-emerald-600" />
-                        <StatMetric icon={MessageCircle} label="Comments" value={metrics?.comments?.toLocaleString() || "0"} colorClass="text-amber-600" />
-                        <StatMetric icon={Bookmark} label="Saves" value={metrics?.saves?.toLocaleString() || "0"} colorClass="text-indigo-600" />
+                        {tabMetrics.map((m, i) => (
+                            <StatMetric key={`${activeTab}-${i}`} icon={m.icon} label={m.label} value={m.value} colorClass={m.colorClass} />
+                        ))}
+                    </div>
+
+                    {/* Supplementary stat for active tab */}
+                    <div className="pt-2 border-t border-white/15">
+                        {activeTab === "personal" ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/40 ring-1 ring-inset ring-white/20 shadow-sm text-indigo-600">
+                                    <Users className="w-3 h-3" />
+                                </div>
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.15em]">Connections</span>
+                                <span className="ml-auto text-sm font-black text-foreground">{(personalMetrics.connections || 0).toLocaleString()}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/40 ring-1 ring-inset ring-white/20 shadow-sm text-indigo-600">
+                                    <Users className="w-3 h-3" />
+                                </div>
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.15em]">Followers</span>
+                                <span className="ml-auto text-sm font-black text-foreground">{(orgMetrics.followers || 0).toLocaleString()}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -302,7 +371,8 @@ export const CampaignPerformanceSection = ({
             </div>
         </CardContent>
     </Card>
-);
+    );
+};
 
 // --- AI Activity Feed ---
 export const AiActivityFeedSection = ({ activities }: { activities: any[] }) => (

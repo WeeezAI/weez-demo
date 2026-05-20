@@ -690,6 +690,7 @@ function ActiveDashboard({
                     progress={progress}
                     metrics={metrics}
                     chartData={chartData}
+                    accountType={dashboardData?.account_type || "founder"}
                 />
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
