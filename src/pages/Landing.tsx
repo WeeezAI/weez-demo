@@ -9,6 +9,16 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
+import showcaseNotebook1 from "@/assets/showcase/notebooklm1.png";
+import showcaseNotebook2 from "@/assets/showcase/notebooklm2.png";
+import showcaseNotion1 from "@/assets/showcase/notion1.png";
+import showcaseNotion2 from "@/assets/showcase/notion2.png";
+import showcaseMedscore1 from "@/assets/showcase/medscore1.jpeg";
+import showcaseMedscore2 from "@/assets/showcase/medscore2.jpeg";
+import showcaseDexraflow1 from "@/assets/showcase/dexraflow1.png";
+import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
+import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
+import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
 
 /* =============== Reusable bits =============== */
 
@@ -669,6 +679,86 @@ const Landing = () => {
           </div>
         </div>
       </Section>
+
+      {/* SHOWCASE — Content created by our system */}
+      <Section id="showcase" className="overflow-hidden">
+        <div className="text-center max-w-3xl mx-auto">
+          <Eyebrow>Created by Weez</Eyebrow>
+          <H2 className="mt-6">Content our system<br/> created in production.</H2>
+          <Sub className="mt-5 mx-auto">
+            Every visual below was conceived, designed and shipped autonomously by Weez —
+            for real brands, in real campaigns.
+          </Sub>
+        </div>
+
+        {/* Marquee row 1 */}
+        <div className="mt-14 relative [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+          <motion.div
+            className="flex gap-6 w-max"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: 60, ease: "linear", repeat: Infinity }}
+          >
+            {[
+              { src: showcaseNotion1, brand: "Notion", title: "From Chaos to Clarity" },
+              { src: showcaseMedscore1, brand: "Medscore", title: "Stop Credit Leaks" },
+              { src: showcaseDexraflow1, brand: "Dexraflow", title: "CRM to Pipeline" },
+              { src: showcaseZeeks1, brand: "Zeeks", title: "The $48K Spreadsheet" },
+              { src: showcaseNotebook1, brand: "NotebookLM", title: "Passive to Active Synthesis" },
+            ].concat([
+              { src: showcaseNotion1, brand: "Notion", title: "From Chaos to Clarity" },
+              { src: showcaseMedscore1, brand: "Medscore", title: "Stop Credit Leaks" },
+              { src: showcaseDexraflow1, brand: "Dexraflow", title: "CRM to Pipeline" },
+              { src: showcaseZeeks1, brand: "Zeeks", title: "The $48K Spreadsheet" },
+              { src: showcaseNotebook1, brand: "NotebookLM", title: "Passive to Active Synthesis" },
+            ]).map((item, i) => (
+              <div key={`r1-${i}`} className="group relative w-[460px] shrink-0 rounded-2xl overflow-hidden border border-slate-900/10 bg-white shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)]">
+                <img src={item.src} alt={`${item.brand} — ${item.title}`} loading="lazy" className="w-full h-[260px] object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-200">{item.brand}</div>
+                  <div className="text-white font-medium text-sm">{item.title}</div>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Marquee row 2 — reverse */}
+        <div className="mt-6 relative [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+          <motion.div
+            className="flex gap-6 w-max"
+            animate={{ x: ["-50%", "0%"] }}
+            transition={{ duration: 70, ease: "linear", repeat: Infinity }}
+          >
+            {[
+              { src: showcaseNotebook2, brand: "NotebookLM", title: "Fragmented Information" },
+              { src: showcaseZeeks2, brand: "Zeeks", title: "CFO Goes Pale in 12s" },
+              { src: showcaseDexraflow2, brand: "Dexraflow", title: "147 Leads Automated" },
+              { src: showcaseMedscore2, brand: "Medscore", title: "Revenue vs Collectability" },
+              { src: showcaseNotion2, brand: "Notion", title: "7 Places Teams Hide Work" },
+            ].concat([
+              { src: showcaseNotebook2, brand: "NotebookLM", title: "Fragmented Information" },
+              { src: showcaseZeeks2, brand: "Zeeks", title: "CFO Goes Pale in 12s" },
+              { src: showcaseDexraflow2, brand: "Dexraflow", title: "147 Leads Automated" },
+              { src: showcaseMedscore2, brand: "Medscore", title: "Revenue vs Collectability" },
+              { src: showcaseNotion2, brand: "Notion", title: "7 Places Teams Hide Work" },
+            ]).map((item, i) => (
+              <div key={`r2-${i}`} className="group relative w-[460px] shrink-0 rounded-2xl overflow-hidden border border-slate-900/10 bg-white shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)]">
+                <img src={item.src} alt={`${item.brand} — ${item.title}`} loading="lazy" className="w-full h-[260px] object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-200">{item.brand}</div>
+                  <div className="text-white font-medium text-sm">{item.title}</div>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+          <span>Notion</span><span>NotebookLM</span><span>Medscore</span><span>Dexraflow</span><span>Zeeks</span>
+        </div>
+      </Section>
+
+
 
       {/* PRICING */}
       <Section id="pricing">
