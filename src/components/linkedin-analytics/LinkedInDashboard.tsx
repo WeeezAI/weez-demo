@@ -67,6 +67,10 @@ const LinkedInDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState<string | undefined>();
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Switcher context state: combined, personal, or organization
+  const [viewContext, setViewContext] = useState<"combined" | "personal" | "org">("combined");
+  const [activeTab, setActiveTab] = useState<string>("individual");
+
   const loadDashboard = useCallback(async () => {
     if (!currentSpace?.id) return;
     setIsLoading(true);
@@ -131,6 +135,16 @@ const LinkedInDashboard = () => {
     };
   }, [pollSummary]);
 
+  // Smart Tab Redirection
+  useEffect(() => {
+    if (!data) return;
+    if (viewContext === "personal" && activeTab === "organization") {
+      setActiveTab("individual");
+    } else if (viewContext === "org" && activeTab === "individual") {
+      setActiveTab("organization");
+    }
+  }, [viewContext, activeTab, data]);
+
   const handleSync = async () => {
     if (!currentSpace?.id) return;
     setIsSyncing(true);
@@ -150,6 +164,395 @@ const LinkedInDashboard = () => {
     setCustomStart(start);
     setCustomEnd(end);
   };
+
+  // ── Client-Side Re-Aggregation hook based on selected viewContext ──
+  const computedData = useMemo(() => {
+    if (!data) return null;
+
+    const computePeriodDelta = (current: number, previous: number) => {
+      const delta = current - previous;
+      const delta_pct = previous > 0 ? +((delta / previous) * 100).toFixed(1) : (current > 0 ? 100 : 0);
+      const direction = delta > 0 ? ("up" as const) : (delta < 0 ? ("down" as const) : ("flat" as const));
+      return { current, previous, delta, delta_pct, direction };
+    };
+
+    const getBestDayFromHeatmap = (heatmap: HeatmapEntry[]) => {
+      if (!heatmap || heatmap.length === 0) return "Tuesday";
+      const dayRates: Record<string, { totalRate: number; count: number }> = {};
+      heatmap.forEach(h => {
+        if (!dayRates[h.day]) {
+          dayRates[h.day] = { totalRate: 0, count: 0 };
+        }
+        dayRates[h.day].totalRate += h.avg_engagement_rate;
+        dayRates[h.day].count += 1;
+      });
+      let bestDay = "Tuesday";
+      let bestAvg = -1;
+      Object.entries(dayRates).forEach(([day, val]) => {
+        const avg = val.count > 0 ? val.totalRate / val.count : 0;
+        if (avg > bestAvg) {
+          bestAvg = avg;
+          bestDay = day;
+        }
+      });
+      return bestDay;
+    };
+
+    const buildContentBreakdown = (posts: PostMetric[]) => {
+      const byType: Record<string, {
+        count: number;
+        total_impressions: number;
+        total_reactions: number;
+        total_comments: number;
+        total_shares: number;
+        engagementRates: number[];
+      }> = {};
+      posts.forEach(p => {
+        const ct = p.content_type || "text";
+        if (!byType[ct]) {
+          byType[ct] = { count: 0, total_impressions: 0, total_reactions: 0, total_comments: 0, total_shares: 0, engagementRates: [] };
+        }
+        byType[ct].count++;
+        byType[ct].total_impressions += p.impressions || 0;
+        byType[ct].total_reactions += p.reactions || 0;
+        byType[ct].total_comments += p.comments || 0;
+        byType[ct].total_shares += p.shares || 0;
+        if (p.engagement_rate) byType[ct].engagementRates.push(p.engagement_rate);
+      });
+      return Object.entries(byType).map(([content_type, b]) => {
+        const avg_engagement_rate = b.engagementRates.length > 0
+          ? +(b.engagementRates.reduce((x, y) => x + y, 0) / b.engagementRates.length).toFixed(2)
+          : 0;
+        return {
+          content_type,
+          count: b.count,
+          total_impressions: b.total_impressions,
+          total_reactions: b.total_reactions,
+          total_comments: b.total_comments,
+          total_shares: b.total_shares,
+          avg_engagement_rate,
+        };
+      });
+    };
+
+    const buildHeatmap = (posts: PostMetric[]) => {
+      const grid: Record<string, { totalRate: number; count: number }> = {};
+      posts.forEach(p => {
+        if (!p.posted_at) return;
+        const dt = new Date(p.posted_at);
+        const dayIndex = dt.getDay();
+        const hour = dt.getHours();
+        const shiftedDay = dayIndex === 0 ? 6 : dayIndex - 1;
+        const key = `${shiftedDay}-${hour}`;
+        if (!grid[key]) {
+          grid[key] = { totalRate: 0, count: 0 };
+        }
+        grid[key].totalRate += p.engagement_rate || 0;
+        grid[key].count++;
+      });
+      
+      const heatmapData: HeatmapEntry[] = [];
+      const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      for (let d = 0; d < 7; d++) {
+        for (let h = 0; h < 24; h++) {
+          const key = `${d}-${h}`;
+          const cell = grid[key];
+          heatmapData.push({
+            day: dayNames[d],
+            day_index: d,
+            hour: h,
+            avg_engagement_rate: cell ? +(cell.totalRate / cell.count).toFixed(2) : 0,
+            post_count: cell ? cell.count : 0,
+          });
+        }
+      }
+      return heatmapData;
+    };
+
+    const leadsCard = data.highlights?.find(h => h.metric_key === "leads") || {
+      icon: "Target",
+      label: "Leads Generated",
+      metric_key: "leads",
+      current: 0,
+      previous: 0,
+      delta: 0,
+      delta_pct: 0,
+      direction: "flat" as const,
+    };
+
+    if (viewContext === "personal") {
+      const ci = data.individual;
+      const pi = data.individual?.previous || {
+        connections_count: 0,
+        profile_views: 0,
+        search_appearances: 0,
+        total_impressions: 0,
+        total_reactions: 0,
+        total_comments: 0,
+        total_shares: 0,
+      };
+
+      const personalImpressions = ci.total_impressions;
+      const personalEngagements = ci.total_reactions + ci.total_comments + ci.total_shares;
+      const personalEngRate = personalImpressions > 0 ? +((personalEngagements / personalImpressions) * 100).toFixed(2) : 0;
+      const personalMultiplier = +(personalEngRate / 2.0).toFixed(1);
+      
+      const personalPosts = ci.posts || [];
+      const personalHeatmap = buildHeatmap(personalPosts);
+      const personalBestDay = getBestDayFromHeatmap(personalHeatmap);
+      
+      const personalTopPost = personalPosts.length > 0 
+        ? personalPosts.reduce((max, p) => (p.impressions || 0) > (max.impressions || 0) ? p : max, personalPosts[0])
+        : null;
+      const personalTopPostReach = personalTopPost ? personalTopPost.impressions : 0;
+
+      const highlightsList = [
+        {
+          icon: "Link2",
+          label: "New Connections",
+          metric_key: "connections",
+          ...computePeriodDelta(ci.connections_count || 0, pi.connections_count || 0),
+        },
+        {
+          icon: "Eye",
+          label: "Profile Views",
+          metric_key: "profile_views",
+          ...computePeriodDelta(ci.profile_views || 0, pi.profile_views || 0),
+        },
+        {
+          icon: "Eye",
+          label: "Search Appearances",
+          metric_key: "search_appearances",
+          ...computePeriodDelta(ci.search_appearances || 0, pi.search_appearances || 0),
+        },
+        {
+          icon: "TrendingUp",
+          label: "Impressions",
+          metric_key: "impressions",
+          ...computePeriodDelta(ci.total_impressions || 0, pi.total_impressions || 0),
+        },
+        {
+          icon: "MessageSquare",
+          label: "Comments Received",
+          metric_key: "comments",
+          ...computePeriodDelta(ci.total_comments || 0, pi.total_comments || 0),
+        },
+        {
+          icon: "Heart",
+          label: "Reactions Received",
+          metric_key: "reactions",
+          ...computePeriodDelta(ci.total_reactions || 0, pi.total_reactions || 0),
+        },
+        {
+          icon: "Repeat2",
+          label: "Shares",
+          metric_key: "shares",
+          ...computePeriodDelta(ci.total_shares || 0, pi.total_shares || 0),
+        },
+        leadsCard,
+        {
+          icon: "BarChart3",
+          label: "Industry Avg Engagement",
+          metric_key: "benchmark",
+          current: personalMultiplier,
+          previous: 0,
+          delta: 0,
+          delta_pct: 0,
+          direction: personalMultiplier > 1 ? ("up" as const) : ("down" as const),
+          suffix: "x",
+        },
+        {
+          icon: "Trophy",
+          label: "Top Post Reach",
+          metric_key: "top_post",
+          current: personalTopPostReach,
+          previous: 0,
+          delta: 0,
+          delta_pct: 0,
+          direction: personalTopPostReach > 0 ? ("up" as const) : ("flat" as const),
+        },
+        {
+          icon: "CalendarDays",
+          label: "Best Day to Post",
+          metric_key: "best_day",
+          current: personalBestDay,
+          previous: "",
+          delta: 0,
+          delta_pct: 0,
+          direction: "flat" as const,
+          is_text: true,
+        },
+      ];
+
+      const personalBenchmark = {
+        client_rate: personalEngRate,
+        benchmark_rate: 2.0,
+        multiplier: personalMultiplier,
+        status: personalEngRate > 2.2 ? ("above" as const) : (personalEngRate < 1.8 ? ("below" as const) : ("at" as const)),
+        label: personalEngRate > 2.2 
+          ? `Your profile engagement is ${personalMultiplier}x the industry average!`
+          : personalEngRate < 1.8
+          ? `Room to grow — your profile is at ${personalEngRate}% vs 2.0% industry avg.`
+          : `Your profile is right at the industry average of 2.0%.`,
+      };
+
+      return {
+        highlights: highlightsList,
+        contentBreakdown: buildContentBreakdown(personalPosts),
+        heatmap: personalHeatmap,
+        bestDay: personalBestDay,
+        topPost: personalTopPost,
+        benchmark: personalBenchmark,
+      };
+    }
+
+    if (viewContext === "org") {
+      const co = data.organization;
+      const po = data.organization?.previous || {
+        total_followers: 0,
+        total_impressions: 0,
+        total_reactions: 0,
+        total_comments: 0,
+        total_shares: 0,
+        page_views: 0,
+        unique_visitors: 0,
+      };
+
+      const orgImpressions = co.share_stats?.totals?.impressions || 0;
+      const orgEngagements = (co.share_stats?.totals?.reactions || 0) + (co.share_stats?.totals?.comments || 0) + (co.share_stats?.totals?.shares || 0);
+      const orgEngRate = orgImpressions > 0 ? +((orgEngagements / orgImpressions) * 100).toFixed(2) : 0;
+      const orgMultiplier = +(orgEngRate / 2.0).toFixed(1);
+      
+      const orgPosts = co.posts || [];
+      const orgHeatmap = buildHeatmap(orgPosts);
+      const orgBestDay = getBestDayFromHeatmap(orgHeatmap);
+      
+      const orgTopPost = orgPosts.length > 0 
+        ? orgPosts.reduce((max, p) => (p.impressions || 0) > (max.impressions || 0) ? p : max, orgPosts[0])
+        : null;
+      const orgTopPostReach = orgTopPost ? orgTopPost.impressions : 0;
+
+      const highlightsList = [
+        {
+          icon: "Users",
+          label: "New Followers (Org)",
+          metric_key: "org_followers",
+          ...computePeriodDelta(co.followers?.total_followers || 0, po.total_followers || 0),
+        },
+        {
+          icon: "Eye",
+          label: "Page Views",
+          metric_key: "page_views",
+          ...computePeriodDelta(co.page_stats?.total_page_views || 0, po.page_views || 0),
+        },
+        {
+          icon: "Users",
+          label: "Unique Visitors",
+          metric_key: "unique_visitors",
+          ...computePeriodDelta(co.page_stats?.total_unique_visitors || 0, po.unique_visitors || 0),
+        },
+        {
+          icon: "TrendingUp",
+          label: "Impressions",
+          metric_key: "impressions",
+          ...computePeriodDelta(co.share_stats?.totals?.impressions || 0, po.total_impressions || 0),
+        },
+        {
+          icon: "MessageSquare",
+          label: "Comments Received",
+          metric_key: "comments",
+          ...computePeriodDelta(co.share_stats?.totals?.comments || 0, po.total_comments || 0),
+        },
+        {
+          icon: "Heart",
+          label: "Reactions Received",
+          metric_key: "reactions",
+          ...computePeriodDelta(co.share_stats?.totals?.reactions || 0, po.total_reactions || 0),
+        },
+        {
+          icon: "Repeat2",
+          label: "Shares",
+          metric_key: "shares",
+          ...computePeriodDelta(co.share_stats?.totals?.shares || 0, po.total_shares || 0),
+        },
+        leadsCard,
+        {
+          icon: "BarChart3",
+          label: "Industry Avg Engagement",
+          metric_key: "benchmark",
+          current: orgMultiplier,
+          previous: 0,
+          delta: 0,
+          delta_pct: 0,
+          direction: orgMultiplier > 1 ? ("up" as const) : ("down" as const),
+          suffix: "x",
+        },
+        {
+          icon: "Trophy",
+          label: "Top Post Reach",
+          metric_key: "top_post",
+          current: orgTopPostReach,
+          previous: 0,
+          delta: 0,
+          delta_pct: 0,
+          direction: orgTopPostReach > 0 ? ("up" as const) : ("flat" as const),
+        },
+        {
+          icon: "BrainCircuit",
+          label: "Decision Makers",
+          metric_key: "decision_makers",
+          current: data.decision_maker_pct || 0,
+          previous: 0,
+          delta: 0,
+          delta_pct: 0,
+          direction: (data.decision_maker_pct || 0) > 30 ? ("up" as const) : ("flat" as const),
+          suffix: "%",
+        },
+        {
+          icon: "CalendarDays",
+          label: "Best Day to Post",
+          metric_key: "best_day",
+          current: orgBestDay,
+          previous: "",
+          delta: 0,
+          delta_pct: 0,
+          direction: "flat" as const,
+          is_text: true,
+        },
+      ];
+
+      const orgBenchmark = {
+        client_rate: orgEngRate,
+        benchmark_rate: 2.0,
+        multiplier: orgMultiplier,
+        status: orgEngRate > 2.2 ? ("above" as const) : (orgEngRate < 1.8 ? ("below" as const) : ("at" as const)),
+        label: orgEngRate > 2.2 
+          ? `Your company page engagement is ${orgMultiplier}x the industry average!`
+          : orgEngRate < 1.8
+          ? `Room to grow — your company page is at ${orgEngRate}% vs 2.0% industry avg.`
+          : `Your company page is right at the industry average of 2.0%.`,
+      };
+
+      return {
+        highlights: highlightsList,
+        contentBreakdown: buildContentBreakdown(orgPosts),
+        heatmap: orgHeatmap,
+        bestDay: orgBestDay,
+        topPost: orgTopPost,
+        benchmark: orgBenchmark,
+      };
+    }
+
+    // Combined default
+    return {
+      highlights: data.highlights,
+      contentBreakdown: data.content_breakdown,
+      heatmap: data.heatmap,
+      bestDay: data.best_day,
+      topPost: data.top_post,
+      benchmark: data.benchmark,
+    };
+  }, [data, viewContext]);
 
   // ── Loading State ────────────────────────────────────────────────────
   if (isLoading) {
@@ -261,7 +664,35 @@ const LinkedInDashboard = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* View Context Switcher */}
+          <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-border/30 shadow-sm">
+            {(
+              [
+                { id: "combined", label: "Overview", Icon: Cpu },
+                { id: "personal", label: "Profile", Icon: User },
+                ...(data.org_urn ? [{ id: "org", label: "Page", Icon: Building2 }] : []),
+              ] as const
+            ).map((ctx) => {
+              const isActive = viewContext === ctx.id;
+              return (
+                <button
+                  key={ctx.id}
+                  onClick={() => setViewContext(ctx.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+                    isActive
+                      ? "bg-foreground text-background shadow-md transform scale-[1.02]"
+                      : "text-muted-foreground/60 hover:bg-muted/50"
+                  )}
+                >
+                  <ctx.Icon className="w-3.5 h-3.5" />
+                  <span>{ctx.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <TimePeriodSelector value={period} onChange={handlePeriodChange} />
 
           {/* Last Updated Indicator */}
@@ -291,19 +722,21 @@ const LinkedInDashboard = () => {
       </div>
 
       {/* ── Section 1: Growth Highlights ──────────────────────── */}
-      <GrowthHighlightCards highlights={data.highlights} />
+      <GrowthHighlightCards highlights={computedData?.highlights || []} />
 
       {/* ── Tabbed Content ────────────────────────────────────── */}
-      <Tabs defaultValue="individual" className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList className="bg-white rounded-2xl p-1.5 shadow-sm border border-border/20 h-auto">
-          <TabsTrigger
-            value="individual"
-            className="rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-foreground data-[state=active]:text-background"
-          >
-            <User className="w-3.5 h-3.5 mr-2" />
-            Individual
-          </TabsTrigger>
-          {data.org_urn && (
+          {(viewContext === "combined" || viewContext === "personal") && (
+            <TabsTrigger
+              value="individual"
+              className="rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-foreground data-[state=active]:text-background"
+            >
+              <User className="w-3.5 h-3.5 mr-2" />
+              Individual
+            </TabsTrigger>
+          )}
+          {data.org_urn && (viewContext === "combined" || viewContext === "org") && (
             <TabsTrigger
               value="organization"
               className="rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-foreground data-[state=active]:text-background"
@@ -336,19 +769,21 @@ const LinkedInDashboard = () => {
         </TabsList>
 
         {/* ── Tab: Individual ──────────────────────────────────── */}
-        <TabsContent value="individual" className="space-y-8">
-          <PostPerformanceTable
-            posts={data.individual?.posts || []}
-            avgEngagementRate={avgEngRate}
-          />
+        {(viewContext === "combined" || viewContext === "personal") && (
+          <TabsContent value="individual" className="space-y-8">
+            <PostPerformanceTable
+              posts={data.individual?.posts || []}
+              avgEngagementRate={avgEngRate}
+            />
 
-          {data.heatmap && data.heatmap.length > 0 && (
-            <BestTimeHeatmap data={data.heatmap} bestDay={data.best_day} />
-          )}
-        </TabsContent>
+            {computedData?.heatmap && computedData.heatmap.length > 0 && (
+              <BestTimeHeatmap data={computedData.heatmap} bestDay={computedData.bestDay} />
+            )}
+          </TabsContent>
+        )}
 
         {/* ── Tab: Organization ─────────────────────────────────── */}
-        {data.org_urn && (
+        {data.org_urn && (viewContext === "combined" || viewContext === "org") && (
           <TabsContent value="organization" className="space-y-8">
             {/* Org charts */}
             <div className="grid gap-8 lg:grid-cols-2">
@@ -369,7 +804,7 @@ const LinkedInDashboard = () => {
             </div>
 
             {/* Benchmark */}
-            {data.benchmark && <EngagementBenchmark data={data.benchmark} />}
+            {computedData?.benchmark && <EngagementBenchmark data={computedData.benchmark} />}
 
             {/* Demographics */}
             <div className="space-y-4">
@@ -406,14 +841,14 @@ const LinkedInDashboard = () => {
 
         {/* ── Tab: Content Mix ──────────────────────────────────── */}
         <TabsContent value="content" className="space-y-8">
-          <ContentTypeBreakdownChart data={data.content_breakdown} />
+          <ContentTypeBreakdownChart data={computedData?.contentBreakdown || []} />
 
-          {data.heatmap && data.heatmap.length > 0 && (
-            <BestTimeHeatmap data={data.heatmap} bestDay={data.best_day} />
+          {computedData?.heatmap && computedData.heatmap.length > 0 && (
+            <BestTimeHeatmap data={computedData.heatmap} bestDay={computedData.bestDay} />
           )}
 
           {/* Top Post Highlight */}
-          {data.top_post && (
+          {computedData?.topPost && (
             <Card className="border-none bg-gradient-to-br from-amber-50 to-orange-50 rounded-[2.5rem] p-8 shadow-sm">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600">
@@ -424,18 +859,18 @@ const LinkedInDashboard = () => {
                     Top Performing Post
                   </p>
                   <p className="text-sm font-bold text-foreground/80 line-clamp-2 mb-3">
-                    "{data.top_post.text_snippet}"
+                    "{computedData.topPost.text_snippet}"
                   </p>
                   <div className="flex items-center gap-6 text-sm">
                     <span className="font-black">
-                      {(data.top_post.impressions || 0).toLocaleString()} impressions
+                      {(computedData.topPost.impressions || 0).toLocaleString()} impressions
                     </span>
                     <span className="font-black text-emerald-500">
-                      {data.top_post.engagement_rate}% engagement
+                      {computedData.topPost.engagement_rate}% engagement
                     </span>
                     <span className="font-bold text-muted-foreground/50">
-                      {data.top_post.posted_at
-                        ? new Date(data.top_post.posted_at).toLocaleDateString()
+                      {computedData.topPost.posted_at
+                        ? new Date(computedData.topPost.posted_at).toLocaleDateString()
                         : ""}
                     </span>
                   </div>

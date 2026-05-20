@@ -94,6 +94,21 @@ export interface LinkedInDashboardData {
     total_reactions: number;
     total_comments: number;
     total_shares: number;
+    connections_count?: number;
+    followers_count?: number;
+    profile_views?: number;
+    search_appearances?: number;
+    previous?: {
+      total_impressions: number;
+      total_reactions: number;
+      total_comments: number;
+      total_shares: number;
+      post_count: number;
+      connections_count: number;
+      followers_count: number;
+      profile_views: number;
+      search_appearances: number;
+    };
   };
   content_breakdown: ContentBreakdown[];
   heatmap: HeatmapEntry[];
@@ -104,6 +119,15 @@ export interface LinkedInDashboardData {
     share_stats: any;
     posts: PostMetric[];
     demographics: Record<string, Record<string, number>>;
+    previous?: {
+      total_followers: number;
+      total_impressions: number;
+      total_reactions: number;
+      total_comments: number;
+      total_shares: number;
+      page_views: number;
+      unique_visitors: number;
+    };
   };
   benchmark: BenchmarkData;
   decision_maker_pct: number;
