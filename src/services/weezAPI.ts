@@ -98,6 +98,28 @@ export const weezAPI = {
     return await response.json();
   },
 
+  /**
+   * Fetches available LinkedIn pages (personal and organizational) for a brand
+   */
+  getLinkedInPages: async (brandId: string): Promise<{ pages: Array<{ urn: string; name: string; type: "personal" | "organization" }>; current_urn?: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/connectors/linkedin/pages?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to fetch LinkedIn pages");
+    return await response.json();
+  },
+
+  /**
+   * Connects the specified LinkedIn page/profile for marketing execution
+   */
+  selectLinkedInPage: async (brandId: string, urn: string, name: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/connectors/linkedin/select`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, urn, name }),
+    });
+    if (!response.ok) throw new Error("Failed to select LinkedIn page");
+    return await response.json();
+  },
+
 
   /**
    * Explicitly triggers the Brand Analysis Pipeline
@@ -561,7 +583,7 @@ export const weezAPI = {
   },
 
   // ── Unified Poster Editor API ────────────────────────────────────────
-  
+
   /**
    * Fetches the content (JSX or HTML) for a poster job
    */

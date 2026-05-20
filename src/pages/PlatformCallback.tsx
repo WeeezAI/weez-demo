@@ -11,6 +11,11 @@ const PlatformCallback = () => {
   const [params] = useSearchParams();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [pages, setPages] = useState<Array<{ urn: string; name: string; type: "personal" | "organization" }>>([]);
+  const [selectedPageUrn, setSelectedPageUrn] = useState<string>("");
+  const [isFetchingPages, setIsFetchingPages] = useState(false);
+  const [isSavingPage, setIsSavingPage] = useState(false);
+  const [hasSelectedPage, setHasSelectedPage] = useState(false);
 
   const isConnected = params.get("connected") === "true";
   const brandId = params.get("state") || "";
@@ -25,7 +30,9 @@ const PlatformCallback = () => {
 
   useEffect(() => {
     if (isConnected && brandId && !isSuccess) {
-      if (provider === "linkedin" || provider === "hubspot") {
+      if (provider === "linkedin") {
+        fetchLinkedInPages(brandId);
+      } else if (provider === "hubspot") {
         // Skip full brand analysis — backend already stored the token
         setIsSuccess(true);
       } else {
@@ -33,6 +40,45 @@ const PlatformCallback = () => {
       }
     }
   }, [isConnected, brandId, provider, isSuccess]);
+
+  const fetchLinkedInPages = async (id: string) => {
+    setIsFetchingPages(true);
+    try {
+      const data = await weezAPI.getLinkedInPages(id);
+      setPages(data.pages || []);
+      if (data.pages && data.pages.length > 0) {
+        const current = data.current_urn || data.pages[0].urn;
+        setSelectedPageUrn(current);
+      }
+    } catch (err) {
+      console.error("Failed to fetch LinkedIn pages:", err);
+      toast.error("Could not fetch LinkedIn pages");
+    } finally {
+      setIsFetchingPages(false);
+    }
+  };
+
+  const handleConfirmLinkedInPage = async () => {
+    if (!selectedPageUrn) {
+      toast.error("Please select a page or profile.");
+      return;
+    }
+    const page = pages.find(p => p.urn === selectedPageUrn);
+    if (!page) return;
+
+    setIsSavingPage(true);
+    try {
+      await weezAPI.selectLinkedInPage(brandId, page.urn, page.name);
+      setHasSelectedPage(true);
+      setIsSuccess(true);
+      toast.success(`Successfully connected to ${page.name}!`);
+    } catch (err) {
+      console.error("Failed to select page:", err);
+      toast.error("Failed to save LinkedIn page selection");
+    } finally {
+      setIsSavingPage(false);
+    }
+  };
 
   const handleRunAnalysis = async (id: string) => {
     setIsAnalyzing(true);
@@ -250,6 +296,63 @@ const PlatformCallback = () => {
       <div className="max-w-xl w-full">
         {isAnalyzing ? (
           <EducationalLoader />
+        ) : isFetchingPages ? (
+          <div className="space-y-6 text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto opacity-20" />
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">Fetching available LinkedIn pages...</p>
+          </div>
+        ) : provider === "linkedin" && !hasSelectedPage && pages.length > 0 ? (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+            <div className="flex justify-center">
+              <div className="w-24 h-24 bg-blue-600/10 rounded-[3rem] flex items-center justify-center shadow-inner">
+                <Linkedin className="w-12 h-12 text-blue-600 animate-pulse" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-2">
+              <h1 className="text-4xl font-black uppercase tracking-tighter">Choose Your Page</h1>
+              <p className="text-muted-foreground font-medium text-lg">
+                We found multiple profiles or pages associated with your LinkedIn account. Select where you want to publish and run marketing.
+              </p>
+            </div>
+
+            <div className="p-8 rounded-[2.5rem] bg-white border border-border/80 shadow-xl shadow-black/[0.02] space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
+                  Select Destination Profile or Organization
+                </label>
+                <select
+                  value={selectedPageUrn}
+                  onChange={(e) => setSelectedPageUrn(e.target.value)}
+                  className="w-full h-14 px-4 rounded-xl border border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-900 font-semibold"
+                >
+                  {pages.map((p) => (
+                    <option key={p.urn} value={p.urn}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <p className="text-xs text-zinc-400 font-medium leading-relaxed">
+                * Note: Weez AI will generate content tailored specifically for this page. You can change this selection later in your connectors settings.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleConfirmLinkedInPage}
+              disabled={isSavingPage}
+              className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20 flex items-center justify-center gap-2"
+            >
+              {isSavingPage ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Confirm & Launch Dashboard <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </div>
         ) : isSuccess ? (
           renderSuccess()
         ) : error ? (
