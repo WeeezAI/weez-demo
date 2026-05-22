@@ -689,4 +689,58 @@ export const weezAPI = {
     });
     if (!response.ok) throw new Error("Failed to save poster HTML");
   },
+
+  // ── Founder Voice Onboarding API ──────────────────────────────────────────
+
+  /**
+   * Creates a WebRTC session for the GPT-4o voice interview
+   */
+  createRealtimeSession: async (brandId: string): Promise<{
+    token: string;
+    url: string;
+    ice_servers: any[];
+    session_id: string;
+    expires_at: number;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/session?brand_id=${brandId}`, {
+      method: "POST"
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed to create voice session" }));
+      throw new Error(err.detail || "Failed to create voice session");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Submits the voice interview transcript for analysis & synthesis
+   */
+  processFounderVoice: async (brandId: string, transcript: string): Promise<{
+    status: string;
+    founder_voice: any;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/process`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, transcript }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed to process voice" }));
+      throw new Error(err.detail || "Failed to process voice");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Gets the completion status and voice profile for a brand
+   */
+  getFounderVoiceStatus: async (brandId: string): Promise<{
+    completed: boolean;
+    founder_voice: any;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/status?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to get voice status");
+    return await response.json();
+  },
 };
+

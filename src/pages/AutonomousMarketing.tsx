@@ -75,6 +75,7 @@ import {
 import ConnectorsView from "@/components/ConnectorsView";
 import { usePosterWebSocket } from "@/hooks/usePosterWebSocket";
 import PosterEditorModal from "@/components/PosterEditorModal";
+import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
 import {
@@ -975,6 +976,10 @@ export default function AutonomousMarketing() {
     const [isBrandVoiceGenerating, setIsBrandVoiceGenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Founder Voice Onboarding state
+    const [voiceCompleted, setVoiceCompleted] = useState(false);
+    const [voiceSkipped, setVoiceSkipped] = useState(false);
+
     // Campaign Configuration State
     const [campaignDuration, setCampaignDuration] = useState("30");
     const [campaignType, setCampaignType] = useState("engagement");
@@ -1040,6 +1045,21 @@ export default function AutonomousMarketing() {
             });
         }
     }, [isSetupMode]);
+
+    useEffect(() => {
+        const checkVoiceStatus = async () => {
+            if (!spaceId || !isSetupMode) return;
+            try {
+                const res = await weezAPI.getFounderVoiceStatus(spaceId);
+                if (res.completed) {
+                    setVoiceCompleted(true);
+                }
+            } catch (err) {
+                console.error("Failed to check voice onboarding status:", err);
+            }
+        };
+        checkVoiceStatus();
+    }, [spaceId, isSetupMode]);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -1418,6 +1438,26 @@ export default function AutonomousMarketing() {
 
     if (isPageLoading) {
         return <VisionLoadingScreen />;
+    }
+
+    if (isSetupMode && !voiceCompleted && !voiceSkipped) {
+        return (
+            <FounderVoiceOnboarding
+                spaceId={spaceId!}
+                onComplete={(profile) => {
+                    setVoiceCompleted(true);
+                    toast.success("Voice profile synthesized and applied!", {
+                        description: "Sage has customized your digital brand persona."
+                    });
+                }}
+                onSkip={() => {
+                    setVoiceSkipped(true);
+                    toast.info("Voice onboarding skipped.", {
+                        description: "You can proceed to space connectors directly."
+                    });
+                }}
+            />
+        );
     }
 
     const SUGGESTIONS = [
