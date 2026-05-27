@@ -78,6 +78,7 @@ import PosterEditorModal from "@/components/PosterEditorModal";
 import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
+import PublishingControls from "@/components/PublishingControls";
 import {
     Select,
     SelectContent,
@@ -660,6 +661,31 @@ function ActiveDashboard({
                                 </div>
                             </div>
                         </div>
+                    </Card>
+                )}
+
+                {/* ─── Publishing Controls (Approval vs AutoPilot) ────────────── */}
+                {/*
+                  Mounted on the active campaign dashboard so the campaign owner
+                  can toggle between Approval Mode and AutoPilot directly here.
+                  The component owns its own dialogs (Premium upgrade modal +
+                  AutoPilot confirmation) and persists changes via approvalAPI.
+                  Premium gating is enforced server-side via 403 +
+                  `premium_required`; the `isPremium` prop is a best-effort
+                  hint from the dashboard payload — falls back to `false` so a
+                  missing field never escalates a non-Premium user.
+                */}
+                {activeStatus?.campaign_id && (
+                    <Card className="border-none shadow-xl bg-white rounded-[2.5rem] mb-8 p-6 md:p-8">
+                        <PublishingControls
+                            campaignId={activeStatus.campaign_id}
+                            isPremium={Boolean(
+                                (dashboardData as any)?.is_premium ??
+                                (activeStatus as any)?.is_premium ??
+                                (dashboardData as any)?.user?.is_premium ??
+                                (dashboardData as any)?.subscription_tier === "PREMIUM"
+                            )}
+                        />
                     </Card>
                 )}
 

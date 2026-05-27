@@ -32,7 +32,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ConversationSidebar from "@/components/ConversationSidebar";
-import PublishingControls from "@/components/PublishingControls";
 import { weezAPI } from "@/services/weezAPI";
 
 type AutopilotDashboardData = any;
@@ -499,28 +498,6 @@ export default function AutopilotDashboard() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* ============ PUBLISHING CONTROLS (Approval vs AutoPilot) ============ */}
-                {data?.campaign?.id && (
-                    <motion.div variants={fadeUp} initial="hidden" animate="show" custom={2}>
-                        <Glass className="p-6 md:p-8">
-                            <PublishingControls
-                                campaignId={data.campaign.id}
-                                // The dashboard payload does not carry a typed `is_premium` flag yet
-                                // (AutopilotDashboardData is `any`). We probe a few likely shapes
-                                // and fall back to `false`; the backend still enforces the Premium
-                                // gate via 403 + `premium_required` (Req 2.5), so a wrong client
-                                // hint cannot bypass the check.
-                                isPremium={Boolean(
-                                    data?.is_premium ??
-                                    data?.user?.is_premium ??
-                                    data?.subscription_tier === "PREMIUM"
-                                )}
-                                onModeChange={() => loadDashboard()}
-                            />
-                        </Glass>
-                    </motion.div>
-                )}
 
                 {/* ============ STAT CARDS ============ */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
