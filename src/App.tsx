@@ -30,6 +30,7 @@ import Plans from "./pages/Plans";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
 import VerificationFailed from "./pages/VerificationFailed";
+import ApprovalConfirmation from "./pages/ApprovalConfirmation";
 import PremiumModal from "./components/PremiumModal";
 import { differenceInDays, parseISO } from "date-fns";
 import CONFIG from "./services/config";
@@ -100,6 +101,12 @@ const AppContent = () => {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verification-success" element={<VerificationSuccess />} />
               <Route path="/verification-failed" element={<VerificationFailed />} />
+
+              {/* Approval workflow — destination of email "Approve Post" links (Req 7.5, 21.x) */}
+              <Route
+                path="/campaign/:campaignId/approve/:contentId"
+                element={<ApprovalConfirmation />}
+              />
 
               {/* Spaces list */}
               <Route path="/spaces" element={<Spaces />} />
