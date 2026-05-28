@@ -21,6 +21,7 @@ import OneClickPost from "./pages/OneClickPost";
 import AutonomousMarketing from "./pages/AutonomousMarketing";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import SalesAssistant from "./pages/SalesAssistant";
+import GrowthStrategist from "./pages/GrowthStrategist";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -119,6 +120,7 @@ const AppContent = () => {
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
               <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />
               <Route path="/sales/:spaceId" element={<SalesAssistant />} />
+              <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
               <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
 

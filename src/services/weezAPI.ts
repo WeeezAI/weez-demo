@@ -742,5 +742,51 @@ export const weezAPI = {
     if (!response.ok) throw new Error("Failed to get voice status");
     return await response.json();
   },
+
+  // ── Growth Strategist API ─────────────────────────────────────────────────
+
+  /**
+   * Fetches on-demand weekly growth suggestions
+   */
+  getGrowthSuggestions: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/growth/suggestions?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to generate growth suggestions");
+    return await response.json();
+  },
+
+  /**
+   * Generates LinkedIn profile copy (headlines + about)
+   */
+  getProfileCopy: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/growth/profile-copy?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to generate profile copy");
+    return await response.json();
+  },
+
+  /**
+   * Regenerates profile copy with fresh alternatives
+   */
+  regenerateProfileCopy: async (brandId: string, section: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/growth/profile-copy/regenerate?brand_id=${brandId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section }),
+    });
+    if (!response.ok) throw new Error("Failed to regenerate profile copy");
+    return await response.json();
+  },
+
+  /**
+   * Sends a message to Sarah AI assistant
+   */
+  chatWithSarah: async (brandId: string, message: string): Promise<{ response: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/growth/sarah/chat?brand_id=${brandId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    if (!response.ok) throw new Error("Sarah is unavailable right now");
+    return await response.json();
+  },
 };
 

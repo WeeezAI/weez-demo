@@ -67,6 +67,12 @@ const ConversationSidebar = ({
       icon: Target,
       color: "text-orange-500"
     },
+    {
+      label: "Growth",
+      path: `/growth/${spaceId}`,
+      icon: Zap,
+      color: "text-emerald-500"
+    },
   ];
 
   return (
