@@ -113,6 +113,16 @@ const PublishingControls: React.FC<PublishingControlsProps> = ({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // ── Initial load (Req 1.3) ─────────────────────────────────────────────────
+  //
+  // Resilience: a 404 here means either (a) the campaign has no persisted
+  // publishing_mode row yet (e.g. column added by a migration that hasn't run
+  // in this environment, or a brand-new campaign with the default not yet
+  // materialised) or (b) this deployment doesn't expose the route. The
+  // backend itself documents APPROVAL as the canonical default in that case
+  // (`getattr(campaign, "publishing_mode", None) or "APPROVAL"`), so the UI
+  // mirrors that fallback rather than blocking the toggle with a red banner.
+  // PATCH later will surface a real 404 on save if the endpoint truly does
+  // not exist, at which point the user sees an actionable toast.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -126,9 +136,17 @@ const PublishingControls: React.FC<PublishingControlsProps> = ({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        if (err instanceof ApprovalAPIError && err.status === 404) {
+          // Soft-fail: default to APPROVAL, no error banner.
+          setPersistedMode("APPROVAL");
+          return;
+        }
         const msg =
           err instanceof ApprovalAPIError ? err.message : "Failed to load publishing mode.";
         setLoadError(msg);
+        // Still default the toggle visual to APPROVAL so the radio group
+        // is usable; the banner conveys the real failure.
+        setPersistedMode("APPROVAL");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -229,7 +247,10 @@ const PublishingControls: React.FC<PublishingControlsProps> = ({
   // ── Render ─────────────────────────────────────────────────────────────────
   const isApproval = persistedMode === "APPROVAL";
   const isAutopilot = persistedMode === "AUTOPILOT";
-  const disabled = loading || saving || loadError !== null;
+  // Note: a non-null `loadError` no longer disables the toggle — the user can
+  // still attempt a PATCH which carries its own toast on failure. We only
+  // disable while the load or save is in flight.
+  const disabled = loading || saving;
 
   return (
     <section
