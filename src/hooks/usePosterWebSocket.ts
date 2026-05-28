@@ -55,10 +55,17 @@ export function usePosterWebSocket(
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const reconnectAttemptsRef = useRef(0);
+    // Use refs to avoid dependency cycles in the WebSocket callbacks
+    const campaignIdRef = useRef(campaignId);
+    const enabledRef = useRef(enabled);
 
-    // Fetch initial poster jobs via REST
+    campaignIdRef.current = campaignId;
+    enabledRef.current = enabled;
+
+    // Fetch poster jobs via REST — stable reference (no deps that change)
     const fetchPosterJobs = useCallback(async () => {
-        if (!campaignId) return;
+        const cid = campaignIdRef.current;
+        if (!cid) return;
         try {
             const token = sessionStorage.getItem("token");
             const headers: Record<string, string> = {
@@ -67,7 +74,7 @@ export function usePosterWebSocket(
             if (token) headers["Authorization"] = `Bearer ${token}`;
 
             const res = await fetch(
-                `${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/poster-jobs`,
+                `${WEEZ_BASE_URL}/autopilot/campaign/${cid}/poster-jobs`,
                 { headers }
             );
             if (res.ok) {
@@ -77,23 +84,25 @@ export function usePosterWebSocket(
         } catch (err) {
             console.error("[usePosterWebSocket] Failed to fetch poster jobs:", err);
         }
-    }, [campaignId]);
+    }, []); // stable — reads campaignId from ref
 
-    // Connect WebSocket
+    // Connect WebSocket — stable reference
     const connect = useCallback(() => {
-        if (!campaignId || !enabled) return;
+        const cid = campaignIdRef.current;
+        if (!cid || !enabledRef.current) return;
 
         // Close existing connection
         if (wsRef.current) {
             wsRef.current.close();
+            wsRef.current = null;
         }
 
-        const url = getWsUrl(campaignId);
+        const url = getWsUrl(cid);
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => {
-            console.log(`[WS] Connected to ${campaignId}`);
+            console.log(`[WS] Connected to ${cid}`);
             setIsConnected(true);
             reconnectAttemptsRef.current = 0;
         };
@@ -141,8 +150,8 @@ export function usePosterWebSocket(
             setIsConnected(false);
             wsRef.current = null;
 
-            // Auto-reconnect with exponential backoff
-            if (enabled && reconnectAttemptsRef.current < 10) {
+            // Auto-reconnect with exponential backoff (only if still enabled)
+            if (enabledRef.current && reconnectAttemptsRef.current < 10) {
                 const delay = Math.min(
                     1000 * Math.pow(2, reconnectAttemptsRef.current),
                     30000
@@ -158,7 +167,7 @@ export function usePosterWebSocket(
         ws.onerror = (error) => {
             console.error("[WS] Error:", error);
         };
-    }, [campaignId, enabled, fetchPosterJobs]);
+    }, [fetchPosterJobs]); // fetchPosterJobs is stable (empty deps)
 
     // Manual reconnect
     const reconnect = useCallback(() => {
@@ -166,7 +175,7 @@ export function usePosterWebSocket(
         connect();
     }, [connect]);
 
-    // Effect: connect on mount, disconnect on unmount
+    // Effect: connect when campaignId/enabled change, disconnect on unmount
     useEffect(() => {
         if (campaignId && enabled) {
             fetchPosterJobs();
@@ -180,8 +189,11 @@ export function usePosterWebSocket(
             }
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = null;
             }
         };
+        // Only re-run when campaignId or enabled actually change value
+        // connect/fetchPosterJobs are stable refs now
     }, [campaignId, enabled, connect, fetchPosterJobs]);
 
     // Periodic refresh as fallback (every 10s)

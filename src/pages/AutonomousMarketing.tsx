@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, KeyboardEvent, ChangeEvent } from "react";
+import { useState, useEffect, useRef, KeyboardEvent, ChangeEvent, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowUp,
@@ -78,7 +78,7 @@ import PosterEditorModal from "@/components/PosterEditorModal";
 import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
-import PublishingControls from "@/components/PublishingControls";
+const PublishingControls = lazy(() => import("@/components/PublishingControls"));
 import {
     Select,
     SelectContent,
@@ -677,15 +677,17 @@ function ActiveDashboard({
                 */}
                 {activeStatus?.campaign_id && (
                     <Card className="border-none shadow-xl bg-white rounded-[2.5rem] mb-8 p-6 md:p-8">
-                        <PublishingControls
-                            campaignId={activeStatus.campaign_id}
-                            isPremium={Boolean(
-                                (dashboardData as any)?.is_premium ??
-                                (activeStatus as any)?.is_premium ??
-                                (dashboardData as any)?.user?.is_premium ??
-                                (dashboardData as any)?.subscription_tier === "PREMIUM"
-                            )}
-                        />
+                        <Suspense fallback={null}>
+                            <PublishingControls
+                                campaignId={activeStatus.campaign_id}
+                                isPremium={Boolean(
+                                    (dashboardData as any)?.is_premium ??
+                                    (activeStatus as any)?.is_premium ??
+                                    (dashboardData as any)?.user?.is_premium ??
+                                    (dashboardData as any)?.subscription_tier === "PREMIUM"
+                                )}
+                            />
+                        </Suspense>
                     </Card>
                 )}
 

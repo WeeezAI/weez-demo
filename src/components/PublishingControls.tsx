@@ -310,87 +310,91 @@ const PublishingControls: React.FC<PublishingControlsProps> = ({
         />
       </div>
 
-      {/* ── Premium Upgrade Modal (Req 2.1) ─────────────────────────────── */}
-      <Dialog
-        open={premiumModalOpen}
-        onOpenChange={(open) => {
-          if (!open) handleCancelUpgrade();
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+      {/* ── Premium Upgrade Modal (Req 2.1) — only mounted when open ──── */}
+      {premiumModalOpen && (
+        <Dialog
+          open={premiumModalOpen}
+          onOpenChange={(open) => {
+            if (!open) handleCancelUpgrade();
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+              </div>
+              <DialogTitle>{PREMIUM_MODAL_TITLE}</DialogTitle>
+              <DialogDescription>{PREMIUM_MODAL_DESCRIPTION}</DialogDescription>
+            </DialogHeader>
+
+            <ul className="mt-2 space-y-2" aria-label="Premium benefits">
+              {PREMIUM_MODAL_BENEFITS.map((benefit) => (
+                <li key={benefit} className="flex items-start gap-2 text-sm">
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+
+            <DialogFooter className="mt-4 gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelUpgrade}
+              >
+                {PREMIUM_MODAL_SECONDARY}
+              </Button>
+              <Button type="button" onClick={handleUpgradeClick}>
+                {PREMIUM_MODAL_PRIMARY}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── AutoPilot Confirmation Dialog (Req 3.1) — only mounted when open */}
+      {confirmDialogOpen && (
+        <Dialog
+          open={confirmDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) handleCancelEnableAutopilot();
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{CONFIRM_DIALOG_TITLE}</DialogTitle>
+              <DialogDescription>{CONFIRM_DIALOG_DESCRIPTION}</DialogDescription>
+            </DialogHeader>
+
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100"
+            >
+              <AlertTriangle
+                className="mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+              <span>{CONFIRM_DIALOG_WARNING}</span>
             </div>
-            <DialogTitle>{PREMIUM_MODAL_TITLE}</DialogTitle>
-            <DialogDescription>{PREMIUM_MODAL_DESCRIPTION}</DialogDescription>
-          </DialogHeader>
 
-          <ul className="mt-2 space-y-2" aria-label="Premium benefits">
-            {PREMIUM_MODAL_BENEFITS.map((benefit) => (
-              <li key={benefit} className="flex items-start gap-2 text-sm">
-                <Check
-                  className="mt-0.5 h-4 w-4 shrink-0 text-primary"
-                  aria-hidden="true"
-                />
-                <span>{benefit}</span>
-              </li>
-            ))}
-          </ul>
-
-          <DialogFooter className="mt-4 gap-2 sm:gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancelUpgrade}
-            >
-              {PREMIUM_MODAL_SECONDARY}
-            </Button>
-            <Button type="button" onClick={handleUpgradeClick}>
-              {PREMIUM_MODAL_PRIMARY}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── AutoPilot Confirmation Dialog (Req 3.1) ─────────────────────── */}
-      <Dialog
-        open={confirmDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) handleCancelEnableAutopilot();
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{CONFIRM_DIALOG_TITLE}</DialogTitle>
-            <DialogDescription>{CONFIRM_DIALOG_DESCRIPTION}</DialogDescription>
-          </DialogHeader>
-
-          <div
-            role="alert"
-            className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100"
-          >
-            <AlertTriangle
-              className="mt-0.5 h-4 w-4 shrink-0"
-              aria-hidden="true"
-            />
-            <span>{CONFIRM_DIALOG_WARNING}</span>
-          </div>
-
-          <DialogFooter className="mt-4 gap-2 sm:gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancelEnableAutopilot}
-            >
-              {CONFIRM_DIALOG_SECONDARY}
-            </Button>
-            <Button type="button" onClick={handleConfirmEnableAutopilot}>
-              {CONFIRM_DIALOG_PRIMARY}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="mt-4 gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelEnableAutopilot}
+              >
+                {CONFIRM_DIALOG_SECONDARY}
+              </Button>
+              <Button type="button" onClick={handleConfirmEnableAutopilot}>
+                {CONFIRM_DIALOG_PRIMARY}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </section>
   );
 };
