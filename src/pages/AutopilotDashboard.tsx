@@ -15,6 +15,9 @@ import {
     Trash2,
     Sparkles,
     RefreshCw,
+    Eye,
+    Users,
+    ArrowUpRight,
 } from "lucide-react";
 import {
     XAxis,
@@ -104,6 +107,145 @@ const fadeUp: any = {
         y: 0,
         transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] as any },
     }),
+};
+
+/* ---------- Big animated count-up for large numbers (with thousands separators) ---------- */
+const BigCount = ({ value }: { value: number }) => {
+    const mv = useMotionValue(0);
+    const spring = useSpring(mv, { duration: 1600, bounce: 0 });
+    const display = useTransform(spring, (v) => Math.round(v).toLocaleString());
+    useEffect(() => {
+        mv.set(value);
+    }, [value, mv]);
+    return <motion.span>{display}</motion.span>;
+};
+
+/* ---------- Growth Spotlight (hero momentum banner) ----------
+ * First thing the user sees: big positive growth numbers so they immediately
+ * feel their marketing is working. Reads `data.growth` computed by the backend
+ * (trailing 7 days vs the prior 7 days).
+ */
+const GrowthSpotlight = ({ growth }: { growth: any }) => {
+    const windowDays = growth?.window_days ?? 7;
+    const cards = [
+        {
+            key: "impressions",
+            label: "Increase in Impressions",
+            icon: Eye,
+            deltaPct: growth?.impressions?.delta_pct ?? 0,
+            total: growth?.impressions?.current ?? 0,
+            accent: "from-emerald-400 via-teal-400 to-cyan-400",
+            glow: "rgba(16,185,129,0.45)",
+        },
+        {
+            key: "members_reached",
+            label: "Members Reached",
+            icon: Users,
+            deltaPct: growth?.members_reached?.delta_pct ?? 0,
+            total: growth?.members_reached?.current ?? 0,
+            accent: "from-violet-400 via-fuchsia-400 to-pink-400",
+            glow: "rgba(168,85,247,0.45)",
+        },
+    ];
+
+    return (
+        <motion.div variants={fadeUp} initial="hidden" animate="show" custom={0.5}>
+            <div className="relative rounded-[2rem] overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white shadow-2xl shadow-zinc-900/40 border border-white/5">
+                {/* Animated aurora wash */}
+                <motion.div
+                    className="absolute inset-0 opacity-40"
+                    style={{
+                        background:
+                            "radial-gradient(circle at 15% 20%, rgba(16,185,129,0.35) 0%, transparent 45%), radial-gradient(circle at 85% 80%, rgba(168,85,247,0.30) 0%, transparent 45%)",
+                    }}
+                    animate={{ opacity: [0.3, 0.55, 0.3] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                />
+                {/* Shimmer sweep */}
+                <motion.div
+                    className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12"
+                    animate={{ x: ["-150%", "350%"] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                />
+
+                <div className="relative p-8 md:p-10">
+                    <div className="flex items-center gap-2 mb-8">
+                        <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.9)]"
+                        />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-300/90">
+                            Your Growth · Last {windowDays} Days
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6">
+                        {cards.map((c, i) => {
+                            const positive = c.deltaPct >= 0;
+                            return (
+                                <motion.div
+                                    key={c.key}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 + i * 0.15, duration: 0.7 }}
+                                    className="relative"
+                                >
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div
+                                            className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/10"
+                                            style={{ boxShadow: `0 0 24px -6px ${c.glow}` }}
+                                        >
+                                            <c.icon className="w-5 h-5 text-white/90" />
+                                        </div>
+                                        <span className="text-sm font-bold text-white/70 tracking-tight">
+                                            {c.label}
+                                        </span>
+                                    </div>
+
+                                    {/* The big positive number */}
+                                    <div className="flex items-end gap-3 flex-wrap">
+                                        <div
+                                            className={cn(
+                                                "text-6xl md:text-7xl font-black tracking-tighter leading-none bg-gradient-to-br bg-clip-text text-transparent",
+                                                c.accent
+                                            )}
+                                        >
+                                            {positive ? "+" : ""}
+                                            <BigCount value={Math.abs(c.deltaPct)} />%
+                                        </div>
+                                        <motion.div
+                                            animate={{ y: [0, -4, 0] }}
+                                            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                                            className={cn(
+                                                "mb-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-black",
+                                                positive
+                                                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/20"
+                                                    : "bg-rose-500/15 text-rose-300 border border-rose-400/20"
+                                            )}
+                                        >
+                                            <ArrowUpRight
+                                                className={cn("w-3.5 h-3.5", !positive && "rotate-90")}
+                                            />
+                                            {positive ? "Trending up" : "Down"}
+                                        </motion.div>
+                                    </div>
+
+                                    <p className="mt-3 text-sm text-white/50 font-medium">
+                                        <span className="text-white/80 font-bold tabular-nums">
+                                            <BigCount value={c.total} />
+                                        </span>{" "}
+                                        {c.key === "impressions" ? "impressions" : "members"} reached in the last{" "}
+                                        {windowDays} days
+                                    </p>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
 export default function AutopilotDashboard() {
@@ -206,9 +348,13 @@ export default function AutopilotDashboard() {
         );
     }
 
+    // `metrics` may arrive as the aggregate dict (current backend) or a legacy
+    // array of daily metrics. Normalize to an array for the projection chart.
+    const metricsArray = Array.isArray(data?.metrics) ? data.metrics : [];
+
     const chartData =
         data?.projections.map((p) => {
-            const metric = data.metrics.find((m) => m.date === p.date);
+            const metric = metricsArray.find((m: any) => m.date === p.date);
             return {
                 date: new Date(p.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
                 projected: p.projected_engagement_rate * 100,
@@ -216,7 +362,7 @@ export default function AutopilotDashboard() {
             };
         }) || [];
 
-    const velocity = (data?.metrics.length ? data.metrics[0].engagement_rate : 0) * 100;
+    const velocity = (metricsArray.length ? metricsArray[0].engagement_rate : 0) * 100;
     const confidence = (data?.confidence_score || 0) * 100;
     const target = (data?.campaign.target_value || 0) * 100;
     const isActive = data?.campaign.status === "active";
@@ -350,6 +496,9 @@ export default function AutopilotDashboard() {
                         </motion.div>
                     </div>
                 </motion.div>
+
+                {/* ============ GROWTH SPOTLIGHT (momentum hero) ============ */}
+                {data?.growth && <GrowthSpotlight growth={data.growth} />}
 
                 {/* ============ DAILY SPOTLIGHT ============ */}
                 <AnimatePresence>
