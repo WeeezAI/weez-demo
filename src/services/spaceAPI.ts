@@ -46,10 +46,24 @@ export const spaceApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Failed to delete space");
+    if (!res.ok) {
+      // The server may return JSON ({detail}) OR a plain-text 500 body.
+      // Read as text first so a non-JSON error doesn't throw a misleading
+      // "Unexpected token" JSON parse error and mask the real status.
+      const raw = await res.text();
+      let message = `Failed to delete space (HTTP ${res.status})`;
+      try {
+        const parsed = JSON.parse(raw);
+        message = parsed.detail || message;
+      } catch {
+        if (raw) message = raw;
+      }
+      throw new Error(message);
+    }
 
-    return data;
+    // Successful response may legitimately be empty; guard the JSON parse.
+    const raw = await res.text();
+    return raw ? JSON.parse(raw) : { message: "Space deleted successfully" };
   },
 
   // -----------------------------
