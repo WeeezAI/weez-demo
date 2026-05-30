@@ -122,12 +122,14 @@ export interface LinkedInDashboardData {
   best_day: string;
   organization: {
     followers: any;
+    follower_gain?: number;
     page_stats: any;
     share_stats: any;
     posts: PostMetric[];
     demographics: Record<string, Record<string, number>>;
     previous?: {
       total_followers: number;
+      follower_gain?: number;
       total_impressions: number;
       total_reactions: number;
       total_comments: number;

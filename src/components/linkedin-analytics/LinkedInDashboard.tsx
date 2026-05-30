@@ -311,21 +311,9 @@ const LinkedInDashboard = () => {
       const highlightsList = [
         {
           icon: "Link2",
-          label: "New Connections",
+          label: "Connections",
           metric_key: "connections",
           ...computePeriodDelta(ci.connections_count || 0, pi.connections_count || 0),
-        },
-        {
-          icon: "Eye",
-          label: "Profile Views",
-          metric_key: "profile_views",
-          ...computePeriodDelta(ci.profile_views || 0, pi.profile_views || 0),
-        },
-        {
-          icon: "Eye",
-          label: "Search Appearances",
-          metric_key: "search_appearances",
-          ...computePeriodDelta(ci.search_appearances || 0, pi.search_appearances || 0),
         },
         {
           icon: "TrendingUp",
@@ -412,6 +400,7 @@ const LinkedInDashboard = () => {
       const co = data.organization;
       const po = data.organization?.previous || {
         total_followers: 0,
+        follower_gain: 0,
         total_impressions: 0,
         total_reactions: 0,
         total_comments: 0,
@@ -439,7 +428,7 @@ const LinkedInDashboard = () => {
           icon: "Users",
           label: "New Followers (Org)",
           metric_key: "org_followers",
-          ...computePeriodDelta(co.followers?.total_followers || 0, po.total_followers || 0),
+          ...computePeriodDelta(co.follower_gain || 0, po.follower_gain || 0),
         },
         {
           icon: "Eye",
@@ -448,7 +437,7 @@ const LinkedInDashboard = () => {
           ...computePeriodDelta(co.page_stats?.total_page_views || 0, po.page_views || 0),
         },
         {
-          icon: "Users",
+          icon: "Footprints",
           label: "Unique Visitors",
           metric_key: "unique_visitors",
           ...computePeriodDelta(co.page_stats?.total_unique_visitors || 0, po.unique_visitors || 0),

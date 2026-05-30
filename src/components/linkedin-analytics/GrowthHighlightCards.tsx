@@ -4,13 +4,13 @@ import type { HighlightCard } from "@/services/linkedinAnalyticsAPI";
 import {
   TrendingUp, TrendingDown, Minus,
   Link2, Users, Eye, MessageSquare, Heart, Repeat2,
-  Target, BarChart3, Trophy, BrainCircuit, CalendarDays, type LucideIcon,
+  Target, BarChart3, Trophy, BrainCircuit, CalendarDays, Footprints, type LucideIcon,
 } from "lucide-react";
 
 // Map backend icon name strings to lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
   Link2, Users, Eye, TrendingUp, MessageSquare, Heart,
-  Repeat2, Target, BarChart3, Trophy, BrainCircuit, CalendarDays,
+  Repeat2, Target, BarChart3, Trophy, BrainCircuit, CalendarDays, Footprints,
 };
 
 // Subtle color associations per metric
@@ -18,6 +18,7 @@ const ICON_COLORS: Record<string, string> = {
   Link2: "text-blue-500 bg-blue-500/10",
   Users: "text-violet-500 bg-violet-500/10",
   Eye: "text-cyan-500 bg-cyan-500/10",
+  Footprints: "text-fuchsia-500 bg-fuchsia-500/10",
   TrendingUp: "text-emerald-500 bg-emerald-500/10",
   MessageSquare: "text-sky-500 bg-sky-500/10",
   Heart: "text-rose-500 bg-rose-500/10",
