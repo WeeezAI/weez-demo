@@ -677,7 +677,7 @@ const Landing = () => {
             {
               quote: "Weez AI doesn't just generate content — it understands our brand and creates relevant LinkedIn posts, ideas, and content plans that actually align with our positioning. It has saved us significant time while keeping our content consistent and authentic.",
               name: "Shivang",
-              role: "Founder & CEO, Niverror Technologies",
+              role: "Founder & CEO, Niverro Technologies",
               url: "www.niverro.com",
               initials: "S",
             },
