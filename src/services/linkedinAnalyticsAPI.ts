@@ -86,6 +86,13 @@ export interface LinkedInDashboardData {
   org_urn: string | null;
   person_name: string | null;
   org_name: string | null;
+  data_status?: {
+    has_individual_data: boolean;
+    has_org_data: boolean;
+    person_connected: boolean;
+    org_connected: boolean;
+    notes: string[];
+  };
   highlights: HighlightCard[];
   individual: {
     posts: PostMetric[];

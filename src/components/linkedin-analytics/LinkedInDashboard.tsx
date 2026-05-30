@@ -723,6 +723,23 @@ const LinkedInDashboard = () => {
         </div>
       </div>
 
+      {/* ── Data status / scope diagnostics ───────────────────── */}
+      {data.data_status?.notes && data.data_status.notes.length > 0 && (
+        <div className="rounded-2xl border border-amber-300/40 bg-amber-50 px-5 py-4 flex items-start gap-3">
+          <WifiOff className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-[11px] font-black uppercase tracking-widest text-amber-700">
+              Analytics partially unavailable
+            </p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {data.data_status.notes.map((note, i) => (
+                <li key={i} className="text-xs text-amber-700/80 leading-relaxed">{note}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* ── Section 1: Growth Highlights ──────────────────────── */}
       <GrowthHighlightCards highlights={computedData?.highlights || []} />
 
