@@ -98,8 +98,37 @@ export interface Engagement {
 export interface TopClient {
   brand_id: string;
   brand_name: string;
+  space_name: string | null;
   posts_created: number;
   hours_saved: number;
+  impressions: number;
+  reach: number;
+  total_interactions: number;
+}
+
+export interface ClientMember {
+  email: string;
+  name: string | null;
+  role: string;
+}
+
+export interface ClientRow {
+  brand_id: string;
+  brand_name: string;
+  space_name: string | null;
+  industry: string;
+  owner_email: string | null;
+  owner_name: string | null;
+  members: ClientMember[];
+  member_count: number;
+  created_at: string | null;
+  posts_created: number;
+  posts_published: number;
+  hours_saved: number;
+  impressions: number;
+  reach: number;
+  total_interactions: number;
+  avg_engagement_rate: number;
 }
 
 export interface Snapshot {
@@ -108,6 +137,7 @@ export interface Snapshot {
   segments: Segments;
   engagement: Engagement;
   top_clients: TopClient[];
+  clients: ClientRow[];
 }
 
 // ---- API --------------------------------------------------------------------

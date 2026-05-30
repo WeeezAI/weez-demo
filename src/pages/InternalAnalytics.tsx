@@ -4,7 +4,7 @@
 // Gated by a static user_id + password (exchanged for a short-lived JWT).
 // Not linked from the customer app; reachable at /internal.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   Area,
   AreaChart,
@@ -33,6 +33,10 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  Mail,
+  Search,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import internalAnalyticsAPI, { Snapshot } from "@/services/internalAnalyticsAPI";
+import internalAnalyticsAPI, { Snapshot, ClientRow } from "@/services/internalAnalyticsAPI";
 
 const PIE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4", "#a855f7", "#ec4899", "#84cc16"];
 
@@ -158,6 +162,151 @@ const Stat = ({
     </CardContent>
   </Card>
 );
+
+// --------------------------------------------------------------------------- //
+// Clients directory (people + space + brand growth stats)
+// --------------------------------------------------------------------------- //
+const ClientsDirectory = ({ clients }: { clients: ClientRow[] }) => {
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => {
+      const haystack = [
+        c.brand_name,
+        c.space_name,
+        c.industry,
+        c.owner_email,
+        ...c.members.map((m) => m.email),
+        ...c.members.map((m) => m.name || ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [clients, query]);
+
+  return (
+    <Card className="border-slate-800 bg-slate-900">
+      <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="text-sm font-medium text-slate-200">
+          Client Directory <span className="text-slate-500">({filtered.length})</span>
+        </CardTitle>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search brand, space, email…"
+            className="border-slate-700 bg-slate-800 pl-8 text-slate-100 placeholder:text-slate-500"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-slate-800 hover:bg-transparent">
+                <TableHead className="text-slate-400">Space / Brand</TableHead>
+                <TableHead className="text-slate-400">Owner</TableHead>
+                <TableHead className="text-center text-slate-400">Members</TableHead>
+                <TableHead className="text-right text-slate-400">Posts</TableHead>
+                <TableHead className="text-right text-slate-400">Impressions</TableHead>
+                <TableHead className="text-right text-slate-400">Reach</TableHead>
+                <TableHead className="text-right text-slate-400">Interactions</TableHead>
+                <TableHead className="text-right text-slate-400">Avg ER</TableHead>
+                <TableHead className="text-right text-slate-400">Hrs Saved</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((c) => {
+                const isOpen = expanded === c.brand_id;
+                return (
+                  <Fragment key={c.brand_id}>
+                    <TableRow
+                      className="cursor-pointer border-slate-800 hover:bg-slate-800/40"
+                      onClick={() => setExpanded(isOpen ? null : c.brand_id)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {isOpen ? (
+                            <ChevronDown className="h-4 w-4 text-slate-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-slate-500" />
+                          )}
+                          <div>
+                            <p className="font-medium text-slate-100">{c.space_name || c.brand_name}</p>
+                            <p className="text-xs text-slate-500">
+                              {c.brand_name}
+                              {c.industry ? ` · ${c.industry}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-300">
+                        <span className="text-xs">{c.owner_email || "—"}</span>
+                      </TableCell>
+                      <TableCell className="text-center text-slate-300">{c.member_count}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.posts_created)}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.impressions)}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.reach)}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.total_interactions)}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.avg_engagement_rate)}%</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.hours_saved)}</TableCell>
+                    </TableRow>
+                    {isOpen && (
+                      <TableRow className="border-slate-800 bg-slate-950/40 hover:bg-slate-950/40">
+                        <TableCell colSpan={9}>
+                          <div className="px-6 py-3">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              Team members ({c.members.length})
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {c.members.length === 0 && (
+                                <span className="text-xs text-slate-500">No members recorded</span>
+                              )}
+                              {c.members.map((m) => (
+                                <span
+                                  key={m.email}
+                                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-200"
+                                >
+                                  <Mail className="h-3 w-3 text-slate-400" />
+                                  {m.email}
+                                  <Badge variant="outline" className="ml-1 border-slate-600 px-1.5 py-0 text-[10px] text-slate-400">
+                                    {m.role}
+                                  </Badge>
+                                </span>
+                              ))}
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                              <div><span className="text-slate-500">Published:</span> <span className="text-slate-200">{fmt(c.posts_published)}</span></div>
+                              <div><span className="text-slate-500">Likes/Comments/Saves:</span> <span className="text-slate-200">{fmt(c.total_interactions)}</span></div>
+                              <div><span className="text-slate-500">Joined:</span> <span className="text-slate-200">{c.created_at ? c.created_at.slice(0, 10) : "—"}</span></div>
+                              <div><span className="text-slate-500">Brand ID:</span> <span className="text-slate-400">{c.brand_id.slice(0, 8)}…</span></div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {filtered.length === 0 && (
+                <TableRow className="border-slate-800">
+                  <TableCell colSpan={9} className="text-center text-slate-500">
+                    No clients match your search
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // --------------------------------------------------------------------------- //
 // Dashboard
@@ -406,21 +555,25 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <TableHeader>
                   <TableRow className="border-slate-800 hover:bg-transparent">
                     <TableHead className="text-slate-400">Brand</TableHead>
+                    <TableHead className="text-slate-400">Space</TableHead>
                     <TableHead className="text-right text-slate-400">Posts</TableHead>
-                    <TableHead className="text-right text-slate-400">Hours Saved</TableHead>
+                    <TableHead className="text-right text-slate-400">Reach</TableHead>
+                    <TableHead className="text-right text-slate-400">Hrs Saved</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(data?.top_clients || []).map((c) => (
                     <TableRow key={c.brand_id} className="border-slate-800 hover:bg-slate-800/40">
                       <TableCell className="font-medium text-slate-200">{c.brand_name}</TableCell>
+                      <TableCell className="text-slate-400">{c.space_name || "—"}</TableCell>
                       <TableCell className="text-right text-slate-300">{fmt(c.posts_created)}</TableCell>
+                      <TableCell className="text-right text-slate-300">{fmt(c.reach)}</TableCell>
                       <TableCell className="text-right text-slate-300">{fmt(c.hours_saved)}</TableCell>
                     </TableRow>
                   ))}
                   {(!data?.top_clients || data.top_clients.length === 0) && (
                     <TableRow className="border-slate-800">
-                      <TableCell colSpan={3} className="text-center text-slate-500">No data yet</TableCell>
+                      <TableCell colSpan={5} className="text-center text-slate-500">No data yet</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -428,6 +581,9 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Full client directory: people + space + brand growth stats */}
+        <ClientsDirectory clients={data?.clients || []} />
 
         {/* Industry distribution */}
         {data?.segments.industries && data.segments.industries.length > 0 && (
