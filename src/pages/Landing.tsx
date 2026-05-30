@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import {
   Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
   Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
-  Users, Building2, Briefcase, Check, Menu, Play, TrendingUp,
+  Users, Building2, Briefcase, Check, Menu, Play, TrendingUp, Quote,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -661,6 +661,63 @@ const Landing = () => {
               </div>
               <div className="text-sm text-slate-600 mt-2">{s.l}</div>
             </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* TESTIMONIALS */}
+      <Section id="testimonials">
+        <div className="text-center mb-14">
+          <Eyebrow>Testimonials</Eyebrow>
+          <H2 className="mt-5">Loved by founders<br/> who ship.</H2>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          {[
+            {
+              quote: "Weez AI doesn't just generate content — it understands our brand and creates relevant LinkedIn posts, ideas, and content plans that actually align with our positioning. It has saved us significant time while keeping our content consistent and authentic.",
+              name: "Shivang",
+              role: "Founder & CEO, Niverror Technologies",
+              url: "www.niverro.com",
+              initials: "S",
+            },
+          ].map((t, i) => (
+            <motion.figure
+              key={t.name}
+              variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
+              className="relative p-8 md:p-12 rounded-[2rem] border border-slate-900/10 bg-white/80 backdrop-blur-xl shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)] overflow-hidden"
+            >
+              <div className="absolute -top-10 -right-6 text-blue-500/10">
+                <Quote className="w-40 h-40" />
+              </div>
+              <div className="relative">
+                <div className="flex gap-1 mb-6">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <Sparkles key={s} className="w-4 h-4 text-blue-500 fill-blue-500" />
+                  ))}
+                </div>
+                <blockquote className="font-agrandir text-2xl md:text-3xl leading-snug tracking-tight text-slate-900">
+                  "{t.quote}"
+                </blockquote>
+                <figcaption className="mt-8 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center text-white font-semibold text-lg shadow-lg shadow-blue-600/30">
+                    {t.initials}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">{t.name}</div>
+                    <div className="text-sm text-slate-600">{t.role}</div>
+                    <a
+                      href={`https://${t.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-700 transition"
+                    >
+                      {t.url}
+                    </a>
+                  </div>
+                </figcaption>
+              </div>
+            </motion.figure>
           ))}
         </div>
       </Section>
