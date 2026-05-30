@@ -32,6 +32,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import VerificationSuccess from "./pages/VerificationSuccess";
 import VerificationFailed from "./pages/VerificationFailed";
 import ApprovalConfirmation from "./pages/ApprovalConfirmation";
+import InternalAnalytics from "./pages/InternalAnalytics";
 import PremiumModal from "./components/PremiumModal";
 import { differenceInDays, parseISO } from "date-fns";
 import CONFIG from "./services/config";
@@ -94,6 +95,9 @@ const AppContent = () => {
         <Routes>
               {/* Landing Page */}
               <Route path="/" element={<Landing />} />
+
+              {/* Internal staff-only analytics (static credential gate) */}
+              <Route path="/internal" element={<InternalAnalytics />} />
 
               {/* Auth */}
               <Route path="/auth" element={<Auth />} />
