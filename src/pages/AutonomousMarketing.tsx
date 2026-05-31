@@ -78,6 +78,7 @@ import ConnectorsView from "@/components/ConnectorsView";
 import { usePosterWebSocket } from "@/hooks/usePosterWebSocket";
 import PosterEditorModal from "@/components/PosterEditorModal";
 import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
+import SageAssistant from "@/components/SageAssistant";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
 const PublishingControls = lazy(() => import("@/components/PublishingControls"));
@@ -2272,6 +2273,9 @@ export default function AutonomousMarketing() {
                     refreshPosterJobs();
                 }}
             />
+
+            {/* Sage — floating founder check-in assistant (bottom-right) */}
+            {spaceId && <SageAssistant spaceId={spaceId} />}
         </div>
     );
 }
