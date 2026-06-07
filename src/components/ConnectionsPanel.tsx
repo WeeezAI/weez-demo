@@ -102,9 +102,14 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
     // Specific logic for Instagram (Weez Pipeline)
     if (connector.providerKey === "instagram") {
-      const authUrl = weezAPI.getInstagramAuthUrl(currentSpace.id);
-      console.log("🚀 Redirecting to Weez Instagram OAuth:", authUrl);
-      window.location.href = authUrl;
+      try {
+        const authUrl = await weezAPI.getInstagramAuthUrl(currentSpace.id);
+        console.log("🚀 Redirecting to Weez Instagram OAuth:", authUrl);
+        window.location.href = authUrl;
+      } catch (err) {
+        console.error("Failed to get Instagram auth URL:", err);
+        toast.error("Failed to start Instagram connection");
+      }
       return;
     }
 

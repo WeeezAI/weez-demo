@@ -94,9 +94,13 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
         window.location.href = authUrl;
     };
 
-    const handleConnectInstagram = () => {
-        const authUrl = weezAPI.getInstagramAuthUrl(brandId);
-        window.location.href = authUrl;
+    const handleConnectInstagram = async () => {
+        try {
+            const authUrl = await weezAPI.getInstagramAuthUrl(brandId);
+            window.location.href = authUrl;
+        } catch (err: any) {
+            toast.error(err.message || "Failed to get Instagram auth URL");
+        }
     };
 
     const handleConnectHubSpot = () => {

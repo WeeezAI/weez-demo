@@ -13,10 +13,18 @@ interface InstagramConnectModalProps {
 
 const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectModalProps) => {
     const [isConfirmed, setIsConfirmed] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (spaceId && isConfirmed) {
-            window.location.href = weezAPI.getInstagramAuthUrl(spaceId);
+            try {
+                setIsLoading(true);
+                const authUrl = await weezAPI.getInstagramAuthUrl(spaceId);
+                window.location.href = authUrl;
+            } catch (err) {
+                console.error("Failed to get Instagram auth URL:", err);
+                setIsLoading(false);
+            }
         }
     };
 
@@ -85,10 +93,10 @@ const InstagramConnectModal = ({ isOpen, onClose, spaceId }: InstagramConnectMod
                 <div className="p-12 pt-0">
                     <Button
                         onClick={handleContinue}
-                        disabled={!isConfirmed}
+                        disabled={!isConfirmed || isLoading}
                         className="w-full h-20 rounded-[1.5rem] bg-foreground text-white hover:bg-primary disabled:opacity-30 disabled:grayscale transition-all text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 flex gap-4"
                     >
-                        Continue to Connect
+                        {isLoading ? "Connecting..." : "Continue to Connect"}
                         <CheckCircle2 className="w-5 h-5" />
                     </Button>
                     <button

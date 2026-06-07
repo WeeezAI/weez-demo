@@ -49,13 +49,16 @@ const fetchWithBypass = async (url: string, options: RequestInit = {}) => {
 
 export const weezAPI = {
   /**
-   * Generates the Instagram OAuth link for a brand (Redirects to Backend first)
+   * Returns the URL to start Instagram OAuth flow via the backend's authorize endpoint.
+   * The backend dynamically constructs the proper Facebook OAuth URL with all required
+   * scopes (instagram_content_publish, instagram_manage_insights, etc.) and supports
+   * Facebook Login for Business when configured.
    */
-  getInstagramAuthUrl: (brandId: string) => {
-    const backendRedirectUri = `${WEEZ_BASE_URL}/instagram/callback`;
-    return `https://www.facebook.com/v21.0/dialog/oauth?client_id=1904435020191340&redirect_uri=${encodeURIComponent(
-      backendRedirectUri
-    )}&scope=instagram_basic, instagram_content_publish,pages_show_list&response_type=code&state=${brandId}`;
+  getInstagramAuthUrl: async (brandId: string): Promise<string> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/instagram/authorize?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to get Instagram auth URL");
+    const data = await response.json();
+    return data.auth_url;
   },
 
   /**
@@ -873,6 +876,126 @@ export const weezAPI = {
       body: JSON.stringify({ message }),
     });
     if (!response.ok) throw new Error("Sarah is unavailable right now");
+    return await response.json();
+  },
+
+  // ── Weez Lead Tracking System ─────────────────────────────────────────────
+
+  /**
+   * Get all tracking links generated for a campaign (MOFU + BOFU posts)
+   */
+  getCampaignTrackingLinks: async (campaignId: string): Promise<{
+    campaign_id: string;
+    total: number;
+    links: Array<{
+      id: string;
+      funnel_stage: string;
+      platform: string;
+      content_day: number;
+      slug: string;
+      tracking_url: string;
+      cta_type: string;
+      destination_url: string | null;
+      conversion_goal: string;
+      click_count: number;
+      form_submit_count: number;
+      last_clicked_at: string | null;
+      is_active: boolean;
+    }>;
+  }> => {
+    const response = await fetchWithBypass(
+      `${WEEZ_BASE_URL}/tracking/campaign/${campaignId}/links`
+    );
+    if (!response.ok) throw new Error("Failed to fetch tracking links");
+    return await response.json();
+  },
+
+  /**
+   * Get click + form submission analytics for a single tracking link
+   */
+  getTrackingLinkAnalytics: async (linkId: string): Promise<{
+    link: Record<string, any>;
+    click_count: number;
+    submit_count: number;
+    conversion_rate: number;
+    leads: Array<Record<string, any>>;
+  }> => {
+    const response = await fetchWithBypass(
+      `${WEEZ_BASE_URL}/tracking/link/${linkId}/analytics`
+    );
+    if (!response.ok) throw new Error("Failed to fetch link analytics");
+    return await response.json();
+  },
+
+  /**
+   * Get all captured leads for a campaign, optionally filtered by funnel stage
+   */
+  getCampaignLeads: async (
+    campaignId: string,
+    funnelStage?: "MOFU" | "BOFU"
+  ): Promise<{
+    campaign_id: string;
+    total: number;
+    leads: Array<{
+      id: string;
+      full_name: string;
+      work_email: string;
+      job_title: string | null;
+      company_name: string | null;
+      funnel_stage: string;
+      platform: string;
+      cta_type: string;
+      conversion_goal: string;
+      hubspot_synced: boolean;
+      hubspot_contact_url: string | null;
+      submitted_at: string;
+    }>;
+  }> => {
+    let url = `${WEEZ_BASE_URL}/tracking/campaign/${campaignId}/leads`;
+    if (funnelStage) url += `?funnel_stage=${funnelStage}`;
+    const response = await fetchWithBypass(url);
+    if (!response.ok) throw new Error("Failed to fetch campaign leads");
+    return await response.json();
+  },
+
+  /**
+   * Update the destination URL for a tracking link (e.g. when brand changes landing page)
+   */
+  updateTrackingLinkDestination: async (
+    linkId: string,
+    destinationUrl: string,
+    ctaType?: string,
+    conversionGoal?: string
+  ): Promise<{ status: string; link: Record<string, any> }> => {
+    const response = await fetchWithBypass(
+      `${WEEZ_BASE_URL}/tracking/link/${linkId}/destination`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination_url: destinationUrl,
+          cta_type: ctaType,
+          conversion_goal: conversionGoal,
+        }),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to update tracking link");
+    return await response.json();
+  },
+
+  /**
+   * Retroactively generate tracking links for an existing campaign
+   * (useful for campaigns planned before this feature was enabled)
+   */
+  enrichCampaignWithTracking: async (
+    campaignId: string,
+    brandId: string,
+    destinationUrl?: string
+  ): Promise<{ status: string; enriched: number; message: string }> => {
+    let url = `${WEEZ_BASE_URL}/tracking/campaign/${campaignId}/enrich?brand_id=${brandId}`;
+    if (destinationUrl) url += `&destination_url=${encodeURIComponent(destinationUrl)}`;
+    const response = await fetchWithBypass(url, { method: "POST" });
+    if (!response.ok) throw new Error("Failed to enrich campaign with tracking");
     return await response.json();
   },
 };

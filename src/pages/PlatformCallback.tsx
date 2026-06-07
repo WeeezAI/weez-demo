@@ -36,7 +36,11 @@ const PlatformCallback = () => {
         // Skip full brand analysis — backend already stored the token
         setIsSuccess(true);
       } else {
-        handleRunAnalysis(brandId);
+        // Instagram: Skip brand analysis — the backend callback already stored
+        // the token and account info. Brand voice is synthesized from the website
+        // (primary source), not Instagram OAuth. Just mark success.
+        setIsSuccess(true);
+        toast.success("Instagram connected successfully!");
       }
     }
   }, [isConnected, brandId, provider, isSuccess]);
