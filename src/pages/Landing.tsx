@@ -19,6 +19,7 @@ import showcaseDexraflow1 from "@/assets/showcase/dexraflow1.png";
 import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
 import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
+import { HeroFloatingCards } from "@/components/HeroFloatingCards";
 
 /* =============== Reusable bits =============== */
 
@@ -363,6 +364,8 @@ const Landing = () => {
         <GlowOrb className="w-[600px] h-[600px] -top-40 -left-40" color="from-blue-600/50" />
         <GlowOrb className="w-[500px] h-[500px] top-20 right-0" color="from-blue-500/40" />
         <GlowOrb className="w-[400px] h-[400px] bottom-0 left-1/3" color="from-sky-400/30" />
+
+        <HeroFloatingCards />
 
         <motion.div style={{ y: heroY }} className="relative max-w-7xl mx-auto text-center">
           <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
