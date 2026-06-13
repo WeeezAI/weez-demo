@@ -365,6 +365,8 @@ const Landing = () => {
         <GlowOrb className="w-[500px] h-[500px] top-20 right-0" color="from-blue-500/40" />
         <GlowOrb className="w-[400px] h-[400px] bottom-0 left-1/3" color="from-sky-400/30" />
 
+        <HeroFloatingCards />
+
         <motion.div style={{ y: heroY }} className="relative max-w-7xl mx-auto text-center">
           <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
           <motion.h1
