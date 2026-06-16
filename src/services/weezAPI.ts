@@ -998,5 +998,41 @@ export const weezAPI = {
     if (!response.ok) throw new Error("Failed to enrich campaign with tracking");
     return await response.json();
   },
+
+  // ── Customer Context API ──────────────────────────────────────────────────
+
+  /**
+   * Fetches the full CustomerContextDocument for a brand.
+   * Never returns 404 — returns an empty structure if no context has been built yet.
+   */
+  getCustomerContext: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/customer-context/${brandId}`);
+    if (!response.ok) throw new Error("Failed to fetch customer context");
+    return await response.json();
+  },
+
+  /**
+   * Fetches the customer asset library for a brand (logos, testimonials, outcome_metrics).
+   */
+  getCustomerAssets: async (brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/customer-context/${brandId}/assets`);
+    if (!response.ok) throw new Error("Failed to fetch customer assets");
+    return await response.json();
+  },
+
+  /**
+   * Triggers a refresh of the customer context for a brand.
+   * Returns { status: "queued" | "already_running", brand_id } immediately;
+   * the actual pipeline runs in the background.
+   */
+  refreshCustomerContext: async (brandId: string): Promise<{ status: "queued" | "already_running"; brand_id: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/customer-context/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId }),
+    });
+    if (!response.ok) throw new Error("Failed to refresh customer context");
+    return await response.json();
+  },
 };
 
