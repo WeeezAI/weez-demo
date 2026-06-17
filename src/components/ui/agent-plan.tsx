@@ -144,12 +144,66 @@ const initialTasks: Task[] = [
   },
 ];
 
-export default function Plan() {
+export default function Plan({ phase = 0 }: { phase?: number }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [expandedTasks, setExpandedTasks] = useState<string[]>(["2"]);
   const [expandedSubtasks, setExpandedSubtasks] = useState<{
     [key: string]: boolean;
   }>({});
+
+  useEffect(() => {
+    if (phase > 0) {
+      setTasks((prev) =>
+        prev.map((task) => {
+          let taskStatus = "pending";
+          const updatedSubtasks = task.subtasks.map((subtask, subIdx) => {
+            let subStatus = "pending";
+            // Task 1: id=1 -> targetPhases: 1.1 -> 1, 1.2 -> 2
+            // Task 2: id=2 -> targetPhases: 2.1 -> 3, 2.2 -> 4
+            // Task 3: id=3 -> targetPhases: 3.1 -> 5, 3.2 -> 6
+            // Task 4: id=4 -> targetPhases: 4.1 -> 7, 4.2 -> 8
+            const startPhase = task.id === "1" ? 1 : task.id === "2" ? 3 : task.id === "3" ? 5 : 7;
+            const targetPhase = startPhase + subIdx;
+            
+            if (phase > targetPhase) {
+              subStatus = "completed";
+            } else if (phase === targetPhase) {
+              subStatus = "in-progress";
+            }
+            return { ...subtask, status: subStatus };
+          });
+
+          const allCompleted = updatedSubtasks.every((s) => s.status === "completed");
+          const anyInProgress = updatedSubtasks.some((s) => s.status === "in-progress");
+          if (allCompleted) {
+            taskStatus = "completed";
+          } else if (anyInProgress || (phase >= (task.id === "1" ? 1 : task.id === "2" ? 3 : task.id === "3" ? 5 : 7) && phase <= (task.id === "1" ? 2 : task.id === "2" ? 4 : task.id === "3" ? 6 : 8))) {
+            taskStatus = "in-progress";
+          }
+
+          return {
+            ...task,
+            status: taskStatus,
+            subtasks: updatedSubtasks,
+          };
+        })
+      );
+
+      // Auto-expand the task that is in progress
+      const currentActiveTaskId = phase <= 2 ? "1" : phase <= 4 ? "2" : phase <= 6 ? "3" : "4";
+      setExpandedTasks([currentActiveTaskId]);
+      
+      // Auto-expand current in-progress subtask description
+      const startPhase = currentActiveTaskId === "1" ? 1 : currentActiveTaskId === "2" ? 3 : currentActiveTaskId === "3" ? 5 : 7;
+      const subIdx = phase - startPhase;
+      if (subIdx === 0 || subIdx === 1) {
+        const subtaskId = `${currentActiveTaskId}.${subIdx + 1}`;
+        setExpandedSubtasks({
+          [`${currentActiveTaskId}-${subtaskId}`]: true
+        });
+      }
+    }
+  }, [phase]);
   
   // Reduced motion preference logic
   const prefersReducedMotion = 

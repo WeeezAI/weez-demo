@@ -265,7 +265,7 @@ function PlannerThinkingBubble({ phase }: { phase: number }) {
     return (
         <div className="flex items-start mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="min-w-[420px] max-w-[500px]">
-                <Plan />
+                <Plan phase={phase} />
             </div>
         </div>
     );
