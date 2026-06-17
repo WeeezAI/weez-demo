@@ -1,6 +1,8 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ? "http://127.0.0.1:8000"
+  : "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
@@ -475,6 +477,15 @@ export const weezAPI = {
       const err = await response.json().catch(() => ({ detail: "Planner generation failed" }));
       throw new Error(err.detail || "Failed to generate planner");
     }
+    return await response.json();
+  },
+
+  /**
+   * Retrieves full details for a campaign's content planner/calendar
+   */
+  getCampaignPlannerDetails: async (campaignId: string, brandId: string): Promise<any> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${campaignId}/planner-details?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to fetch planner details");
     return await response.json();
   },
 

@@ -1487,6 +1487,18 @@ export default function AutonomousMarketing() {
 
     const handleGeneratePlanner = async () => {
         if (!campaignId) return;
+
+        let phaseInterval: any = null;
+        let pollInterval: any = null;
+
+        const cleanup = () => {
+            if (phaseInterval) clearInterval(phaseInterval);
+            if (pollInterval) clearInterval(pollInterval);
+            setIsStarting(false);
+            setIsPlannerGenerating(false);
+            setPlannerPhase(0);
+        };
+
         try {
             // Pre-processing acknowledgement
             setMessages(prev => [...prev, {
@@ -1500,10 +1512,9 @@ export default function AutonomousMarketing() {
             setPlannerPhase(1);
 
             // Animate through phases dynamically
-            const phaseInterval = setInterval(() => {
+            phaseInterval = setInterval(() => {
                 setPlannerPhase(prev => {
                     if (prev >= PLANNER_SEQUENCE.length) {
-                        clearInterval(phaseInterval);
                         return prev;
                     }
                     return prev + 1;
@@ -1513,39 +1524,87 @@ export default function AutonomousMarketing() {
             const now = new Date().toISOString();
             const res = await weezAPI.generateCampaignPlanner(campaignId, now);
 
-            // Complete all phases
-            clearInterval(phaseInterval);
-            setPlannerPhase(PLANNER_SEQUENCE.length + 1);
+            if (res.status === "generating") {
+                // Poll for completion
+                pollInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await weezAPI.getActiveCampaignStatus(spaceId!);
+                        if (statusRes.status === "planning") {
+                            clearInterval(pollInterval);
+                            clearInterval(phaseInterval);
 
-            // Small delay to show completion before transitioning
-            await new Promise(r => setTimeout(r, 600));
+                            // Load full conversation history to populate messages
+                            await fetchConversation(campaignId);
 
-            setPlannerData(res.planner);
-            setPlannerExplanation(res.explanation);
-            setCampaignSummary(res.campaign_summary || null);
-            setConfidenceScore(res.confidence_score || 0);
-            setWorkspaceMode("planning");
-            toast.success("Content Calendar Generated");
+                            // Retrieve actual calendar details
+                            try {
+                                const detailsRes = await weezAPI.getCampaignPlannerDetails(campaignId, spaceId!);
+                                if (detailsRes) {
+                                    setPlannerData(detailsRes.planner || []);
+                                    
+                                    const convRes = await weezAPI.getCampaignConversation(spaceId!, campaignId);
+                                    if (convRes.messages && convRes.messages.length > 0) {
+                                        const lastPlanner = convRes.messages.findLast((m: any) => m.metadata?.planner);
+                                        if (lastPlanner) {
+                                            setPlannerData(lastPlanner.metadata.planner || detailsRes.planner || []);
+                                            setPlannerExplanation(lastPlanner.metadata.explanation || "");
+                                            setCampaignSummary(lastPlanner.metadata.campaign_summary || null);
+                                            setConfidenceScore(lastPlanner.metadata.confidence_score || 0);
+                                        }
+                                    }
+                                }
+                            } catch (detailsErr) {
+                                console.error("Failed to load planner details", detailsErr);
+                            }
 
-            // Count content focus types
-            const focusCounts = (res.planner || []).reduce((acc: any, p: any) => {
-                const focus = p.content_focus || 'engagement';
-                acc[focus] = (acc[focus] || 0) + 1;
-                return acc;
-            }, {} as Record<string, number>);
-            const focusSummary = Object.entries(focusCounts).map(([k, v]) => `${v} ${k}`).join(', ');
+                            // Complete all phases
+                            setPlannerPhase(PLANNER_SEQUENCE.length + 1);
+                            await new Promise(r => setTimeout(r, 600));
 
-            setMessages(prev => [...prev, {
-                role: "assistant",
-                content: `**Content Calendar Complete** — Here's what I've built for you:\n\n📅 **${res.planner?.length || 0} strategic posts** planned across your campaign timeline.\n\n📊 **Content Mix:** ${focusSummary || 'Balanced mix of awareness, engagement & conversion posts'}.\n\n🎯 Each post is designed to move your audience through the funnel — from discovering your brand, to engaging with your content, to taking action.\n\nPlease review the calendar and strategic roadmap below.`,
-                time: nowTime()
-            }]);
+                            setWorkspaceMode("planning");
+                            toast.success("Content Calendar Generated");
+                            cleanup();
+                        } else if (statusRes.status === "briefing") {
+                            cleanup();
+                            toast.error("Strategy Planner generation failed or was reset on the server.");
+                        }
+                    } catch (pollErr) {
+                        console.error("Error polling campaign status", pollErr);
+                    }
+                }, 4000);
+            } else {
+                // Complete all phases immediately
+                clearInterval(phaseInterval);
+                setPlannerPhase(PLANNER_SEQUENCE.length + 1);
+
+                // Small delay to show completion before transitioning
+                await new Promise(r => setTimeout(r, 600));
+
+                setPlannerData(res.planner);
+                setPlannerExplanation(res.explanation);
+                setCampaignSummary(res.campaign_summary || null);
+                setConfidenceScore(res.confidence_score || 0);
+                setWorkspaceMode("planning");
+                toast.success("Content Calendar Generated");
+
+                // Count content focus types
+                const focusCounts = (res.planner || []).reduce((acc: any, p: any) => {
+                    const focus = p.content_focus || 'engagement';
+                    acc[focus] = (acc[focus] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+                const focusSummary = Object.entries(focusCounts).map(([k, v]) => `${v} ${k}`).join(', ');
+
+                setMessages(prev => [...prev, {
+                    role: "assistant",
+                    content: `**Content Calendar Complete** — Here's what I've built for you:\n\n📅 **${res.planner?.length || 0} strategic posts** planned across your campaign timeline.\n\n📊 **Content Mix:** ${focusSummary || 'Balanced mix of awareness, engagement & conversion posts'}.\n\n🎯 Each post is designed to move your audience through the funnel — from discovering your brand, to engaging with your content, to taking action.\n\nPlease review the calendar and strategic roadmap below.`,
+                    time: nowTime()
+                }]);
+                cleanup();
+            }
         } catch (err: any) {
+            cleanup();
             toast.error(err.message || "Failed to generate planner");
-        } finally {
-            setIsStarting(false);
-            setIsPlannerGenerating(false);
-            setPlannerPhase(0);
         }
     };
 
