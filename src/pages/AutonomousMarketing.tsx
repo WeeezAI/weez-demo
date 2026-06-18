@@ -2247,7 +2247,7 @@ export default function AutonomousMarketing() {
                                                         <p className="text-xs font-bold text-gray-700">{post.date || post.scheduled_date || ""}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap justify-end">
                                                     {post.platform && (
                                                         <Badge
                                                             variant="outline"
@@ -2258,6 +2258,9 @@ export default function AutonomousMarketing() {
                                                         >
                                                             {post.platform}
                                                         </Badge>
+                                                    )}
+                                                    {post.content_type && (
+                                                        <span className="px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[9px] font-black uppercase tracking-wider">{post.content_type}</span>
                                                     )}
                                                     {post.funnel_stage && (
                                                         <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-wider">{post.funnel_stage}</span>
