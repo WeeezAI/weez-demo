@@ -10,7 +10,7 @@ import CONFIG from "./config";
 const BASE = CONFIG.WEEZ_BASE_URL;
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
