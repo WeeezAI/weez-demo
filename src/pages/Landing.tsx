@@ -821,6 +821,22 @@ const Landing = () => {
 
 
 
+      {/* OUTBOUND WORKFLOW */}
+      <Section id="workflow" className="overflow-hidden">
+        <div className="text-center max-w-3xl mx-auto">
+          <Eyebrow>From post to meeting</Eyebrow>
+          <H2 className="mt-6">One post in. Booked meetings out.</H2>
+          <Sub className="mt-5 mx-auto">
+            Watch Weez turn a single LinkedIn post into qualified pipeline —
+            track engagement, filter your ICP, enrich via Apollo and Clay,
+            send hyperpersonalized outbound, and book the meeting. Fully autonomous.
+          </Sub>
+        </div>
+        <div className="mt-16">
+          <OutboundWorkflow />
+        </div>
+      </Section>
+
       {/* PRICING */}
       <Section id="pricing">
         <div className="text-center max-w-3xl mx-auto">
