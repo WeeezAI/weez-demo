@@ -393,7 +393,7 @@ const Landing = () => {
             variants={fadeUp} custom={2} initial="hidden" animate="show"
             className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
           >
-            Weez AI plans, creates, launches, and optimizes your marketing — so you get leads without hiring a team.
+            Weez AI plans, creates, launches, and optimizes your marketing — so you get high qualified leads without hiring a team.
           </motion.p>
           <motion.div
             variants={fadeUp} custom={3} initial="hidden" animate="show"
