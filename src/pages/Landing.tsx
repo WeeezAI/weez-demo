@@ -302,7 +302,7 @@ const Landing = () => {
   }, []);
 
   const features = [
-    { icon: <Wand2 />, title: "AI-Powered Content Creation", desc: "Generate posts, ads, and creatives instantly." },
+    { icon: <Wand2 />, title: "Hyperpersonalized Content Creation", desc: "Generate posts, ads, and creatives instantly." },
     { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
     { icon: <BarChart3 />, title: "Deep Analytics & Insights", desc: "Actionable recommendations on every metric." },
   ];
