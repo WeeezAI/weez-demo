@@ -20,6 +20,7 @@ import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
 import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
 import { HeroFloatingCards } from "@/components/HeroFloatingCards";
+import { OutboundWorkflow } from "@/components/OutboundWorkflow";
 
 /* =============== Reusable bits =============== */
 
