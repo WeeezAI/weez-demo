@@ -20,6 +20,7 @@ import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
 import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
 import { HeroFloatingCards } from "@/components/HeroFloatingCards";
+import { OutboundWorkflow } from "@/components/OutboundWorkflow";
 
 /* =============== Reusable bits =============== */
 
@@ -302,7 +303,7 @@ const Landing = () => {
   }, []);
 
   const features = [
-    { icon: <Wand2 />, title: "AI-Powered Content Creation", desc: "Generate posts, ads, and creatives instantly." },
+    { icon: <Wand2 />, title: "Hyperpersonalized Content Creation", desc: "Generate posts, ads, and creatives instantly." },
     { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
     { icon: <BarChart3 />, title: "Deep Analytics & Insights", desc: "Actionable recommendations on every metric." },
   ];
@@ -393,7 +394,7 @@ const Landing = () => {
             variants={fadeUp} custom={2} initial="hidden" animate="show"
             className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
           >
-            Weez AI plans, creates, launches, and optimizes your marketing — so you get leads without hiring a team.
+            Weez AI plans, creates, launches, and optimizes your marketing — so you get high qualified leads without hiring a team.
           </motion.p>
           <motion.div
             variants={fadeUp} custom={3} initial="hidden" animate="show"
@@ -819,6 +820,22 @@ const Landing = () => {
       </Section>
 
 
+
+      {/* OUTBOUND WORKFLOW */}
+      <Section id="workflow" className="overflow-hidden">
+        <div className="text-center max-w-3xl mx-auto">
+          <Eyebrow>From post to meeting</Eyebrow>
+          <H2 className="mt-6">One post in. Booked meetings out.</H2>
+          <Sub className="mt-5 mx-auto">
+            Watch Weez turn a single LinkedIn post into qualified pipeline —
+            track engagement, filter your ICP, enrich via Apollo and Clay,
+            send hyperpersonalized outbound, and book the meeting. Fully autonomous.
+          </Sub>
+        </div>
+        <div className="mt-16">
+          <OutboundWorkflow />
+        </div>
+      </Section>
 
       {/* PRICING */}
       <Section id="pricing">
