@@ -318,7 +318,7 @@ const Landing = () => {
   const integrations = ["LinkedIn", "Instagram", "Meta Ads", "Google Ads", "HubSpot", "Salesforce", "Notion", "Slack"];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-500/20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-500/20 [overflow-x:clip]">
       {/* Global ambient gradient */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(34,211,238,0.12),transparent_55%)]" />
