@@ -12,7 +12,9 @@ import {
     Loader2,
     Check,
     Clock,
-    Target
+    Target,
+    Mail,
+    Calendar as CalendarIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { weezAPI } from "@/services/weezAPI";
@@ -62,6 +64,42 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
                 allConnectors.push({ type: "hubspot", connected: false });
             }
 
+            // Fetch email connections
+            try {
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+                const emailRes = await fetch(`${API_BASE}/api/v1/email/connections?customer_id=${brandId}`);
+                if (emailRes.ok) {
+                    const emailConnections = await emailRes.json();
+                    emailConnections.forEach((conn: any) => {
+                        allConnectors.push({
+                            type: conn.provider,
+                            connected: conn.connected,
+                            identifier: conn.mailbox_email,
+                        });
+                    });
+                }
+            } catch {
+                // Email connections not available
+            }
+
+            // Fetch calendar connections
+            try {
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+                const calendarRes = await fetch(`${API_BASE}/api/v1/calendar/connections?customer_id=${brandId}`);
+                if (calendarRes.ok) {
+                    const calendarConnections = await calendarRes.json();
+                    calendarConnections.forEach((conn: any) => {
+                        allConnectors.push({
+                            type: conn.provider,
+                            connected: conn.connected,
+                            identifier: conn.mailbox_email,
+                        });
+                    });
+                }
+            } catch {
+                // Calendar connections not available
+            }
+
             setConnectors(allConnectors);
         } catch (err) {
             console.error("Failed to fetch connectors status:", err);
@@ -107,6 +145,21 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
         window.location.href = getHubSpotAuthorizeUrl(brandId);
     };
 
+    const handleConnectGmail = () => {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        window.location.href = `${API_BASE}/api/v1/email/auth/url?provider=gmail&customer_id=${brandId}`;
+    };
+
+    const handleConnectOutlook = () => {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        window.location.href = `${API_BASE}/api/v1/email/auth/url?provider=outlook&customer_id=${brandId}`;
+    };
+
+    const handleConnectGoogleCalendar = () => {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        window.location.href = `${API_BASE}/api/v1/calendar/auth/url?provider=google_calendar&customer_id=${brandId}`;
+    };
+
     const handleResyncAll = async () => {
         try {
             setIsResyncing(true);
@@ -131,6 +184,34 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
             } else if (platformId === "hubspot") {
                 await disconnectHubSpot(brandId);
                 toast.success("HubSpot CRM disconnected.");
+            } else if (platformId === "gmail" || platformId === "outlook") {
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+                // Find the connection ID
+                const emailRes = await fetch(`${API_BASE}/api/v1/email/connections?customer_id=${brandId}`);
+                if (emailRes.ok) {
+                    const emailConnections = await emailRes.json();
+                    const connection = emailConnections.find((c: any) => c.provider === platformId);
+                    if (connection) {
+                        await fetch(`${API_BASE}/api/v1/email/connections/${connection.id}?customer_id=${brandId}`, {
+                            method: "DELETE",
+                        });
+                        toast.success(`${platformId === "gmail" ? "Gmail" : "Outlook"} disconnected.`);
+                    }
+                }
+            } else if (platformId === "google_calendar" || platformId === "microsoft_calendar") {
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+                // Find the connection ID
+                const calendarRes = await fetch(`${API_BASE}/api/v1/calendar/connections?customer_id=${brandId}`);
+                if (calendarRes.ok) {
+                    const calendarConnections = await calendarRes.json();
+                    const connection = calendarConnections.find((c: any) => c.provider === platformId);
+                    if (connection) {
+                        await fetch(`${API_BASE}/api/v1/calendar/connections/${connection.id}?customer_id=${brandId}`, {
+                            method: "DELETE",
+                        });
+                        toast.success(`${platformId === "google_calendar" ? "Google Calendar" : "Microsoft Calendar"} disconnected.`);
+                    }
+                }
             }
             fetchStatus();
         } catch (err: any) {
@@ -183,6 +264,42 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
             color: "text-orange-500",
             bg: "bg-orange-500/10",
             action: handleConnectHubSpot,
+            comingSoon: false,
+            isOptional: true,
+            isPrimary: false
+        },
+        {
+            id: "gmail",
+            name: "Gmail",
+            description: "Email outreach automation. Connect Gmail to track email responses, schedule follow-ups, and integrate email engagement with your revenue attribution.",
+            icon: Mail,
+            color: "text-red-500",
+            bg: "bg-red-500/10",
+            action: handleConnectGmail,
+            comingSoon: false,
+            isOptional: true,
+            isPrimary: false
+        },
+        {
+            id: "outlook",
+            name: "Outlook",
+            description: "Microsoft email integration. Connect Outlook to sync email communications, track responses, and unify your email outreach across platforms.",
+            icon: Mail,
+            color: "text-blue-500",
+            bg: "bg-blue-500/10",
+            action: handleConnectOutlook,
+            comingSoon: false,
+            isOptional: true,
+            isPrimary: false
+        },
+        {
+            id: "google_calendar",
+            name: "Google Calendar",
+            description: "Meeting scheduling automation. Connect Google Calendar to automatically schedule meetings with discovered leads and sync with your revenue tracking.",
+            icon: CalendarIcon,
+            color: "text-green-500",
+            bg: "bg-green-500/10",
+            action: handleConnectGoogleCalendar,
             comingSoon: false,
             isOptional: true,
             isPrimary: false
