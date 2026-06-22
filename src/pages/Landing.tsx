@@ -21,6 +21,7 @@ import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
 import { HeroFloatingCards } from "@/components/HeroFloatingCards";
 import { OutboundWorkflow } from "@/components/OutboundWorkflow";
+import { LivingWorkflow } from "@/components/LivingWorkflow";
 
 /* =============== Reusable bits =============== */
 
@@ -820,6 +821,9 @@ const Landing = () => {
       </Section>
 
 
+
+      {/* LIVING WORKFLOW — AI-native workforce */}
+      <LivingWorkflow />
 
       {/* OUTBOUND WORKFLOW */}
       <Section id="workflow" className="overflow-hidden">
