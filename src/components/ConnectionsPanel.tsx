@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cable, Check, Share2, Database, Zap } from "lucide-react";
+import { Cable, Check, Share2, Database, Zap, Mail, Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -21,6 +21,7 @@ interface Connector {
   name: string;
   providerKey: string;
   iconImage?: string;
+  icon?: any;
   connected: boolean;
   description: string;
   color: string;
@@ -38,6 +39,38 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       connected: false,
       description: "Creative assets, documents",
       color: "text-yellow-600",
+    },
+    {
+      name: "Gmail",
+      providerKey: "gmail",
+      icon: Mail,
+      connected: false,
+      description: "Email delivery & outreach",
+      color: "text-red-500",
+    },
+    {
+      name: "Outlook",
+      providerKey: "outlook",
+      icon: Mail,
+      connected: false,
+      description: "Microsoft email & outreach",
+      color: "text-blue-500",
+    },
+    {
+      name: "Google Calendar",
+      providerKey: "google_calendar",
+      icon: Calendar,
+      connected: false,
+      description: "Schedule meetings & events",
+      color: "text-green-500",
+    },
+    {
+      name: "Microsoft Calendar",
+      providerKey: "microsoft_calendar",
+      icon: Calendar,
+      connected: false,
+      description: "Outlook calendar integration",
+      color: "text-blue-600",
     },
   ]);
 
@@ -68,7 +101,7 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
       // 2. Load dedicated Weez Instagram status
       const igStatus = await weezAPI.getInstagramStatus(currentSpace.id);
 
-      // Update generic connectors
+      // Update generic connectors (including Gmail, Outlook, Calendar)
       setConnectors((prev) =>
         prev.map((c) => ({
           ...c,
@@ -206,6 +239,38 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
 
         <ScrollArea className="flex-1">
           <div className="px-4 py-6 space-y-3">
+            {/* Strategic Assets Connectors */}
+            {connectors.map((connector) => (
+              <Card
+                key={connector.providerKey}
+                className="p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => !connector.connected && handleConnect(connector)}
+              >
+                <div className="flex items-center gap-3">
+                  {connector.iconImage ? (
+                    <img
+                      src={connector.iconImage}
+                      alt={connector.name}
+                      className="w-8 h-8 rounded"
+                    />
+                  ) : connector.icon ? (
+                    <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${connector.color}`}>
+                      <connector.icon className="w-4 h-4" />
+                    </div>
+                  ) : null}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{connector.name}</span>
+                      {connector.connected && (
+                        <Check className="w-3 h-3 text-green-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{connector.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
             {/* Social connectors removed as they are managed via the Campaign Hub / Spaces grid */}
 
             <div className="flex flex-col items-center justify-center p-8 text-center gap-4 opacity-20 mt-10">
