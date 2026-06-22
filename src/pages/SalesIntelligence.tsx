@@ -5,7 +5,8 @@ import {
   Search, Filter, RefreshCw, Mail, Building2, Users, TrendingUp,
   CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp,
   ExternalLink, Download, Star, Target, Zap, MessageSquare,
-  Calendar, MapPin, Globe, Briefcase, Award, Clock
+  Calendar, MapPin, Globe, Briefcase, Award, Clock, DollarSign,
+  Phone, Handshake, CreditCard
 } from "lucide-react";
 
 // Types for the sales intelligence API
@@ -157,6 +158,22 @@ export default function SalesIntelligence() {
       }
     } catch (error) {
       console.error("Error enriching lead:", error);
+    }
+  };
+
+  const trackRevenueEvent = async (leadId: number, eventType: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/revenue-intelligence/track/${eventType}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead_id: leadId, customer_id: spaceId }),
+      });
+      if (response.ok) {
+        await fetchLeads();
+        await fetchStats();
+      }
+    } catch (error) {
+      console.error(`Error tracking ${eventType}:`, error);
     }
   };
 
@@ -401,13 +418,43 @@ export default function SalesIntelligence() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); enrichLead(lead.id); }}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 rounded-lg transition-colors text-sm"
-                        >
-                          <Zap className="w-4 h-4" />
-                          Enrich
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); enrichLead(lead.id); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 rounded-lg transition-colors text-sm"
+                          >
+                            <Zap className="w-4 h-4" />
+                            Enrich
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); trackRevenueEvent(lead.id, "reply"); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors text-sm"
+                            title="Track Reply"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); trackRevenueEvent(lead.id, "meeting"); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors text-sm"
+                            title="Track Meeting"
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); trackRevenueEvent(lead.id, "opportunity"); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors text-sm"
+                            title="Track Opportunity"
+                          >
+                            <Handshake className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); trackRevenueEvent(lead.id, "customer"); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors text-sm"
+                            title="Track Customer"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

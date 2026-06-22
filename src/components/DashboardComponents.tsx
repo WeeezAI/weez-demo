@@ -30,7 +30,9 @@ import {
     PartyPopper,
     RefreshCw,
     Send,
-    Palette
+    Palette,
+    Search,
+    DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";

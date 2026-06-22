@@ -24,6 +24,8 @@ import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
 import SalesWorkspace from "./pages/SalesWorkspace";
 import GrowthStrategist from "./pages/GrowthStrategist";
+import MarketDiscovery from "./pages/MarketDiscovery";
+import RevenueIntelligence from "./pages/RevenueIntelligence";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -129,6 +131,8 @@ const AppContent = () => {
               <Route path="/sales-intelligence/:spaceId" element={<SalesIntelligence />} />
               <Route path="/sales-workspace/:spaceId" element={<SalesWorkspace />} />
               <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
+              <Route path="/market-discovery/:spaceId" element={<MarketDiscovery />} />
+              <Route path="/revenue-intelligence/:spaceId" element={<RevenueIntelligence />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
               <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
 

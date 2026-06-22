@@ -1,7 +1,7 @@
 // Spaces.tsx — WITH VISIONARY ORCHESTRATION UPGRADE
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Folder, LogOut, Plus, Loader2, Rocket, Globe, Shield, Zap, ChevronRight, LayoutGrid, LayoutList, BrainCircuit, Activity, Database, Settings, Trash2, Menu, HelpCircle, LifeBuoy } from "lucide-react";
+import { Sparkles, Folder, LogOut, Plus, Loader2, Rocket, Globe, Shield, Zap, ChevronRight, LayoutGrid, LayoutList, BrainCircuit, Activity, Database, Settings, Trash2, Menu, HelpCircle, LifeBuoy, DollarSign, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -291,6 +291,24 @@ const Spaces = () => {
                     }}
                   >
                     <Database className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/market-discovery/${space.id}`);
+                    }}
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/revenue-intelligence/${space.id}`);
+                    }}
+                  >
+                    <DollarSign className="w-3.5 h-3.5" />
                   </button>
                   <button
                     className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-foreground hover:text-white transition-all text-muted-foreground"
