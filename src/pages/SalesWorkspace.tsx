@@ -199,7 +199,7 @@ export default function SalesWorkspace() {
   const [showFilters, setShowFilters] = useState(false);
 
   // API URL
-  const API_BASE = process.env.VITE_API_BASE_URL || "http://localhost:8000";
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
   const fetchLeads = useCallback(async () => {
     if (!spaceId) return;
