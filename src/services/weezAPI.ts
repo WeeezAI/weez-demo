@@ -1,8 +1,6 @@
 // services/weezAPI.ts
 
-const WEEZ_BASE_URL = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-  ? "http://127.0.0.1:8000"
-  : "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
+const WEEZ_BASE_URL = "https://dexraflow-poster-pipeline-e7behqgjfqfresgf.canadacentral-01.azurewebsites.net";
 
 export interface BrandMemoryFacts {
   brand_name?: string;
