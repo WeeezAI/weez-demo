@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useSearchParams, Navigate, useParams } from "react-router-dom";
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
@@ -59,6 +59,16 @@ const HubSpotCallbackRedirect = () => {
       </div>
     </div>
   );
+};
+
+const RedirectToMarketDiscovery = () => {
+  const { spaceId } = useParams<{ spaceId: string }>();
+  return <Navigate to={`/sales/${spaceId}?tab=market-discovery`} replace />;
+};
+
+const RedirectToRevenue = () => {
+  const { spaceId } = useParams<{ spaceId: string }>();
+  return <Navigate to={`/sales/${spaceId}?tab=revenue`} replace />;
 };
 
 const queryClient = new QueryClient();
@@ -131,8 +141,8 @@ const AppContent = () => {
               <Route path="/sales-intelligence/:spaceId" element={<SalesIntelligence />} />
               <Route path="/sales-workspace/:spaceId" element={<SalesWorkspace />} />
               <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
-              <Route path="/market-discovery/:spaceId" element={<MarketDiscovery />} />
-              <Route path="/revenue-intelligence/:spaceId" element={<RevenueIntelligence />} />
+              <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
+              <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
               <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
 

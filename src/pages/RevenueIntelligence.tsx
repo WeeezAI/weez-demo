@@ -139,7 +139,11 @@ interface PerformanceSummary {
   best_source_quality_score: number | null;
 }
 
-export default function RevenueIntelligence() {
+interface RevenueIntelligenceProps {
+  hideHeader?: boolean;
+}
+
+export default function RevenueIntelligence({ hideHeader = false }: RevenueIntelligenceProps) {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -316,52 +320,54 @@ export default function RevenueIntelligence() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className={hideHeader ? "text-white" : "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white"}>
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-900/80 border-b border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                <ChevronDown className="w-5 h-5 rotate-90" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                    Revenue Intelligence
-                  </h1>
-                  <p className="text-xs text-slate-400">Revenue Learning Layer</p>
+      {!hideHeader && (
+        <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-900/80 border-b border-slate-700/50">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+                >
+                  <ChevronDown className="w-5 h-5 rotate-90" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                      Revenue Intelligence
+                    </h1>
+                    <p className="text-xs text-slate-400">Revenue Learning Layer</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={calculateYields}
-                disabled={calculating}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <BarChart3 className="w-4 h-4" />
-                {calculating ? "Calculating..." : "Calculate Yields"}
-              </button>
-              <button
-                onClick={() => { fetchNarratives(); fetchPosts(); fetchSources(); fetchRecommendations(); fetchSummary(); }}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Refresh
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={calculateYields}
+                  disabled={calculating}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  {calculating ? "Calculating..." : "Calculate Yields"}
+                </button>
+                <button
+                  onClick={() => { fetchNarratives(); fetchPosts(); fetchSources(); fetchRecommendations(); fetchSummary(); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className={hideHeader ? "max-w-7xl mx-auto py-8" : "max-w-7xl mx-auto px-6 py-8"}>
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {[

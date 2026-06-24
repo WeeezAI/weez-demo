@@ -296,7 +296,7 @@ const Spaces = () => {
                     className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/market-discovery/${space.id}`);
+                      navigate(`/sales/${space.id}?tab=market-discovery`);
                     }}
                   >
                     <Search className="w-3.5 h-3.5" />
@@ -305,7 +305,7 @@ const Spaces = () => {
                     className="w-8 h-8 rounded-lg glass-panel flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/revenue-intelligence/${space.id}`);
+                      navigate(`/sales/${space.id}?tab=revenue`);
                     }}
                   >
                     <DollarSign className="w-3.5 h-3.5" />

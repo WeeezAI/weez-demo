@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getLeads, getLeadStats, getHubSpotStatus, confirmAttribution,
@@ -7,7 +7,9 @@ import {
   disconnectHubSpot, connectLeadWebSocket,
   type Lead, type LeadStats, type HubSpotStatus,
 } from "@/services/salesAPI";
-import { ArrowLeft, Search, Filter, RefreshCw, Plus, ExternalLink, Check, X, Zap, Target, Users, TrendingUp, AlertCircle, Link2, Unlink, ChevronDown, Star, MessageSquare, UserCheck, Archive, Mail, Linkedin, BrainCircuit } from "lucide-react";
+import { ArrowLeft, Search, Filter, RefreshCw, Plus, ExternalLink, Check, X, Zap, Target, Users, TrendingUp, AlertCircle, Link2, Unlink, ChevronDown, Star, MessageSquare, UserCheck, Archive, Mail, Linkedin, BrainCircuit, BarChart3, DollarSign } from "lucide-react";
+import MarketDiscovery from "./MarketDiscovery";
+import RevenueIntelligence from "./RevenueIntelligence";
 
 /* ── Priority / Status helpers ─────────────────────────────────────── */
 const PRIORITY_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
@@ -23,6 +25,13 @@ export default function SalesAssistant() {
   const brandId = spaceId || "";
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "leads";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
 
   /* state */
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -103,7 +112,6 @@ export default function SalesAssistant() {
     } catch (e: any) { alert(e.message); }
   };
 
-  /* ── Render ─────────────────────────────────────────────────────────── */
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0a0a1a 0%,#12122a 50%,#1a0a2e 100%)", color: "#e0e0e0", fontFamily: "'Inter',sans-serif" }}>
       {/* Header */}
@@ -111,169 +119,236 @@ export default function SalesAssistant() {
         <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex" }}><ArrowLeft size={20} /></button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Target size={22} color="#a78bfa" />
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, background: "linear-gradient(135deg,#a78bfa,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Sales Assistant</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, background: "linear-gradient(135deg,#a78bfa,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Sales</h1>
         </div>
+
+        {/* Tab switch buttons */}
+        <div style={{ display: "flex", gap: 8, marginLeft: 24 }}>
+          <button
+            onClick={() => setActiveTab("leads")}
+            style={{
+              padding: "6px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: activeTab === "leads" ? "rgba(167,139,250,0.15)" : "transparent",
+              color: activeTab === "leads" ? "#a78bfa" : "#888",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Leads Pipeline
+          </button>
+          <button
+            onClick={() => setActiveTab("market-discovery")}
+            style={{
+              padding: "6px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: activeTab === "market-discovery" ? "rgba(167,139,250,0.15)" : "transparent",
+              color: activeTab === "market-discovery" ? "#a78bfa" : "#888",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Market Discovery
+          </button>
+          <button
+            onClick={() => setActiveTab("revenue")}
+            style={{
+              padding: "6px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: activeTab === "revenue" ? "rgba(167,139,250,0.15)" : "transparent",
+              color: activeTab === "revenue" ? "#a78bfa" : "#888",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Revenue Intelligence
+          </button>
+        </div>
+
         <div style={{ flex: 1 }} />
         {/* HubSpot status */}
-        <HubSpotBadge hubspot={hubspot} brandId={brandId} onRefresh={refresh} />
-        <button onClick={handleScan} disabled={scanning} style={{ ...btnStyle, opacity: scanning ? .5 : 1 }}>
-          <RefreshCw size={14} className={scanning ? "spin" : ""} /> {scanning ? "Scanning…" : "Scan Leads"}
-        </button>
+        {activeTab === "leads" && (
+          <>
+            <HubSpotBadge hubspot={hubspot} brandId={brandId} onRefresh={refresh} />
+            <button onClick={handleScan} disabled={scanning} style={{ ...btnStyle, opacity: scanning ? .5 : 1 }}>
+              <RefreshCw size={14} className={scanning ? "spin" : ""} /> {scanning ? "Scanning…" : "Scan Leads"}
+            </button>
+          </>
+        )}
       </header>
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px" }}>
-        {/* Real-time alerts */}
-        {realtimeAlerts.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            {realtimeAlerts.map((a, i) => (
-              <div key={i} style={{ padding: "12px 16px", background: "rgba(255,107,107,.08)", border: "1px solid rgba(255,107,107,.2)", borderRadius: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 12, animation: "fadeIn .3s" }}>
-                <Zap size={16} color="#ff6b6b" />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>🔥 New P1 Lead: {a.name}</span>
-                <span style={{ fontSize: 12, color: "#999" }}>{a.company} · {a.role}</span>
-                <span style={{ fontSize: 12, color: "#ff6b6b", marginLeft: "auto" }}>Score {a.lead_score}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Lead Discovery Explanation — show when very few leads or empty */}
-        {leads.length < 3 && !loading && (
-          <div style={{ 
-            marginBottom: 20, padding: "32px", 
-            background: "linear-gradient(165deg, rgba(167,139,250,.08), rgba(129,140,248,.03))",
-            border: "1px solid rgba(167,139,250,.15)",
-            borderRadius: 24,
-            display: "flex", flexDirection: "column", gap: 20
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(167,139,250,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <BrainCircuit size={24} color="#a78bfa" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#fff" }}>Autonomous Lead Discovery</h3>
-                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#999" }}>How we find and score your high-intent prospects</p>
-              </div>
+      {activeTab === "leads" ? (
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px" }}>
+          {/* Real-time alerts */}
+          {realtimeAlerts.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              {realtimeAlerts.map((a, i) => (
+                <div key={i} style={{ padding: "12px 16px", background: "rgba(255,107,107,.08)", border: "1px solid rgba(255,107,107,.2)", borderRadius: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 12, animation: "fadeIn .3s" }}>
+                  <Zap size={16} color="#ff6b6b" />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>🔥 New P1 Lead: {a.name}</span>
+                  <span style={{ fontSize: 12, color: "#999" }}>{a.company} · {a.role}</span>
+                  <span style={{ fontSize: 12, color: "#ff6b6b", marginLeft: "auto" }}>Score {a.lead_score}</span>
+                </div>
+              ))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>1. Exclusion Gate</p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>The AI automatically filters out 1st degree connections, colleagues, and generic "great post" engagers to ensure zero clutter in your CRM.</p>
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>2. ICP Alignment</p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Every commenter is cross-referenced with your Ideal Customer Profile. We check job titles, industries, and company size before scoring.</p>
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>3. Intent Classification</p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Leads are classified into P1 (High Intent), P2 (Referral), or P3 (Question). High intent leads trigger immediate real-time sync to HubSpot.</p>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* HubSpot Connection Banner — shown when not connected */}
-        {hubspot && !hubspot.connected && !loading && (
-          <div style={{
-            marginBottom: 20, padding: "24px 28px",
-            background: "linear-gradient(135deg, rgba(255,146,43,.06), rgba(255,146,43,.02))",
-            border: "1px solid rgba(255,146,43,.2)",
-            borderRadius: 16,
-            display: "flex", alignItems: "center", gap: 20,
-            animation: "fadeIn .4s",
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 14,
-              background: "linear-gradient(135deg, rgba(255,146,43,.15), rgba(255,146,43,.05))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
+          {/* Lead Discovery Explanation — show when very few leads or empty */}
+          {leads.length < 3 && !loading && (
+            <div style={{ 
+              marginBottom: 20, padding: "32px", 
+              background: "linear-gradient(165deg, rgba(167,139,250,.08), rgba(129,140,248,.03))",
+              border: "1px solid rgba(167,139,250,.15)",
+              borderRadius: 24,
+              display: "flex", flexDirection: "column", gap: 20
             }}>
-              <Link2 size={24} color="#ff922b" />
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(167,139,250,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <BrainCircuit size={24} color="#a78bfa" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#fff" }}>Autonomous Lead Discovery</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "#999" }}>How we find and score your high-intent prospects</p>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>1. Exclusion Gate</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>The AI automatically filters out 1st degree connections, colleagues, and generic "great post" engagers to ensure zero clutter in your CRM.</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>2. ICP Alignment</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Every commenter is cross-referenced with your Ideal Customer Profile. We check job titles, industries, and company size before scoring.</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: 1 }}>3. Intent Classification</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888", lineHeight: 1.5 }}>Leads are classified into P1 (High Intent), P2 (Referral), or P3 (Question). High intent leads trigger immediate real-time sync to HubSpot.</p>
+                </div>
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#fff" }}>
-                Connect HubSpot CRM
-              </h3>
-              <p style={{ margin: 0, fontSize: 13, color: "#999", lineHeight: 1.5 }}>
-                Link your HubSpot account to automatically sync discovered leads as contacts,
-                log LinkedIn interactions as notes, and track deal conversions — all without leaving Dexraflow.
+          )}
+
+          {/* HubSpot Connection Banner — shown when not connected */}
+          {hubspot && !hubspot.connected && !loading && (
+            <div style={{
+              marginBottom: 20, padding: "24px 28px",
+              background: "linear-gradient(135deg, rgba(255,146,43,.06), rgba(255,146,43,.02))",
+              border: "1px solid rgba(255,146,43,.2)",
+              borderRadius: 16,
+              display: "flex", alignItems: "center", gap: 20,
+              animation: "fadeIn .4s",
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(255,146,43,.15), rgba(255,146,43,.05))",
+                display: "flex", alignItems: "center", justifyItems: "center",
+                flexShrink: 0,
+              }}>
+                <Link2 size={24} color="#ff922b" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#fff" }}>
+                  Connect HubSpot CRM
+                </h3>
+                <p style={{ margin: 0, fontSize: 13, color: "#999", lineHeight: 1.5 }}>
+                  Link your HubSpot account to automatically sync discovered leads as contacts,
+                  log LinkedIn interactions as notes, and track deal conversions — all without leaving Dexraflow.
+                </p>
+              </div>
+              <a
+                href={getHubSpotAuthorizeUrl(brandId)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "12px 24px", fontSize: 13, fontWeight: 600,
+                  background: "linear-gradient(135deg, #ff922b, #f76707)",
+                  color: "#fff", border: "none", borderRadius: 10,
+                  textDecoration: "none", cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 4px 16px rgba(255,146,43,.25)",
+                  transition: "all .2s",
+                }}
+              >
+                <Link2 size={16} /> Connect HubSpot
+              </a>
+            </div>
+          )}
+
+          {/* Stats cards */}
+          {stats && <StatsCards stats={stats} />}
+
+          {/* Toolbar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
+            <button onClick={() => setShowFilters(!showFilters)} style={btnStyle}><Filter size={14} /> Filters {showFilters ? "▲" : "▼"}</button>
+            {Object.keys(filters).length > 0 && <button onClick={() => { setFilters({}); setPage(1); }} style={{ ...btnStyle, color: "#ff6b6b" }}><X size={14} /> Clear</button>}
+            <span style={{ fontSize: 13, color: "#888", marginLeft: "auto" }}>{total} leads total</span>
+          </div>
+
+          {showFilters && (
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+              {STATUS_OPTIONS.map(s => (
+                <button key={s} onClick={() => { setFilters(f => ({ ...f, status: f.status === s ? undefined : s })); setPage(1); }} style={{ ...chipStyle, background: filters.status === s ? STATUS_COLORS[s] + "33" : "rgba(255,255,255,.04)", borderColor: filters.status === s ? STATUS_COLORS[s] : "rgba(255,255,255,.08)", color: filters.status === s ? STATUS_COLORS[s] : "#aaa" }}>{s}</button>
+              ))}
+              <div style={{ width: 1, height: 24, background: "rgba(255,255,255,.08)" }} />
+              {[1, 2, 3].map(p => (
+                <button key={p} onClick={() => { setFilters(f => ({ ...f, priority: f.priority === p ? undefined : p })); setPage(1); }} style={{ ...chipStyle, background: filters.priority === p ? PRIORITY_CONFIG[p].bg : "rgba(255,255,255,.04)", borderColor: filters.priority === p ? PRIORITY_CONFIG[p].color : "rgba(255,255,255,.08)", color: filters.priority === p ? PRIORITY_CONFIG[p].color : "#aaa" }}>{PRIORITY_CONFIG[p].label}</button>
+              ))}
+            </div>
+          )}
+
+          {/* Lead list */}
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 60, color: "#666" }}>Loading leads…</div>
+          ) : leads.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 80, background: "rgba(255,255,255,.02)", border: "1px dashed rgba(255,255,255,.08)", borderRadius: 32 }}>
+              <div style={{ width: 64, height: 64, borderRadius: 20, background: "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                <Users size={32} color="#444" />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Your Lead Pipeline is Warming Up</h3>
+              <p style={{ color: "#888", fontSize: 14, maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.6 }}>
+                Once you deploy a campaign, the platform will automatically monitor engagement and surface qualified leads here.
               </p>
+              <button onClick={handleScan} disabled={scanning} style={{ ...btnStyle, padding: "12px 24px", background: "linear-gradient(135deg,#a78bfa,#818cf8)", border: "none", color: "#fff", fontWeight: 700 }}>
+                <RefreshCw size={16} className={scanning ? "spin" : ""} /> {scanning ? "Analyzing Content Engagement…" : "Scan Historical Engagement"}
+              </button>
             </div>
-            <a
-              href={getHubSpotAuthorizeUrl(brandId)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "12px 24px", fontSize: 13, fontWeight: 600,
-                background: "linear-gradient(135deg, #ff922b, #f76707)",
-                color: "#fff", border: "none", borderRadius: 10,
-                textDecoration: "none", cursor: "pointer",
-                whiteSpace: "nowrap",
-                boxShadow: "0 4px 16px rgba(255,146,43,.25)",
-                transition: "all .2s",
-              }}
-            >
-              <Link2 size={16} /> Connect HubSpot
-            </a>
-          </div>
-        )}
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {leads.map(lead => (
+                <LeadCard key={lead.id} lead={lead} hubspotConnected={hubspot?.connected || false}
+                  onStatusChange={(s) => handleStatusChange(lead, s)}
+                  onHubspotSync={() => handleHubspotSync(lead)}
+                  onAttributionClick={() => { setSelectedLead(lead); setShowAttribution(true); }} />
+              ))}
+            </div>
+          )}
 
-        {/* Stats cards */}
-        {stats && <StatsCards stats={stats} />}
-
-        {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-          <button onClick={() => setShowFilters(!showFilters)} style={btnStyle}><Filter size={14} /> Filters {showFilters ? "▲" : "▼"}</button>
-          {Object.keys(filters).length > 0 && <button onClick={() => { setFilters({}); setPage(1); }} style={{ ...btnStyle, color: "#ff6b6b" }}><X size={14} /> Clear</button>}
-          <span style={{ fontSize: 13, color: "#888", marginLeft: "auto" }}>{total} leads total</span>
+          {/* Pagination */}
+          {total > 20 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
+              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnStyle}>← Prev</button>
+              <span style={{ fontSize: 13, color: "#888", padding: "8px 12px" }}>Page {page} of {Math.ceil(total / 20)}</span>
+              <button disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)} style={btnStyle}>Next →</button>
+            </div>
+          )}
         </div>
-
-        {showFilters && (
-          <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-            {STATUS_OPTIONS.map(s => (
-              <button key={s} onClick={() => { setFilters(f => ({ ...f, status: f.status === s ? undefined : s })); setPage(1); }} style={{ ...chipStyle, background: filters.status === s ? STATUS_COLORS[s] + "33" : "rgba(255,255,255,.04)", borderColor: filters.status === s ? STATUS_COLORS[s] : "rgba(255,255,255,.08)", color: filters.status === s ? STATUS_COLORS[s] : "#aaa" }}>{s}</button>
-            ))}
-            <div style={{ width: 1, height: 24, background: "rgba(255,255,255,.08)" }} />
-            {[1, 2, 3].map(p => (
-              <button key={p} onClick={() => { setFilters(f => ({ ...f, priority: f.priority === p ? undefined : p })); setPage(1); }} style={{ ...chipStyle, background: filters.priority === p ? PRIORITY_CONFIG[p].bg : "rgba(255,255,255,.04)", borderColor: filters.priority === p ? PRIORITY_CONFIG[p].color : "rgba(255,255,255,.08)", color: filters.priority === p ? PRIORITY_CONFIG[p].color : "#aaa" }}>{PRIORITY_CONFIG[p].label}</button>
-            ))}
-          </div>
-        )}
-
-        {/* Lead list */}
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: "#666" }}>Loading leads…</div>
-        ) : leads.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 80, background: "rgba(255,255,255,.02)", border: "1px dashed rgba(255,255,255,.08)", borderRadius: 32 }}>
-            <div style={{ width: 64, height: 64, borderRadius: 20, background: "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-              <Users size={32} color="#444" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Your Lead Pipeline is Warming Up</h3>
-            <p style={{ color: "#888", fontSize: 14, maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.6 }}>
-              Once you deploy a campaign, the platform will automatically monitor engagement and surface qualified leads here.
-            </p>
-            <button onClick={handleScan} disabled={scanning} style={{ ...btnStyle, padding: "12px 24px", background: "linear-gradient(135deg,#a78bfa,#818cf8)", border: "none", color: "#fff", fontWeight: 700 }}>
-              <RefreshCw size={16} className={scanning ? "spin" : ""} /> {scanning ? "Analyzing Content Engagement…" : "Scan Historical Engagement"}
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {leads.map(lead => (
-              <LeadCard key={lead.id} lead={lead} hubspotConnected={hubspot?.connected || false}
-                onStatusChange={(s) => handleStatusChange(lead, s)}
-                onHubspotSync={() => handleHubspotSync(lead)}
-                onAttributionClick={() => { setSelectedLead(lead); setShowAttribution(true); }} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {total > 20 && (
-          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
-            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnStyle}>← Prev</button>
-            <span style={{ fontSize: 13, color: "#888", padding: "8px 12px" }}>Page {page} of {Math.ceil(total / 20)}</span>
-            <button disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)} style={btnStyle}>Next →</button>
-          </div>
-        )}
-      </div>
+      ) : activeTab === "market-discovery" ? (
+        <div style={{ padding: "0 24px" }}>
+          <MarketDiscovery hideHeader={true} />
+        </div>
+      ) : (
+        <div style={{ padding: "0 24px" }}>
+          <RevenueIntelligence hideHeader={true} />
+        </div>
+      )}
 
       {/* Attribution Modal */}
       {showAttribution && selectedLead && (
