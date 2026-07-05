@@ -19,8 +19,9 @@ import showcaseDexraflow1 from "@/assets/showcase/dexraflow1.png";
 import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
 import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
-import { HeroFloatingCards } from "@/components/HeroFloatingCards";
+import HeroTaskStream from "@/components/HeroTaskStream";
 import HeroAITeam from "@/components/HeroAITeam";
+import HeroTeamAvatars from "@/components/HeroTeamAvatars";
 import { OutboundWorkflow } from "@/components/OutboundWorkflow";
 import { LivingWorkflow } from "@/components/LivingWorkflow";
 
@@ -368,7 +369,7 @@ const Landing = () => {
         <GlowOrb className="w-[500px] h-[500px] top-20 right-0" color="from-blue-500/40" />
         <GlowOrb className="w-[400px] h-[400px] bottom-0 left-1/3" color="from-sky-400/30" />
 
-        <HeroFloatingCards />
+        <HeroTaskStream />
 
         <motion.div style={{ y: heroY }} className="relative max-w-7xl mx-auto text-center">
           <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
@@ -383,9 +384,11 @@ const Landing = () => {
             <br />
             Marketing Team
           </motion.h1>
+          <HeroTeamAvatars />
+
           <motion.p
             variants={fadeUp} custom={2} initial="hidden" animate="show"
-            className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
+            className="mt-8 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
           >
             Weez AI plans, creates, launches, and optimizes your marketing — so you get high qualified leads without hiring a team.
           </motion.p>
@@ -416,6 +419,7 @@ const Landing = () => {
           </motion.div>
 
           <HeroAITeam />
+
 
         </motion.div>
       </section>
