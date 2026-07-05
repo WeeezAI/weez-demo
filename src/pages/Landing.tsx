@@ -20,6 +20,7 @@ import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
 import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
 import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
 import { HeroFloatingCards } from "@/components/HeroFloatingCards";
+import HeroAITeam from "@/components/HeroAITeam";
 import { OutboundWorkflow } from "@/components/OutboundWorkflow";
 import { LivingWorkflow } from "@/components/LivingWorkflow";
 
@@ -375,21 +376,12 @@ const Landing = () => {
             variants={fadeUp} custom={1} initial="hidden" animate="show"
             className="mt-6 font-agrandir font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
           >
-            Marketing that <br />
-            <span className="relative inline-block align-baseline overflow-hidden" style={{ minWidth: "8ch" }}>
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={rotatingWords[wordIdx]}
-                  initial={{ y: "100%", opacity: 0 }}
-                  animate={{ y: "0%", opacity: 1 }}
-                  exit={{ y: "-100%", opacity: 0 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400"
-                >
-                  {rotatingWords[wordIdx]}
-                </motion.span>
-              </AnimatePresence>
+            Meet Your{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400">
+              AI Native
             </span>
+            <br />
+            Marketing Team
           </motion.h1>
           <motion.p
             variants={fadeUp} custom={2} initial="hidden" animate="show"
@@ -423,9 +415,8 @@ const Landing = () => {
             </a>
           </motion.div>
 
-          <div className="mt-12">
-            <HeroVisual />
-          </div>
+          <HeroAITeam />
+
         </motion.div>
       </section>
 
