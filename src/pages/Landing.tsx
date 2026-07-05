@@ -384,9 +384,11 @@ const Landing = () => {
             <br />
             Marketing Team
           </motion.h1>
+          <HeroTeamAvatars />
+
           <motion.p
             variants={fadeUp} custom={2} initial="hidden" animate="show"
-            className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
+            className="mt-8 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
           >
             Weez AI plans, creates, launches, and optimizes your marketing — so you get high qualified leads without hiring a team.
           </motion.p>
@@ -417,6 +419,7 @@ const Landing = () => {
           </motion.div>
 
           <HeroAITeam />
+
 
         </motion.div>
       </section>
