@@ -37,6 +37,38 @@ interface MessageLog {
     text: string;
 }
 
+// ── Nina — the AI CMO who runs onboarding ───────────────────────────────────
+// Note: the team artwork spells it "Ninna"; product copy uses "Nina". Change
+// NINA_NAME here to flip everything in one place.
+const NINA_NAME = "Nina";
+const NINA_TITLE = "AI CMO";
+// Drop Nina's cropped portrait at frontend/public/assets/nina.png. If the file
+// is missing the UI gracefully falls back to an initials avatar (no build break).
+const NINA_AVATAR = "/assets/nina.png";
+// Nina's voice is played through a WebAudio gain node so it can go LOUDER than
+// the 1.0 cap on an <audio> element. 1.0 = normal; 1.8 = noticeably louder.
+const NINA_VOICE_GAIN = 1.8;
+
+/** Nina's avatar with a graceful initials fallback when the image is absent. */
+function NinaAvatar({ className = "" }: { className?: string }) {
+    const [ok, setOk] = useState(true);
+    if (ok) {
+        return (
+            <img
+                src={NINA_AVATAR}
+                alt={`${NINA_NAME}, ${NINA_TITLE}`}
+                onError={() => setOk(false)}
+                className={`object-cover ${className}`}
+            />
+        );
+    }
+    return (
+        <div className={`bg-gradient-to-tr from-indigo-600 to-purple-500 text-white flex items-center justify-center font-black ${className}`}>
+            {NINA_NAME.charAt(0)}
+        </div>
+    );
+}
+
 export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: FounderVoiceOnboardingProps) {
     const [step, setStep] = useState<"intro" | "insist" | "interview" | "processing" | "completed">("intro");
     
@@ -52,7 +84,8 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
     const [voiceProfile, setVoiceProfile] = useState<any>(null);
 
     // Active visualizer state
-    const [audioLevel, setAudioLevel] = useState(0);
+    const [audioLevel, setAudioLevel] = useState(0);          // founder's mic level
+    const [agentAudioLevel, setAgentAudioLevel] = useState(0); // Nina's voice level
     const [agentSpeaking, setAgentSpeaking] = useState(false);
     
     // WebRTC Refs
@@ -63,6 +96,12 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
     const audioContextRef = useRef<AudioContext | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const transcriptAccumulatorRef = useRef<MessageLog[]>([]);
+    // WebAudio graph used to amplify Nina's (remote) voice above the element cap,
+    // plus an analyser so her voice drives the on-screen sound waves.
+    const remoteAudioCtxRef = useRef<AudioContext | null>(null);
+    const remoteGainRef = useRef<GainNode | null>(null);
+    const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
+    const remoteRafRef = useRef<number | null>(null);
 
     useEffect(() => {
         // Cleanup WebRTC connections on unmount
@@ -86,6 +125,20 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
         if (audioContextRef.current) {
             audioContextRef.current.close();
             audioContextRef.current = null;
+        }
+        if (remoteRafRef.current) {
+            cancelAnimationFrame(remoteRafRef.current);
+            remoteRafRef.current = null;
+        }
+        remoteAnalyserRef.current = null;
+        setAgentAudioLevel(0);
+        if (remoteGainRef.current) {
+            try { remoteGainRef.current.disconnect(); } catch { /* noop */ }
+            remoteGainRef.current = null;
+        }
+        if (remoteAudioCtxRef.current) {
+            remoteAudioCtxRef.current.close().catch(() => {});
+            remoteAudioCtxRef.current = null;
         }
         if (remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = null;
@@ -130,7 +183,45 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
             remoteAudio.autoplay = true;
             remoteAudioRef.current = remoteAudio;
             pc.ontrack = (event) => {
-                remoteAudio.srcObject = event.streams[0];
+                const [stream] = event.streams;
+                remoteAudio.srcObject = stream;
+                // Amplify Nina's voice above the 1.0 HTMLMediaElement volume cap by
+                // routing her remote audio through a WebAudio gain node. The <audio>
+                // element stays attached but muted (keeps the WebRTC track flowing);
+                // the WebAudio graph produces the louder audible output.
+                try {
+                    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+                    const ctx = new AudioCtx();
+                    remoteAudioCtxRef.current = ctx;
+                    const source = ctx.createMediaStreamSource(stream);
+                    const gain = ctx.createGain();
+                    gain.gain.value = NINA_VOICE_GAIN;
+                    remoteGainRef.current = gain;
+                    source.connect(gain);
+                    gain.connect(ctx.destination);
+                    remoteAudio.muted = true;
+                    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+                    // Analyser tap so Nina's voice animates the sound-wave ring.
+                    const analyser = ctx.createAnalyser();
+                    analyser.fftSize = 64;
+                    gain.connect(analyser);
+                    remoteAnalyserRef.current = analyser;
+                    const freq = new Uint8Array(analyser.frequencyBinCount);
+                    const tickRemote = () => {
+                        if (!remoteAnalyserRef.current) return;
+                        analyser.getByteFrequencyData(freq);
+                        let sum = 0;
+                        for (let i = 0; i < freq.length; i++) sum += freq[i];
+                        setAgentAudioLevel(Math.min((sum / freq.length) * 1.7, 100));
+                        remoteRafRef.current = requestAnimationFrame(tickRemote);
+                    };
+                    tickRemote();
+                } catch (e) {
+                    // Fallback: play through the element at max volume if WebAudio fails.
+                    remoteAudio.muted = false;
+                    remoteAudio.volume = 1.0;
+                }
             };
 
             // Add local microphone audio track to peer connection
@@ -209,7 +300,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
 
         } catch (err: any) {
             console.error("Failed to start voice session:", err);
-            toast.error(err.message || "Failed to establish voice session with Sage. Please try again.");
+            toast.error(err.message || `Failed to establish voice session with ${NINA_NAME}. Please try again.`);
             cleanupWebRTC();
             setStep("intro");
         }
@@ -305,7 +396,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
             if (!fullTranscriptText || fullTranscriptText.trim().length < 50) {
                 // Fallback transcript in case WebRTC transcripts didn't log due to WebRTC disconnect, 
                 // but user did speak or want to preview
-                throw new Error("No substantial conversation recorded. Please speak to Sage or re-run the interview.");
+                throw new Error(`No substantial conversation recorded. Please speak to ${NINA_NAME} or re-run the interview.`);
             }
 
             const result = await weezAPI.processFounderVoice(spaceId, fullTranscriptText);
@@ -330,6 +421,11 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
         onSkip();
     };
 
+    // The latest thing Nina said aloud — shown in plain text under her circle.
+    const currentQuestion = [...transcript].reverse().find((m) => m.sender === "assistant")?.text || "";
+    // Combined level: reacts to whoever is talking (Nina or the founder).
+    const waveLevel = isMuted ? agentAudioLevel : Math.max(audioLevel, agentAudioLevel);
+
     return (
         <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center overflow-y-auto px-6 py-8">
             {/* Background cinematic effects */}
@@ -345,24 +441,24 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                     <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10 max-w-2xl mx-auto my-auto animate-in fade-in zoom-in-95 duration-500">
                         <div className="relative">
                             <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full animate-pulse" />
-                            <div className="relative w-20 h-20 rounded-[1.8rem] bg-indigo-600 shadow-2xl flex items-center justify-center">
-                                <Smile className="w-10 h-10 text-white animate-float" />
+                            <div className="relative w-24 h-24 rounded-[1.8rem] bg-indigo-600 shadow-2xl overflow-hidden ring-4 ring-white">
+                                <NinaAvatar className="w-full h-full text-3xl" />
                             </div>
-                            <div className="absolute -top-3 -right-3 w-8 h-8 rounded-lg bg-amber-500 shadow-lg flex items-center justify-center">
-                                <Sparkles className="w-4 h-4 text-white" />
+                            <div className="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-white">
+                                {NINA_TITLE}
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <Badge className="bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-600 border-none px-4 py-1.5 font-bold tracking-widest uppercase rounded-full">
-                                Setup Phase: Brand Voice
+                                Setup Phase: Meet Your CMO
                             </Badge>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-zinc-950 uppercase leading-none">
-                                Meet Sage, Your <br />
-                                <span className="bg-gradient-to-r from-indigo-600 via-indigo-400 to-cyan-500 bg-clip-text text-transparent">Brand Voice Interviewer</span>
+                                Meet {NINA_NAME}, Your <br />
+                                <span className="bg-gradient-to-r from-indigo-600 via-indigo-400 to-cyan-500 bg-clip-text text-transparent">AI Chief Marketing Officer</span>
                             </h1>
                             <p className="text-zinc-500 text-sm font-semibold leading-relaxed max-w-md mx-auto">
-                                Before getting started, spend 2 minutes answering 5 simple questions about your journey. Sage captures your authentic communication style so Weez AI writes content that sounds exactly like you — not like an AI.
+                                {NINA_NAME} runs marketing for you. Give her 2 minutes and 5 quick questions about your product, customers, and goals — she'll use it to build a real go-to-market strategy, not a generic plan, and to make your content sound exactly like you.
                             </p>
                         </div>
 
@@ -371,7 +467,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                 onClick={startVoiceInterview}
                                 className="w-full h-12 rounded-2xl bg-black hover:bg-black/90 text-white font-bold gap-3 shadow-lg shadow-black/10 active:scale-95 transition-all"
                             >
-                                <Play className="w-4 h-4 fill-white" /> Start Voice Interview (2m)
+                                <Play className="w-4 h-4 fill-white" /> Talk to {NINA_NAME} (2m)
                             </Button>
                             <Button 
                                 onClick={handleSkip}
@@ -383,7 +479,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                         </div>
 
                         <div className="flex items-center justify-center gap-6 pt-6 border-t border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-widest w-full">
-                            <span>🎙️ Sage Voice (Warm)</span>
+                            <span>🎙️ {NINA_NAME}'s Voice (Live)</span>
                             <span>⚡ WebRTC Realtime API</span>
                             <span>🔒 100% Private</span>
                         </div>
@@ -400,7 +496,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                         <div className="space-y-3">
                             <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tight">Are you absolutely sure?</h2>
                             <p className="text-zinc-500 text-xs font-semibold leading-relaxed">
-                                AI content usually sounds robotic and generic. Answering Sage's 5 quick questions builds a <strong className="text-indigo-600 font-black">Personalized Brand Voice Profile</strong>.
+                                Without this, {NINA_NAME} has to guess at your business. Answering her 5 quick questions lets her build a <strong className="text-indigo-600 font-black">realistic, tailored GTM strategy</strong> and content that sounds like you.
                             </p>
                             <p className="text-zinc-600 text-xs font-bold bg-indigo-50/50 p-4 rounded-xl leading-relaxed italic">
                                 "This single step makes your AI-generated marketing up to 10x more personalized, emotional, and authentic to your personal journey."
@@ -412,7 +508,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                 onClick={startVoiceInterview}
                                 className="w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold gap-2 shadow-lg shadow-indigo-600/10"
                             >
-                                Let's talk with Sage (Recommended)
+                                Let's talk with {NINA_NAME} (Recommended)
                             </Button>
                             <Button 
                                 onClick={confirmSkip}
@@ -441,69 +537,90 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                 }`} />
                             </div>
 
-                            {/* The Realtime Voice Orb */}
-                            <div className="relative flex items-center justify-center">
-                                {/* External sound wave rings */}
-                                {isConnected && !isMuted && (
+                            {/* ── Nina circle with a live sound-wave circumference ── */}
+                            <div className="relative flex items-center justify-center" style={{ width: 300, height: 300 }}>
+                                {/* Expanding ripple rings emanating from the circle edge */}
+                                {isConnected && (
                                     <>
-                                        <div 
-                                            className="absolute rounded-full border border-indigo-500/20 animate-ping"
-                                            style={{ 
-                                                width: `${120 + (audioLevel * 1.5)}px`, 
-                                                height: `${120 + (audioLevel * 1.5)}px`,
-                                                animationDuration: "2s" 
-                                            }} 
+                                        <div
+                                            className={`absolute rounded-full border animate-ping ${agentSpeaking ? "border-emerald-400/30" : "border-indigo-400/25"}`}
+                                            style={{ width: `${232 + waveLevel * 0.9}px`, height: `${232 + waveLevel * 0.9}px`, animationDuration: "2s" }}
                                         />
-                                        <div 
-                                            className="absolute rounded-full border border-indigo-400/10 animate-ping"
-                                            style={{ 
-                                                width: `${160 + (audioLevel * 2)}px`, 
-                                                height: `${160 + (audioLevel * 2)}px`,
-                                                animationDuration: "3s" 
-                                            }} 
+                                        <div
+                                            className={`absolute rounded-full border animate-ping ${agentSpeaking ? "border-emerald-400/15" : "border-indigo-400/10"}`}
+                                            style={{ width: `${232 + waveLevel * 1.6}px`, height: `${232 + waveLevel * 1.6}px`, animationDuration: "3s" }}
                                         />
                                     </>
                                 )}
 
-                                {/* Main Liquid Voice Orb */}
-                                <div 
-                                    className={`w-32 h-32 rounded-[2.5rem] bg-gradient-to-tr transition-all duration-700 shadow-2xl flex items-center justify-center ${
-                                        isConnecting ? "from-amber-400 to-orange-500 animate-spin" :
-                                        isMuted ? "from-zinc-400 to-zinc-500" :
-                                        agentSpeaking ? "from-emerald-500 to-teal-400 animate-pulse" :
-                                        "from-indigo-600 to-purple-500"
+                                {/* Radial waveform bars sitting on the circumference (react to whoever is talking) */}
+                                {Array.from({ length: 56 }).map((_, i) => {
+                                    const angle = (i / 56) * 360;
+                                    const wobble = 0.55 + 0.45 * Math.abs(Math.sin(i * 0.9));
+                                    const dynamic = isConnecting ? 4 : 4 + (Math.min(waveLevel, 100) / 100) * 26 * wobble;
+                                    const color = isMuted
+                                        ? "rgb(148 163 184)"
+                                        : agentSpeaking ? "rgb(16 185 129)" : "rgb(99 102 241)";
+                                    return (
+                                        <span
+                                            key={i}
+                                            className="absolute left-1/2 top-1/2 rounded-full"
+                                            style={{
+                                                width: 3,
+                                                height: `${dynamic}px`,
+                                                background: color,
+                                                opacity: 0.75,
+                                                transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-118px)`,
+                                                transition: "height 110ms ease-out, background 300ms ease",
+                                            }}
+                                        />
+                                    );
+                                })}
+
+                                {/* The circle: Nina's image inside */}
+                                <div
+                                    className={`relative w-52 h-52 rounded-full overflow-hidden shadow-2xl ring-4 transition-all duration-500 ${
+                                        isConnecting ? "ring-amber-200" :
+                                        agentSpeaking ? "ring-emerald-200" :
+                                        isMuted ? "ring-zinc-200" : "ring-indigo-200"
                                     }`}
-                                    style={{
-                                        transform: isConnected && !isMuted ? `scale(${1 + (audioLevel / 300)})` : "scale(1)",
-                                        borderRadius: isConnected && !isMuted ? `${40 + (audioLevel / 5)}%` : "2.5rem"
-                                    }}
+                                    style={{ transform: `scale(${1 + Math.min(waveLevel, 100) / 600})` }}
                                 >
-                                    {isConnecting ? (
-                                        <Loader2 className="w-10 h-10 text-white animate-spin" />
-                                    ) : isMuted ? (
-                                        <MicOff className="w-10 h-10 text-white" />
-                                    ) : agentSpeaking ? (
-                                        <Volume2 className="w-10 h-10 text-white animate-bounce" />
-                                    ) : (
-                                        <Mic className="w-10 h-10 text-white animate-pulse" />
+                                    <NinaAvatar className="w-full h-full text-5xl" />
+                                    {(isConnecting || isMuted) && (
+                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                                            {isConnecting
+                                                ? <Loader2 className="w-9 h-9 text-white animate-spin" />
+                                                : <MicOff className="w-9 h-9 text-white" />}
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Interview Connection Status */}
-                            <div className="text-center mt-8 space-y-2 relative z-10">
-                                <h3 className="text-lg font-black text-zinc-900 uppercase tracking-tight leading-none">
-                                    {isConnecting ? "Connecting to Sage..." :
-                                     isMuted ? "Microphone Muted" :
-                                     agentSpeaking ? "Sage is speaking..." :
-                                     "Sage is listening..."}
-                                </h3>
-                                <p className="text-xs text-zinc-400 font-semibold">
-                                    {isConnecting ? "Establishing WebRTC voice channel..." :
-                                     isMuted ? "Click the microphone button to unmute" :
-                                     agentSpeaking ? "Listen carefully & think about your answers" :
-                                     "Speak freely. Answering clearly at your own pace."}
-                                </p>
+                            {/* Status line */}
+                            <div className="text-center mt-8 relative z-10">
+                                <div className="inline-flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${isConnected ? (agentSpeaking ? "bg-emerald-500" : "bg-indigo-500") + " animate-pulse" : "bg-zinc-300"}`} />
+                                    <h3 className="text-base font-bold text-zinc-900 tracking-tight">
+                                        {isConnecting ? `Connecting to ${NINA_NAME}…` :
+                                         isMuted ? "Your mic is muted" :
+                                         agentSpeaking ? `${NINA_NAME} is speaking…` :
+                                         `${NINA_NAME} is listening…`}
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Current question — shown in plain, simple text below the circle */}
+                            <div className="mt-4 min-h-[4.5rem] max-w-md text-center px-4 relative z-10">
+                                {currentQuestion ? (
+                                    <p className="text-lg md:text-xl font-semibold text-zinc-800 leading-relaxed animate-in fade-in duration-500">
+                                        {currentQuestion}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-zinc-400 font-medium">
+                                        {isConnecting ? "Getting Nina ready…" : "Nina will say hello and ask her first question in a moment."}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Control Actions Panel */}
@@ -524,7 +641,7 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                     disabled={isConnecting}
                                     className="h-12 px-8 rounded-2xl bg-black hover:bg-black/90 text-white font-bold gap-2 shadow-lg active:scale-95 transition-all"
                                 >
-                                    Finish & Process Voice
+                                    Finish & Continue
                                 </Button>
                             </div>
                         </div>
@@ -558,8 +675,8 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                             }`}
                                         >
                                             {msg.sender === 'assistant' && (
-                                                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-[10px] font-bold text-indigo-600 shrink-0">
-                                                    S
+                                                <div className="w-7 h-7 rounded-lg overflow-hidden border border-indigo-100/50 shrink-0" title={`${NINA_NAME}, ${NINA_TITLE}`}>
+                                                    <NinaAvatar className="w-full h-full text-[10px]" />
                                                 </div>
                                             )}
                                             <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] text-xs font-medium leading-relaxed ${
@@ -579,9 +696,9 @@ export default function FounderVoiceOnboarding({ spaceId, onComplete, onSkip }: 
                                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Interview Checklist</span>
                                 <div className="grid grid-cols-5 gap-1.5">
                                     {[
-                                        "ICP / Context",
+                                        "Product & Who",
                                         "Origin Story",
-                                        "Contrarian POV",
+                                        "Market POV",
                                         "Lived Moment",
                                         "Tone Bounds"
                                     ].map((q, idx) => {

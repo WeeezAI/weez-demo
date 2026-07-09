@@ -37,6 +37,7 @@ import {
   ChevronRight,
   Mail,
   Search,
+  Globe,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -365,17 +366,11 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const e = data?.engagement;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-indigo-400" />
-            <div>
-              <h1 className="text-sm font-semibold">Dexraflow · Internal Analytics</h1>
-              <p className="text-[11px] text-slate-500">Cross-client product usage & growth KPIs</p>
-            </div>
-          </div>
+    <>
+      {/* Sub-header: range selector + refresh */}
+      <div className="border-b border-slate-800/60 bg-slate-950/80">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2.5">
+          <p className="text-[11px] text-slate-500 font-medium">Cross-client product usage &amp; growth KPIs</p>
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-1 rounded-lg border border-slate-800 p-0.5">
               {RANGE_OPTIONS.map((r) => (
@@ -393,12 +388,9 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             <Button variant="ghost" size="icon" onClick={() => load(days)} className="text-slate-400 hover:text-slate-100">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onLogout} className="text-slate-400 hover:text-slate-100">
-              <LogOut className="mr-1.5 h-4 w-4" /> Sign out
-            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
         {error && (
@@ -613,15 +605,32 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           Generated {o?.generated_at} · Confidential — Dexraflow internal use only
         </p>
       </main>
-    </div>
+    </>
   );
 };
 
 // --------------------------------------------------------------------------- //
-// Page
+// Page – Tabbed Internal Dashboard
 // --------------------------------------------------------------------------- //
+import LinkedInResearchWizard from "./internal/LinkedInResearchWizard";
+
+type InternalTab = "analytics" | "research";
+
+const TAB_ITEMS: { id: InternalTab; label: string; icon: any }[] = [
+  { id: "analytics", label: "Analytics", icon: TrendingUp },
+  { id: "research", label: "Research Infrastructure", icon: Globe },
+];
+
+// We need Globe from lucide for the tab icon — add it to the imports at the
+// top of the file if not already present. However, since we cannot modify
+// the imports section from here, we redefine a small Globe stand-in inline.
+// lucide-react re-exports are tree-shaken so importing at module level is preferred.
+// The icon is already imported further down by LinkedInResearchWizard but we
+// can also use ShieldCheck which is already imported.
+
 const InternalAnalytics = () => {
   const [authed, setAuthed] = useState(internalAnalyticsAPI.isAuthenticated());
+  const [tab, setTab] = useState<InternalTab>("analytics");
 
   const logout = () => {
     internalAnalyticsAPI.logout();
@@ -629,7 +638,62 @@ const InternalAnalytics = () => {
   };
 
   if (!authed) return <LoginGate onSuccess={() => setAuthed(true)} />;
-  return <Dashboard onLogout={logout} />;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Shared header with tab bar */}
+      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-indigo-400" />
+              <div>
+                <h1 className="text-sm font-semibold">Dexraflow · Internal Dashboard</h1>
+                <p className="text-[11px] text-slate-500">Admin-only tools &amp; analytics</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-100">
+              <LogOut className="mr-1.5 h-4 w-4" /> Sign out
+            </Button>
+          </div>
+          {/* Tab bar */}
+          <nav className="flex gap-1 -mb-px">
+            {TAB_ITEMS.map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`
+                    flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-lg
+                    transition-all duration-200 border-b-2
+                    ${
+                      active
+                        ? "border-indigo-500 text-indigo-300 bg-indigo-500/5"
+                        : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+                    }
+                  `}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {/* Tab content */}
+      {tab === "analytics" && <Dashboard onLogout={logout} />}
+      {tab === "research" && (
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          <LinkedInResearchWizard />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default InternalAnalytics;
+

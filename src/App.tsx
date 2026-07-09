@@ -24,6 +24,9 @@ import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
 import SalesWorkspace from "./pages/SalesWorkspace";
 import GrowthStrategist from "./pages/GrowthStrategist";
+import Robert from "./pages/Robert";
+import Max from "./pages/Max";
+import Eva from "./pages/Eva";
 import MarketDiscovery from "./pages/MarketDiscovery";
 import RevenueIntelligence from "./pages/RevenueIntelligence";
 import NotFound from "./pages/NotFound";
@@ -63,12 +66,12 @@ const HubSpotCallbackRedirect = () => {
 
 const RedirectToMarketDiscovery = () => {
   const { spaceId } = useParams<{ spaceId: string }>();
-  return <Navigate to={`/sales/${spaceId}?tab=market-discovery`} replace />;
+  return <Navigate to={`/leads/${spaceId}?tab=market-discovery`} replace />;
 };
 
 const RedirectToRevenue = () => {
   const { spaceId } = useParams<{ spaceId: string }>();
-  return <Navigate to={`/sales/${spaceId}?tab=revenue`} replace />;
+  return <Navigate to={`/leads/${spaceId}?tab=revenue`} replace />;
 };
 
 const queryClient = new QueryClient();
@@ -137,10 +140,16 @@ const AppContent = () => {
               <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
               <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />
-              <Route path="/sales/:spaceId" element={<SalesAssistant />} />
+              {/* Max — AI Outbound & Relationship-Intelligence command center
+                  (replaces the old Sales page). The legacy lead/CRM view is
+                  kept at /leads so Market Discovery & Revenue tabs still work. */}
+              <Route path="/sales/:spaceId" element={<Max />} />
+              <Route path="/leads/:spaceId" element={<SalesAssistant />} />
               <Route path="/sales-intelligence/:spaceId" element={<SalesIntelligence />} />
               <Route path="/sales-workspace/:spaceId" element={<SalesWorkspace />} />
               <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
+              <Route path="/robert/:spaceId" element={<Robert />} />
+              <Route path="/eva/:spaceId" element={<Eva />} />
               <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />

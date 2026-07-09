@@ -1,70 +1,66 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Sparkles, ArrowRight, Instagram, Linkedin, Target, Wand2,
-  Rocket, LineChart, Zap, BrainCircuit, MessageSquare, BarChart3,
-  Users, Building2, Briefcase, Check, Menu, Play, TrendingUp, Quote,
+  Sparkles, ArrowRight, Instagram, Linkedin, BrainCircuit, BarChart3, PenSquare,
+  Check, X, Menu, Play, TrendingUp, Quote,
+  Radar, Send, CalendarRange, Layers, Signal, CheckCircle2,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
-import showcaseNotebook1 from "@/assets/showcase/notebooklm1.png";
-import showcaseNotebook2 from "@/assets/showcase/notebooklm2.png";
-import showcaseNotion1 from "@/assets/showcase/notion1.png";
-import showcaseNotion2 from "@/assets/showcase/notion2.png";
-import showcaseMedscore1 from "@/assets/showcase/medscore1.jpeg";
-import showcaseMedscore2 from "@/assets/showcase/medscore2.jpeg";
-import showcaseDexraflow1 from "@/assets/showcase/dexraflow1.png";
-import showcaseDexraflow2 from "@/assets/showcase/dexraflow2.png";
-import showcaseZeeks1 from "@/assets/showcase/zeeks1.jpeg";
-import showcaseZeeks2 from "@/assets/showcase/zeeks2.jpeg";
-import HeroTaskStream from "@/components/HeroTaskStream";
+import AnimatedBackground from "@/components/landing/AnimatedBackground";
+import HeroWorkforce from "@/components/HeroWorkforce";
 import HeroAITeam from "@/components/HeroAITeam";
-import HeroTeamAvatars from "@/components/HeroTeamAvatars";
-import { OutboundWorkflow } from "@/components/OutboundWorkflow";
-import { LivingWorkflow } from "@/components/LivingWorkflow";
+import WeezWorkflow from "@/components/landing/WeezWorkflow";
+import PostToMeeting from "@/components/landing/PostToMeeting";
+import ReplaceStack from "@/components/landing/ReplaceStack";
+import ninna from "@/assets/team/ninna.jpg";
+import robert from "@/assets/team/robert.jpg";
+import eva from "@/assets/team/eva.jpg";
+import maxImg from "@/assets/team/max.jpg";
 
-/* =============== Reusable bits =============== */
+/* =============== Motion + primitives =============== */
 
 const fadeUp: any = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 26 },
   show: (i: number = 0) => ({
-    opacity: 1, y: 0,
+    opacity: 1,
+    y: 0,
     transition: { duration: 0.7, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] as any },
   }),
 };
 
-const GlowOrb = ({ className = "", color = "from-blue-500/40" }: any) => (
-  <div className={`pointer-events-none absolute rounded-full blur-[120px] ${className}`}>
-    <div className={`w-full h-full bg-gradient-to-br ${color} to-transparent rounded-full`} />
-  </div>
-);
-
-const GridBG = () => (
-  <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.05)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
-);
+const scrollTo = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
 const Section = ({ id, children, className = "" }: any) => (
-  <section id={id} className={`relative py-28 px-6 ${className}`}>
-    <div className="max-w-7xl mx-auto relative">{children}</div>
+  <section id={id} className={`relative py-24 md:py-28 px-6 ${className}`}>
+    <div className="relative mx-auto max-w-7xl">{children}</div>
   </section>
 );
 
 const Eyebrow = ({ children }: any) => (
   <motion.div
-    variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-    className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-900/10 bg-white/70 backdrop-blur text-xs font-medium text-slate-700"
+    variants={fadeUp}
+    initial="hidden"
+    whileInView="show"
+    viewport={{ once: true }}
+    className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur"
   >
-    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
     {children}
   </motion.div>
 );
 
 const H2 = ({ children, className = "" }: any) => (
   <motion.h2
-    variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-    className={`font-agrandir font-bold text-4xl md:text-6xl tracking-tight text-slate-900 leading-[1.05] ${className}`}
+    variants={fadeUp}
+    initial="hidden"
+    whileInView="show"
+    viewport={{ once: true }}
+    className={`text-4xl font-semibold leading-[1.08] tracking-tight text-slate-900 md:text-5xl ${className}`}
   >
     {children}
   </motion.h2>
@@ -72,222 +68,158 @@ const H2 = ({ children, className = "" }: any) => (
 
 const Sub = ({ children, className = "" }: any) => (
   <motion.p
-    variants={fadeUp} custom={1} initial="hidden" whileInView="show" viewport={{ once: true }}
-    className={`text-base md:text-lg text-slate-600 max-w-2xl ${className}`}
+    variants={fadeUp}
+    custom={1}
+    initial="hidden"
+    whileInView="show"
+    viewport={{ once: true }}
+    className={`max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg ${className}`}
   >
     {children}
   </motion.p>
 );
 
-const GradientButton = ({ children, onClick, variant = "primary" }: any) => {
-  if (variant === "ghost") {
-    return (
-      <button
-        onClick={onClick}
-        className="group relative inline-flex items-center gap-2 h-12 px-6 rounded-full border border-slate-900/15 bg-slate-900/[0.04] backdrop-blur text-slate-900 text-sm font-medium hover:bg-slate-900/[0.06] transition"
-      >
-        {children}
-      </button>
-    );
-  }
-  return (
-    <button
-      onClick={onClick}
-      className="group relative inline-flex items-center gap-2 h-12 px-6 rounded-full text-white text-sm font-semibold overflow-hidden"
-    >
-      <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400" />
-      <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 blur-xl opacity-60 group-hover:opacity-90 transition" />
-      <span className="relative flex items-center gap-2">
-        {children}
-        <ArrowRight className="w-4 h-4 transition group-hover:translate-x-0.5" />
-      </span>
-    </button>
-  );
-};
+const PrimaryButton = ({ children, onClick }: any) => (
+  <button
+    onClick={onClick}
+    className="group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-full px-6 text-sm font-semibold text-white"
+  >
+    <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400" />
+    <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 opacity-60 blur-xl transition group-hover:opacity-90" />
+    <span className="relative flex items-center gap-2">
+      {children}
+      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+    </span>
+  </button>
+);
 
-/* =============== Hero Visual =============== */
+const GhostButton = ({ children, onClick }: any) => (
+  <button
+    onClick={onClick}
+    className="group inline-flex h-12 items-center gap-2 rounded-full border border-slate-900/15 bg-slate-900/[0.03] px-6 text-sm font-medium text-slate-900 backdrop-blur transition hover:bg-slate-900/[0.06]"
+  >
+    {children}
+  </button>
+);
 
-const HeroVisual = () => {
-  const navigate = useNavigate();
-  const prompts = [
-    "Run my Marketing for 30 days",
-    "Maximize my engagement for 30 days",
-    "Do content posting for 30 days",
-    "Do rapid marketing for 30 days",
-  ];
-  const chips = prompts;
-  const tabs = [
-    { label: "Chat", icon: <MessageSquare className="w-3.5 h-3.5" /> },
-    { label: "Content Planner", icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { label: "Connectors", icon: <Zap className="w-3.5 h-3.5" /> },
-  ];
+/* =============== Data =============== */
 
-  const [typed, setTyped] = useState("");
-  const [promptIdx, setPromptIdx] = useState(0);
-  const [phase, setPhase] = useState<"typing" | "pause" | "deleting">("typing");
-  const [userTyping, setUserTyping] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+const TEAM_MINI = [
+  { name: "Ninna", role: "CMO", img: ninna, ring: "ring-violet-400" },
+  { name: "Eva", role: "Analyst", img: eva, ring: "ring-emerald-400" },
+  { name: "Max", role: "Outreach", img: maxImg, ring: "ring-amber-400" },
+  { name: "Robert", role: "Content", img: robert, ring: "ring-blue-400" },
+];
 
-  useEffect(() => {
-    if (userTyping) return;
-    const full = prompts[promptIdx];
-    let timeout: any;
-    if (phase === "typing") {
-      if (typed.length < full.length) {
-        timeout = setTimeout(() => setTyped(full.slice(0, typed.length + 1)), 55);
-      } else {
-        timeout = setTimeout(() => setPhase("deleting"), 1400);
-      }
-    } else if (phase === "deleting") {
-      if (typed.length > 0) {
-        timeout = setTimeout(() => setTyped(typed.slice(0, -1)), 28);
-      } else {
-        setPromptIdx((i) => (i + 1) % prompts.length);
-        setPhase("typing");
-      }
-    }
-    return () => clearTimeout(timeout);
-  }, [typed, phase, promptIdx, userTyping]);
+const STEPS = [
+  {
+    n: "01",
+    icon: <BrainCircuit className="h-5 w-5" />,
+    title: "Learn your company",
+    desc: "Weez learns your founder voice, product, positioning, and ICP — the context a marketing hire would take weeks to absorb.",
+  },
+  {
+    n: "02",
+    icon: <PenSquare className="h-5 w-5" />,
+    title: "Create campaigns & content",
+    desc: "Your AI team turns founder knowledge into founder-led content, messaging, and campaign angles built for your ICP.",
+  },
+  {
+    n: "03",
+    icon: <Radar className="h-5 w-5" />,
+    title: "Find high-intent accounts",
+    desc: "It tracks hiring, product, and growth signals to surface companies already showing intent — not scraped random lists.",
+  },
+  {
+    n: "04",
+    icon: <CalendarRange className="h-5 w-5" />,
+    title: "Run warm outbound & book meetings",
+    desc: "Weez finds the right buyer, enriches the contact, drafts contextual outreach, and moves conversations toward booked meetings.",
+  },
+];
 
-  const goAuth = () => navigate("/auth");
+const CAPABILITIES = [
+  {
+    icon: <PenSquare className="h-5 w-5" />,
+    title: "Founder-Led Content Engine",
+    desc: "Posts, campaigns, and narratives generated from founder context and product positioning.",
+    accent: "from-blue-600 to-sky-500",
+    large: true,
+  },
+  {
+    icon: <CalendarRange className="h-5 w-5" />,
+    title: "Campaign Planning & Execution",
+    desc: "Plan content arcs and campaigns around launches, growth priorities, and product motion.",
+    accent: "from-violet-500 to-fuchsia-500",
+    large: true,
+  },
+  {
+    icon: <Radar className="h-5 w-5" />,
+    title: "Event-Driven Account Discovery",
+    desc: "Track hiring, product launches, and growth signals across companies that match your ICP.",
+    accent: "from-emerald-500 to-teal-500",
+  },
+  {
+    icon: <Send className="h-5 w-5" />,
+    title: "Warm Outbound Workflow",
+    desc: "Select the right contact, enrich them, and generate contextual outreach from real company motion.",
+    accent: "from-amber-500 to-orange-500",
+  },
+  {
+    icon: <BarChart3 className="h-5 w-5" />,
+    title: "Marketing Intelligence & Analytics",
+    desc: "Understand what's converting and which accounts and campaigns deserve attention next.",
+    accent: "from-sky-500 to-blue-600",
+  },
+];
 
-  // Container scroll animation
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
-  const rotateX = useTransform(scrollYProgress, [0, 0.5], [22, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.5], [0.92, 1]);
-  const translateY = useTransform(scrollYProgress, [0, 0.5], [40, 0]);
+const DIFFERENTIATORS = [
+  {
+    icon: <BrainCircuit className="h-6 w-6" />,
+    title: "It understands your business first",
+    desc: "Weez doesn't start with prompts or random sequences. It learns your founder context, product, and customer profile before it writes or sends anything.",
+  },
+  {
+    icon: <Signal className="h-6 w-6" />,
+    title: "It works from buying signals",
+    desc: "Instead of blasting generic outbound, Weez monitors companies showing relevant hiring, product, and growth signals — then acts on live intent.",
+  },
+  {
+    icon: <Layers className="h-6 w-6" />,
+    title: "Content + outbound in one system",
+    desc: "Most tools either create content or automate sales. Weez connects founder-led marketing, campaign execution, and warm outbound into a single workflow.",
+  },
+];
 
-  return (
-    <div ref={containerRef} className="relative mx-auto w-full max-w-5xl" style={{ perspective: "1200px" }}>
-      <motion.div
-        style={{ rotateX, scale, y: translateY, transformStyle: "preserve-3d" }}
-        className="relative"
-      >
-      <div className="relative rounded-3xl border border-slate-900/10 bg-white/70 backdrop-blur-2xl shadow-2xl shadow-blue-900/20 overflow-hidden">
-        <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-blue-400/70 to-transparent" />
+const BEST_FIT = [
+  "Founder-led B2B SaaS startups",
+  "Post-validation / PMF-ish teams",
+  "Lean GTM teams without a full marketing org",
+  "Teams scaling content + outbound without 4 separate hires",
+  "Startups that need pipeline before building an in-house team",
+];
 
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-900/5">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
-            <span className="ml-3 text-xs text-slate-500 font-mono">weez.ai / autopilot</span>
-          </div>
-          <div className="flex items-center gap-1">
-            {tabs.map((t, i) => (
-              <div
-                key={t.label}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider ${
-                  i === 0
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                    : "text-slate-400"
-                }`}
-              >
-                {t.icon}
-                <span className="hidden sm:inline">{t.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+const NOT_FOR = [
+  "Enterprise teams with a 20-person marketing org",
+  "Ecommerce and D2C brands",
+  "Agencies wanting white-labeled lead scraping",
+  "Pure B2C consumer apps",
+];
 
-        {/* Body */}
-        <div className="px-6 sm:px-10 py-10 sm:py-14 bg-gradient-to-b from-blue-50/40 via-white to-sky-50/30">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/70 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700">
-              <Zap className="w-3 h-3" />
-              Autonomous Marketing Workforce
-            </div>
-          </div>
-
-          <h3 className="mt-5 text-center text-2xl sm:text-4xl font-semibold tracking-tight text-slate-900">
-            What shall we architect for<br />
-            <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 bg-clip-text text-transparent">
-              Acme Grade
-            </span>{" "}
-            today?
-          </h3>
-          <p className="mt-3 text-center text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
-            Deploy conversion-optimized artifacts and strategic narratives with absolute brand alignment.
-          </p>
-
-          {/* Editable Input */}
-          <form
-            onSubmit={(e) => { e.preventDefault(); goAuth(); }}
-            className="mt-8 rounded-2xl bg-white border border-slate-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-4 cursor-text"
-            onClick={() => inputRef.current?.focus()}
-          >
-            <div className="min-h-[44px] flex items-center">
-              <input
-                ref={inputRef}
-                value={typed}
-                onFocus={() => { if (!userTyping) { setUserTyping(true); setTyped(""); } }}
-                onChange={(e) => { setUserTyping(true); setTyped(e.target.value); }}
-                placeholder="Ask Weez anything…"
-                className="w-full bg-transparent border-0 outline-none text-sm text-slate-700 placeholder:text-slate-300"
-              />
-              {!userTyping && (
-                <span className="ml-0.5 inline-block w-[2px] h-4 bg-blue-500 animate-pulse" />
-              )}
-            </div>
-            <div className="flex items-center justify-end pt-3 border-t border-slate-900/5">
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-slate-600 bg-slate-50 border border-slate-900/5 hover:bg-slate-100 transition"
-              >
-                <Wand2 className="w-3 h-3" />
-                Configure Workspace
-              </button>
-            </div>
-          </form>
-
-          <button
-            onClick={goAuth}
-            className="mt-6 w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-600 text-white py-4 text-sm font-semibold uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 transition-shadow"
-          >
-            <Rocket className="w-4 h-4" />
-            Run Autonomous Campaign
-          </button>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {chips.map((c, i) => (
-              <motion.button
-                key={c}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 + i * 0.1 }}
-                onClick={goAuth}
-                className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-[11px] font-medium hover:scale-[1.03] transition-transform"
-              >
-                {c}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity }}
-        className="absolute -left-4 top-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-slate-900/10 bg-white shadow-lg text-xs text-slate-900">
-        <Wand2 className="w-3.5 h-3.5 text-blue-500" /> Caption generated
-      </motion.div>
-      <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 6, repeat: Infinity }}
-        className="absolute -right-4 bottom-20 hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-slate-900/10 bg-white shadow-lg text-xs text-slate-900">
-        <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> CTR up 24%
-      </motion.div>
-      </motion.div>
-    </div>
-  );
-};
+const METRICS = [
+  { v: "5x", l: "Faster campaign creation" },
+  { v: "+62%", l: "Engagement uplift" },
+  { v: "-41%", l: "Lower marketing cost" },
+  { v: "1.2k+", l: "Pilot users & waitlist" },
+];
 
 /* =============== Page =============== */
 
 const Landing = () => {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
+  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
+
   const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const [currency, setCurrency] = useState<"USD" | "INR">("USD");
   const priceTable = {
@@ -295,65 +227,48 @@ const Landing = () => {
     INR: { symbol: "₹", monthly: 2999, yearly: 1999, yearlyTotal: 23988, savings: 12000 },
   } as const;
   const fmt = (n: number) => n.toLocaleString(currency === "INR" ? "en-IN" : "en-US");
-  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
 
-  // Rotating hero word
-  const rotatingWords = ["Runs Itself", "Plans Itself", "Creates Itself", "Launches Itself", "Optimizes Itself"];
-  const [wordIdx, setWordIdx] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setWordIdx((i) => (i + 1) % rotatingWords.length), 2200);
-    return () => clearInterval(id);
-  }, []);
-
-  const features = [
-    { icon: <Wand2 />, title: "Hyperpersonalized Content Creation", desc: "Generate posts, ads, and creatives instantly." },
-    { icon: <MessageSquare />, title: "Automated Engagement", desc: "Convert conversations into leads, on autopilot." },
-    { icon: <BarChart3 />, title: "Deep Analytics & Insights", desc: "Actionable recommendations on every metric." },
-  ];
-
-  const audiences = [
-    { icon: <Building2 />, title: "SaaS Founders", desc: "Scale marketing without hiring a team." },
-    { icon: <Users />, title: "Growth Teams", desc: "Automate execution and focus on strategy." },
-    { icon: <Briefcase />, title: "Startups", desc: "Drive consistent user acquisition." },
-  ];
-
-  const integrations = ["LinkedIn", "Instagram", "Meta Ads", "Google Ads", "HubSpot", "Salesforce", "Notion", "Slack"];
+  const goAuth = () => navigate("/auth");
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-500/20 [overflow-x:clip]">
-      {/* Global ambient gradient */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(34,211,238,0.12),transparent_55%)]" />
-      </div>
+    <div className="relative min-h-screen bg-[#FBFCFE] font-sans text-slate-900 [overflow-x:clip] selection:bg-blue-500/20">
+      <AnimatedBackground />
 
-      {/* Nav */}
-      <header className="fixed top-0 w-full z-50 backdrop-blur-xl bg-white/70 border-b border-slate-900/5">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+      {/* ============ NAV ============ */}
+      <header className="fixed top-0 z-50 w-full border-b border-slate-900/5 bg-white/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="flex cursor-pointer items-center gap-3" onClick={() => navigate("/")}>
             <img src={logo} alt="Weez AI" className="h-7 w-auto" />
           </div>
-          <nav className="hidden md:flex items-center gap-8 text-sm text-slate-700">
-            <a href="#how" className="hover:text-slate-900 transition">How it works</a>
-            <a href="#features" className="hover:text-slate-900 transition">Features</a>
-            <a href="#integrations" className="hover:text-slate-900 transition">Integrations</a>
-            <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
-            <a href="#vision" className="hover:text-slate-900 transition">Vision</a>
+          <nav className="hidden items-center gap-8 text-sm text-slate-700 md:flex">
+            <button onClick={() => scrollTo("how")} className="transition hover:text-slate-900">How it works</button>
+            <button onClick={() => scrollTo("team")} className="transition hover:text-slate-900">The team</button>
+            <button onClick={() => scrollTo("capabilities")} className="transition hover:text-slate-900">Capabilities</button>
+            <button onClick={() => scrollTo("why")} className="transition hover:text-slate-900">Why Weez</button>
+            <button onClick={() => scrollTo("pricing")} className="transition hover:text-slate-900">Pricing</button>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate('/auth')} className="hidden sm:inline-flex text-slate-800 hover:text-slate-900 hover:bg-slate-900/[0.04] rounded-full">Log in</Button>
-            <GradientButton onClick={() => navigate('/auth')}>Start Free</GradientButton>
+            <Button
+              variant="ghost"
+              onClick={goAuth}
+              className="hidden rounded-full text-slate-800 hover:bg-slate-900/[0.04] hover:text-slate-900 sm:inline-flex"
+            >
+              Log in
+            </Button>
+            <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
             <div className="md:hidden">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-slate-900"><Menu /></Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="bg-white border-slate-900/10 text-slate-900 pt-20">
+                <SheetContent side="right" className="border-slate-900/10 bg-white pt-20 text-slate-900">
                   <nav className="flex flex-col gap-5 text-lg">
-                    <a href="#how">How it works</a>
-                    <a href="#features">Features</a>
-                    <a href="#integrations">Integrations</a>
-                    <a href="#vision">Vision</a>
-                    <button onClick={() => navigate('/auth')} className="text-left">Log in</button>
+                    <button className="text-left" onClick={() => scrollTo("how")}>How it works</button>
+                    <button className="text-left" onClick={() => scrollTo("team")}>The team</button>
+                    <button className="text-left" onClick={() => scrollTo("capabilities")}>Capabilities</button>
+                    <button className="text-left" onClick={() => scrollTo("why")}>Why Weez</button>
+                    <button className="text-left" onClick={() => scrollTo("pricing")}>Pricing</button>
+                    <button onClick={goAuth} className="text-left">Log in</button>
                   </nav>
                 </SheetContent>
               </Sheet>
@@ -362,535 +277,405 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* 1. HERO */}
-      <section className="relative pt-40 pb-28 px-6">
-        <GridBG />
-        <GlowOrb className="w-[600px] h-[600px] -top-40 -left-40" color="from-blue-600/50" />
-        <GlowOrb className="w-[500px] h-[500px] top-20 right-0" color="from-blue-500/40" />
-        <GlowOrb className="w-[400px] h-[400px] bottom-0 left-1/3" color="from-sky-400/30" />
+      {/* ============ 1. HERO ============ */}
+      <section className="relative px-6 pb-24 pt-32 md:pt-40">
+        <motion.div style={{ y: heroY }} className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
+          {/* Left: copy */}
+          <div className="relative text-center lg:text-left">
+            <Eyebrow>AI-Native Marketing Workforce · Built for B2B SaaS</Eyebrow>
 
-        <HeroTaskStream />
-
-        <motion.div style={{ y: heroY }} className="relative max-w-7xl mx-auto text-center">
-          <Eyebrow>Autonomous Marketing • Live Beta</Eyebrow>
-          <motion.h1
-            variants={fadeUp} custom={1} initial="hidden" animate="show"
-            className="mt-6 font-agrandir font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95]"
-          >
-            Meet Your{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400">
-              AI Native
-            </span>
-            <br />
-            Marketing Team
-          </motion.h1>
-          <HeroTeamAvatars />
-
-          <motion.p
-            variants={fadeUp} custom={2} initial="hidden" animate="show"
-            className="mt-8 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
-          >
-            Weez AI plans, creates, launches, and optimizes your marketing — so you get high qualified leads without hiring a team.
-          </motion.p>
-          <motion.div
-            variants={fadeUp} custom={3} initial="hidden" animate="show"
-            className="mt-9 flex items-center justify-center gap-3 flex-wrap"
-          >
-            <GradientButton onClick={() => navigate('/auth')}>Start Automating Marketing</GradientButton>
-            <GradientButton variant="ghost"><Play className="w-4 h-4" /> Watch Demo</GradientButton>
-          </motion.div>
-
-          <motion.div
-            variants={fadeUp} custom={4} initial="hidden" animate="show"
-            className="mt-6 flex justify-center"
-          >
-            <a
-              href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
-              target="_blank"
-              rel="noopener noreferrer"
+            <motion.h1
+              variants={fadeUp}
+              custom={1}
+              initial="hidden"
+              animate="show"
+              className="mt-6 text-[2.6rem] font-bold leading-[1.02] tracking-tight text-slate-900 sm:text-6xl lg:text-[4.1rem]"
             >
-              <img
-                alt="Weez AI - Where Marketing Runs Itself | Product Hunt"
-                width="250"
-                height="54"
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=light&t=1778051193830"
-              />
-            </a>
-          </motion.div>
+              B2B SaaS growth without hiring a{" "}
+              <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 bg-clip-text text-transparent">
+                full marketing team
+              </span>
+            </motion.h1>
 
-          <HeroAITeam />
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              initial="hidden"
+              animate="show"
+              className="mx-auto mt-6 max-w-xl text-lg text-slate-600 lg:mx-0"
+            >
+              Weez is your AI-native marketing workforce — learning your founder voice, product,
+              and ICP to create content, track high-intent accounts, and run warm outbound that
+              turns into meetings.
+            </motion.p>
 
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              initial="hidden"
+              animate="show"
+              className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+            >
+              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+              <GhostButton onClick={() => scrollTo("workflow")}>
+                <Play className="h-4 w-4" /> See Weez in Action
+              </GhostButton>
+            </motion.div>
 
+            {/* mini team + proof */}
+            <motion.div
+              variants={fadeUp}
+              custom={4}
+              initial="hidden"
+              animate="show"
+              className="mt-9 flex flex-col items-center gap-4 lg:flex-row lg:items-center"
+            >
+              <div className="flex -space-x-3">
+                {TEAM_MINI.map((m) => (
+                  <div key={m.name} className={`h-10 w-10 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-[#FBFCFE] ${m.ring}`}>
+                    <img src={m.img} alt={m.name} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <div className="text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">Ninna, Eva, Max &amp; Robert</span> — your
+                AI team, online now.
+              </div>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              custom={5}
+              initial="hidden"
+              animate="show"
+              className="mt-6 flex justify-center lg:justify-start"
+            >
+              <a
+                href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  alt="Weez AI on Product Hunt"
+                  width="230"
+                  height="50"
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=light&t=1778051193830"
+                />
+              </a>
+            </motion.div>
+          </div>
+
+          {/* Right: dynamic team-at-work console */}
+          <div className="relative">
+            <HeroWorkforce />
+          </div>
         </motion.div>
       </section>
 
-      {/* 2. PROBLEM */}
-      <Section>
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
-          <div>
-            <Eyebrow>The Problem</Eyebrow>
-            <H2 className="mt-5">Marketing is slow, expensive,<br/> and hard to scale.</H2>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {[
-              "Founders don't have time to run marketing consistently",
-              "Hiring marketers or agencies is expensive",
-              "Campaigns take weeks to execute",
-              "Results are unpredictable and hard to optimize",
-            ].map((t, i) => (
-              <motion.div key={t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-                className="p-5 rounded-2xl border border-slate-900/10 bg-slate-900/[0.02] backdrop-blur">
-                <div className="text-rose-300 text-xs font-mono mb-2">PROBLEM 0{i + 1}</div>
-                <p className="text-slate-800 text-sm leading-relaxed">{t}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* 3. SOLUTION */}
-      <Section>
-        <div className="text-center mb-14">
-          <Eyebrow>The Solution</Eyebrow>
-          <H2 className="mt-5">Weez AI runs your marketing<br/> end-to-end.</H2>
-        </div>
-        <div className="grid md:grid-cols-4 gap-4">
-          {[
-            { i: <Target />, t: "Plans campaigns", d: "Based on your goals." },
-            { i: <Wand2 />, t: "Creates content", d: "Posts, ads, creatives." },
-            { i: <Rocket />, t: "Launches everywhere", d: "Across every platform." },
-            { i: <LineChart />, t: "Optimizes results", d: "Improves automatically." },
-          ].map((s, i) => (
-            <motion.div key={s.t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="relative p-6 rounded-2xl border border-slate-900/10 bg-gradient-to-b from-white/[0.05] to-transparent overflow-hidden group">
-              <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-blue-500/20 blur-3xl group-hover:bg-blue-500/30 transition" />
-              <div className="relative">
-                <div className="w-11 h-11 rounded-xl bg-slate-900/[0.04] border border-slate-900/10 flex items-center justify-center text-blue-300 mb-4">
-                  {s.i}
-                </div>
-                <h3 className="font-semibold text-slate-900">{s.t}</h3>
-                <p className="text-sm text-slate-600 mt-1">{s.d}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* 4. HOW IT WORKS */}
+      {/* ============ 2. HOW IT WORKS ============ */}
       <Section id="how">
-        <div className="text-center mb-16">
-          <Eyebrow>How it Works</Eyebrow>
-          <H2 className="mt-5">From strategy to results — automatically.</H2>
-        </div>
-        <div className="relative grid lg:grid-cols-3 gap-6">
-          {/* connecting line */}
-          <div className="hidden lg:block absolute top-16 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
-          {[
-            { n: "01", t: "Set Your Goal", d: "Tell Weez what you want — leads, growth, or engagement.", i: <Target /> },
-            { n: "02", t: "Launch Instantly", d: "AI generates content and runs campaigns across platforms.", i: <Rocket /> },
-            { n: "03", t: "Optimize Forever", d: "Tracks performance and improves results over time.", i: <TrendingUp /> },
-          ].map((s, i) => (
-            <motion.div key={s.n} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="relative p-7 rounded-3xl border border-slate-900/10 bg-slate-900/[0.03] backdrop-blur-xl">
-              <div className="flex items-center justify-between mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-900/40">
-                  {s.i}
-                </div>
-                <span className="font-agrandir font-bold text-5xl text-slate-900/10">{s.n}</span>
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900">{s.t}</h3>
-              <p className="text-slate-600 text-sm mt-2 leading-relaxed">{s.d}</p>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* 5. FEATURES */}
-      <Section id="features">
-        <div className="text-center mb-14">
-          <Eyebrow>Capabilities</Eyebrow>
-          <H2 className="mt-5">Power up your marketing<br/> with next-gen automation.</H2>
-          <Sub className="mt-5 mx-auto">Weez AI combines intelligence and execution to run campaigns that actually perform.</Sub>
-        </div>
-
-        {/* Big cards */}
-        <div className="grid md:grid-cols-2 gap-5 mb-5">
-          {[
-            { t: "All-in-One Marketing Automation", d: "Plan, create, and launch campaigns across platforms — all from one place.", g: "from-blue-600/30 to-blue-500/20" },
-            { t: "Smarter Campaigns. Better Results.", d: "AI analyzes performance, optimizes in real-time, and scales what works.", g: "from-sky-400/30 to-blue-600/20" },
-          ].map((c, i) => (
-            <motion.div key={c.t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className={`relative p-8 md:p-10 rounded-3xl border border-slate-900/10 bg-gradient-to-br ${c.g} overflow-hidden min-h-[260px]`}>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
-              <div className="relative">
-                <Sparkles className="w-6 h-6 text-slate-800 mb-5" />
-                <h3 className="font-agrandir font-bold text-3xl text-slate-900 leading-tight">{c.t}</h3>
-                <p className="text-slate-700 mt-3 max-w-md">{c.d}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Small cards */}
-        <div className="grid md:grid-cols-3 gap-5">
-          {features.map((f, i) => (
-            <motion.div key={f.title} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="p-6 rounded-2xl border border-slate-900/10 bg-slate-900/[0.03] hover:bg-slate-900/[0.06] transition">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/15 text-blue-300 flex items-center justify-center mb-4">
-                {f.icon}
-              </div>
-              <h4 className="font-semibold text-slate-900">{f.title}</h4>
-              <p className="text-sm text-slate-600 mt-1">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* 6. WHO IT'S FOR */}
-      <Section>
-        <div className="text-center mb-14">
-          <Eyebrow>Who It's For</Eyebrow>
-          <H2 className="mt-5">Built for founders & teams who want<br/> marketing on autopilot.</H2>
-        </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {audiences.map((a, i) => (
-            <motion.div key={a.title} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="p-7 rounded-3xl border border-slate-900/10 bg-gradient-to-b from-white/[0.04] to-transparent text-center">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/30 to-blue-500/30 flex items-center justify-center text-blue-200 mb-4">
-                {a.icon}
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900">{a.title}</h3>
-              <p className="text-slate-600 text-sm mt-2">{a.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* 7. INTEGRATIONS */}
-      <Section id="integrations">
-        <div className="text-center max-w-3xl mx-auto mb-14">
-          <Eyebrow>Integrations</Eyebrow>
-          <H2 className="mt-5">Connect the channels that<br/> actually drive growth.</H2>
-          <Sub className="mt-5">Weez AI plugs directly into the tools your team already lives in — capturing leads, running campaigns, and reporting back to you automatically.</Sub>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            {
-              name: "HubSpot CRM",
-              tag: "Lead Tracking",
-              desc: "Every lead generated by Weez AI flows straight into HubSpot — enriched, scored, and ready for sales follow-up.",
-              icon: <Target className="w-6 h-6 text-white" />,
-              gradient: "from-orange-500 to-rose-500",
-              bullets: ["Auto-sync new leads", "Lifecycle stage updates", "Pipeline-ready contacts"],
-            },
-            {
-              name: "LinkedIn",
-              tag: "B2B Marketing",
-              desc: "Run founder-led B2B campaigns — posts, thought leadership, and lead gen ads — fully automated for your ICP.",
-              icon: <Linkedin className="w-6 h-6 text-white" />,
-              gradient: "from-sky-500 to-blue-600",
-              bullets: ["Daily authority posts", "Lead gen ad campaigns", "Inbound DM playbooks"],
-            },
-            {
-              name: "Instagram",
-              tag: "B2C Marketing",
-              desc: "Drive consumer demand with auto-generated reels, carousels, and stories — published on the best-performing time slots.",
-              icon: <Instagram className="w-6 h-6 text-white" />,
-              gradient: "from-blue-500 to-pink-500",
-              bullets: ["Reels & carousels", "Story automation", "Smart scheduling"],
-            },
-          ].map((it, i) => (
-            <motion.div key={it.name} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="group relative p-7 rounded-3xl border border-slate-900/10 bg-white/80 backdrop-blur hover:border-slate-900/20 transition">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${it.gradient} flex items-center justify-center shadow-lg mb-5`}>
-                {it.icon}
-              </div>
-              <div className="text-[11px] uppercase tracking-wider text-slate-500 font-medium">{it.tag}</div>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{it.name}</h3>
-              <p className="text-sm text-slate-600 mt-3">{it.desc}</p>
-              <ul className="mt-5 space-y-2">
-                {it.bullets.map((b) => (
-                  <li key={b} className="flex items-center gap-2 text-sm text-slate-700">
-                    <Check className="w-4 h-4 text-blue-500" /> {b}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Email performance updates banner */}
-        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-          className="mt-10 relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-8 md:p-10">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center shadow-xl shadow-blue-500/30 shrink-0">
-              <MessageSquare className="w-7 h-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-wider text-blue-600 font-semibold">Performance Updates</div>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1 font-agrandir">Weekly performance reports — straight to your inbox.</h3>
-              <p className="text-slate-600 mt-2 text-sm md:text-base">No need to log in. Weez AI emails you a clean summary of leads generated, top-performing posts, ad spend efficiency, and what it's optimizing next.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {["Leads", "Engagement", "Ad ROAS", "Next moves"].map((c) => (
-                <span key={c} className="px-3 py-1.5 rounded-full bg-white border border-slate-900/10 text-xs text-slate-700">{c}</span>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </Section>
-
-      {/* 8. PROOF */}
-      <Section>
-        <div className="text-center mb-14">
-          <Eyebrow>Results</Eyebrow>
-          <H2 className="mt-5">Real results, not just features.</H2>
-        </div>
-        <div className="grid md:grid-cols-4 gap-5">
-          {[
-            { v: "5x", l: "Faster campaign creation" },
-            { v: "+62%", l: "Engagement uplift" },
-            { v: "-41%", l: "Lower marketing costs" },
-            { v: "1.2k+", l: "Pilot users & waitlist" },
-          ].map((s, i) => (
-            <motion.div key={s.l} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="p-7 rounded-2xl border border-slate-900/10 bg-slate-900/[0.03] text-center">
-              <div className="font-agrandir font-bold text-5xl bg-clip-text text-transparent bg-gradient-to-br from-blue-600 to-blue-600">
-                {s.v}
-              </div>
-              <div className="text-sm text-slate-600 mt-2">{s.l}</div>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* TESTIMONIALS */}
-      <Section id="testimonials">
-        <div className="text-center mb-14">
-          <Eyebrow>Testimonials</Eyebrow>
-          <H2 className="mt-5">Loved by founders<br/> who ship.</H2>
-        </div>
-
-        <div className="max-w-4xl mx-auto">
-          {[
-            {
-              quote: "Weez AI doesn't just generate content — it understands our brand and creates relevant LinkedIn posts, ideas, and content plans that actually align with our positioning. It has saved us significant time while keeping our content consistent and authentic.",
-              name: "Shivang",
-              role: "Founder & CEO, Niverro Technologies",
-              url: "www.niverro.com",
-              initials: "S",
-            },
-          ].map((t, i) => (
-            <motion.figure
-              key={t.name}
-              variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="relative p-8 md:p-12 rounded-[2rem] border border-slate-900/10 bg-white/80 backdrop-blur-xl shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)] overflow-hidden"
-            >
-              <div className="absolute -top-10 -right-6 text-blue-500/10">
-                <Quote className="w-40 h-40" />
-              </div>
-              <div className="relative">
-                <div className="flex gap-1 mb-6">
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Sparkles key={s} className="w-4 h-4 text-blue-500 fill-blue-500" />
-                  ))}
-                </div>
-                <blockquote className="font-agrandir text-2xl md:text-3xl leading-snug tracking-tight text-slate-900">
-                  "{t.quote}"
-                </blockquote>
-                <figcaption className="mt-8 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center text-white font-semibold text-lg shadow-lg shadow-blue-600/30">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-900">{t.name}</div>
-                    <div className="text-sm text-slate-600">{t.role}</div>
-                    <a
-                      href={`https://${t.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-700 transition"
-                    >
-                      {t.url}
-                    </a>
-                  </div>
-                </figcaption>
-              </div>
-            </motion.figure>
-          ))}
-        </div>
-      </Section>
-
-      {/* 9. VISION */}
-      <Section id="vision">
-        <div className="relative max-w-4xl mx-auto text-center p-12 md:p-16 rounded-[2.5rem] border border-slate-900/10 bg-gradient-to-br from-blue-200/60 via-blue-200/50 to-sky-200/40 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.18),transparent_60%)]" />
-          <div className="relative">
-            <Eyebrow>Vision</Eyebrow>
-            <H2 className="mt-6">The future of marketing<br/> is autonomous.</H2>
-            <p className="mt-6 text-slate-700 max-w-2xl mx-auto">
-              Weez AI is building the world's first fully automated marketing system —
-              where campaigns run, learn, and improve without manual effort.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* SHOWCASE — Content created by our system */}
-      <Section id="showcase" className="overflow-hidden">
-        <div className="text-center max-w-3xl mx-auto">
-          <Eyebrow>Created by Weez</Eyebrow>
-          <H2 className="mt-6">Content our system<br/> created in production.</H2>
-          <Sub className="mt-5 mx-auto">
-            Every visual below was conceived, designed and shipped autonomously by Weez —
-            for real brands, in real campaigns.
+        <div className="mb-16 text-center">
+          <Eyebrow>How Weez Works</Eyebrow>
+          <H2 className="mx-auto mt-5">From founder context to booked meetings.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            One connected workflow — not four disconnected tools stitched together.
           </Sub>
         </div>
 
-        {/* Marquee row 1 */}
-        <div className="mt-14 relative [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
-          <motion.div
-            className="flex gap-6 w-max"
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ duration: 60, ease: "linear", repeat: Infinity }}
-          >
-            {[
-              { src: showcaseNotion1, brand: "Notion", title: "From Chaos to Clarity" },
-              { src: showcaseMedscore1, brand: "Medscore", title: "Stop Credit Leaks" },
-              { src: showcaseDexraflow1, brand: "Dexraflow", title: "CRM to Pipeline" },
-              { src: showcaseZeeks1, brand: "Zeeks", title: "The $48K Spreadsheet" },
-              { src: showcaseNotebook1, brand: "NotebookLM", title: "Passive to Active Synthesis" },
-            ].concat([
-              { src: showcaseNotion1, brand: "Notion", title: "From Chaos to Clarity" },
-              { src: showcaseMedscore1, brand: "Medscore", title: "Stop Credit Leaks" },
-              { src: showcaseDexraflow1, brand: "Dexraflow", title: "CRM to Pipeline" },
-              { src: showcaseZeeks1, brand: "Zeeks", title: "The $48K Spreadsheet" },
-              { src: showcaseNotebook1, brand: "NotebookLM", title: "Passive to Active Synthesis" },
-            ]).map((item, i) => (
-              <div key={`r1-${i}`} className="group relative w-[460px] shrink-0 rounded-2xl overflow-hidden border border-slate-900/10 bg-white shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)]">
-                <img src={item.src} alt={`${item.brand} — ${item.title}`} loading="lazy" className="w-full h-[260px] object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
-                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-200">{item.brand}</div>
-                  <div className="text-white font-medium text-sm">{item.title}</div>
+        <div className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="absolute left-[12%] right-[12%] top-16 hidden h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent lg:block" />
+          {STEPS.map((s, i) => (
+            <motion.div
+              key={s.n}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="relative rounded-3xl border border-slate-900/10 bg-white/80 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_24px_60px_-30px_rgba(30,64,175,0.35)]"
+            >
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-600/30">
+                  {s.icon}
                 </div>
+                <span className="text-4xl font-bold tracking-tight text-slate-900/10">{s.n}</span>
               </div>
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Marquee row 2 — reverse */}
-        <div className="mt-6 relative [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
-          <motion.div
-            className="flex gap-6 w-max"
-            animate={{ x: ["-50%", "0%"] }}
-            transition={{ duration: 70, ease: "linear", repeat: Infinity }}
-          >
-            {[
-              { src: showcaseNotebook2, brand: "NotebookLM", title: "Fragmented Information" },
-              { src: showcaseZeeks2, brand: "Zeeks", title: "CFO Goes Pale in 12s" },
-              { src: showcaseDexraflow2, brand: "Dexraflow", title: "147 Leads Automated" },
-              { src: showcaseMedscore2, brand: "Medscore", title: "Revenue vs Collectability" },
-              { src: showcaseNotion2, brand: "Notion", title: "7 Places Teams Hide Work" },
-            ].concat([
-              { src: showcaseNotebook2, brand: "NotebookLM", title: "Fragmented Information" },
-              { src: showcaseZeeks2, brand: "Zeeks", title: "CFO Goes Pale in 12s" },
-              { src: showcaseDexraflow2, brand: "Dexraflow", title: "147 Leads Automated" },
-              { src: showcaseMedscore2, brand: "Medscore", title: "Revenue vs Collectability" },
-              { src: showcaseNotion2, brand: "Notion", title: "7 Places Teams Hide Work" },
-            ]).map((item, i) => (
-              <div key={`r2-${i}`} className="group relative w-[460px] shrink-0 rounded-2xl overflow-hidden border border-slate-900/10 bg-white shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)]">
-                <img src={item.src} alt={`${item.brand} — ${item.title}`} loading="lazy" className="w-full h-[260px] object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
-                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-200">{item.brand}</div>
-                  <div className="text-white font-medium text-sm">{item.title}</div>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-
-        <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
-          <span>Notion</span><span>NotebookLM</span><span>Medscore</span><span>Dexraflow</span><span>Zeeks</span>
+              <h3 className="text-lg font-semibold text-slate-900">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </Section>
 
+      {/* ============ 3. MEET THE TEAM ============ */}
+      <Section id="team">
+        <div className="mb-4 text-center">
+          <Eyebrow>Meet Your AI Marketing Team</Eyebrow>
+          <H2 className="mx-auto mt-5">Four specialists. One operating system.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Not a set of features — a team with clear responsibilities, working together from
+            strategy to booked pipeline.
+          </Sub>
+        </div>
+        <HeroAITeam />
+      </Section>
 
+      {/* ============ 4. THE WEEZ WORKFLOW (motion-graphics loop) ============ */}
+      <WeezWorkflow />
 
-      {/* LIVING WORKFLOW — AI-native workforce */}
-      <LivingWorkflow />
+      {/* ============ 5. CAPABILITIES ============ */}
+      <Section id="capabilities">
+        <div className="mb-14 text-center">
+          <Eyebrow>What Weez Handles</Eyebrow>
+          <H2 className="mx-auto mt-5">Everything a lean marketing team would own.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Organized by outcome, not by dashboard. Here's what your AI workforce takes off your plate.
+          </Sub>
+        </div>
 
-      {/* OUTBOUND WORKFLOW */}
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-6">
+          {CAPABILITIES.map((c, i) => (
+            <motion.div
+              key={c.title}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className={`group relative overflow-hidden rounded-3xl border border-slate-900/10 bg-white/80 p-7 backdrop-blur-xl transition hover:border-slate-900/20 ${
+                c.large ? "lg:col-span-3" : "lg:col-span-2"
+              }`}
+            >
+              <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl transition group-hover:bg-blue-500/20" />
+              <div className="relative">
+                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${c.accent} text-white shadow-lg`}>
+                  {c.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">{c.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{c.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ============ 6. WHY DIFFERENT ============ */}
+      <Section id="why">
+        <div className="mb-14 text-center">
+          <Eyebrow>Why Weez Is Different</Eyebrow>
+          <H2 className="mx-auto mt-5">Not an SDR bot. Not a content tool.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            The difference isn't more automation — it's understanding, intent, and one connected system.
+          </Sub>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-3">
+          {DIFFERENTIATORS.map((d, i) => (
+            <motion.div
+              key={d.title}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-b from-white to-slate-50/60 p-8"
+            >
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                {d.icon}
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900">{d.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{d.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ============ 7. POST TO MEETING (animated walkthrough) ============ */}
       <Section id="workflow" className="overflow-hidden">
-        <div className="text-center max-w-3xl mx-auto">
+        <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>From post to meeting</Eyebrow>
-          <H2 className="mt-6">One post in. Booked meetings out.</H2>
-          <Sub className="mt-5 mx-auto">
-            Watch Weez turn a single LinkedIn post into qualified pipeline —
-            track engagement, filter your ICP, enrich via Apollo and Clay,
-            send hyperpersonalized outbound, and book the meeting. Fully autonomous.
+          <H2 className="mx-auto mt-5">One post in. Booked meetings out.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Follow a single founder post as it becomes qualified pipeline — Robert publishes,
+            Eva reads intent signals and enriches the account, Max runs warm outbound, and a
+            meeting lands on the calendar. Fully autonomous.
           </Sub>
         </div>
         <div className="mt-16">
-          <OutboundWorkflow />
+          <PostToMeeting />
         </div>
       </Section>
 
-      {/* PRICING */}
+      {/* ============ 8. BUILT FOR / ICP ============ */}
+      <Section id="fit">
+        <div className="mx-auto mb-14 max-w-3xl text-center">
+          <Eyebrow>Who It's For</Eyebrow>
+          <H2 className="mx-auto mt-5">
+            Built for B2B SaaS teams that need growth before they can hire a full marketing org.
+          </H2>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/50 p-8"
+          >
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 shadow-sm">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Best fit for
+            </div>
+            <ul className="space-y-3">
+              {BEST_FIT.map((t) => (
+                <li key={t} className="flex items-start gap-3 text-slate-800">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                  <span className="text-[15px]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          <motion.div
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="rounded-3xl border border-slate-900/10 bg-white/80 p-8 backdrop-blur"
+          >
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <X className="h-3.5 w-3.5" /> Probably not for
+            </div>
+            <ul className="space-y-3">
+              {NOT_FOR.map((t) => (
+                <li key={t} className="flex items-start gap-3 text-slate-500">
+                  <X className="mt-0.5 h-5 w-5 shrink-0 text-slate-300" />
+                  <span className="text-[15px]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      </Section>
+
+      {/* ============ 9. SOCIAL PROOF ============ */}
+      <Section id="proof" className="overflow-hidden">
+        <div className="mb-12 text-center">
+          <Eyebrow>Early Proof</Eyebrow>
+          <H2 className="mx-auto mt-5">Real output, not just a promise.</H2>
+        </div>
+
+        {/* metrics */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {METRICS.map((s, i) => (
+            <motion.div
+              key={s.l}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="rounded-3xl border border-slate-900/10 bg-white/80 p-7 text-center backdrop-blur"
+            >
+              <div className="bg-gradient-to-br from-blue-600 to-sky-500 bg-clip-text text-5xl font-bold tracking-tight text-transparent">
+                {s.v}
+              </div>
+              <div className="mt-2 text-sm text-slate-600">{s.l}</div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* testimonial */}
+        <motion.figure
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="relative mx-auto mt-8 max-w-4xl overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/85 p-8 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)] backdrop-blur-xl md:p-12"
+        >
+          <div className="absolute -right-6 -top-10 text-blue-500/10">
+            <Quote className="h-40 w-40" />
+          </div>
+          <div className="relative">
+            <div className="mb-6 flex gap-1">
+              {Array.from({ length: 5 }).map((_, s) => (
+                <Sparkles key={s} className="h-4 w-4 fill-blue-500 text-blue-500" />
+              ))}
+            </div>
+            <blockquote className="text-2xl font-semibold leading-snug tracking-tight text-slate-900 md:text-3xl">
+              "Weez doesn't just generate content — it understands our brand and creates
+              relevant posts, ideas, and content plans that actually align with our positioning.
+              It saved us serious time while keeping our content consistent and authentic."
+            </blockquote>
+            <figcaption className="mt-8 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 text-lg font-semibold text-white shadow-lg shadow-blue-600/30">
+                S
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">Shivang</div>
+                <div className="text-sm text-slate-600">Founder &amp; CEO, Niverro Technologies</div>
+                <a
+                  href="https://www.niverro.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 transition hover:text-blue-700"
+                >
+                  www.niverro.com
+                </a>
+              </div>
+            </figcaption>
+          </div>
+        </motion.figure>
+
+      </Section>
+
+      {/* ============ 9b. REPLACE THE STACK ============ */}
+      <Section id="replace">
+        <div className="mx-auto mb-14 max-w-3xl text-center">
+          <Eyebrow>Replace, don't add</Eyebrow>
+          <H2 className="mx-auto mt-5">Replace the stack — don't add to it.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Weez isn't one more tab in an already-crowded GTM stack. It collapses the hires and
+            tools you'd otherwise stitch together into a single AI-native team.
+          </Sub>
+        </div>
+        <ReplaceStack />
+      </Section>
+
+      {/* ============ 10. PRICING ============ */}
       <Section id="pricing">
-        <div className="text-center max-w-3xl mx-auto">
+        <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Pricing</Eyebrow>
-          <H2 className="mt-6">Simple, transparent pricing.</H2>
-          <Sub className="mt-5 mx-auto">
-            Replace your marketing workflow — not just a tool.
+          <H2 className="mx-auto mt-5">One team. One simple plan.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Replace a stack of tools and early hires — not just add another subscription.
           </Sub>
         </div>
 
-        {/* Currency toggle */}
+        {/* currency toggle */}
         <div className="mt-10 flex justify-center">
-          <div className="inline-flex items-center p-1 rounded-full border border-slate-900/10 bg-white/80 backdrop-blur shadow-sm">
-            <button
-              onClick={() => setCurrency("USD")}
-              className={`px-4 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
-                currency === "USD" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <svg className="w-5 h-5 rounded-sm" viewBox="0 0 20 16" xmlns="http://www.w3.org/2000/svg">
-                <rect width="20" height="16" fill="#B22234"/>
-                <rect y="1.23" width="20" height="1.23" fill="white"/>
-                <rect y="3.69" width="20" height="1.23" fill="white"/>
-                <rect y="6.15" width="20" height="1.23" fill="white"/>
-                <rect y="8.62" width="20" height="1.23" fill="white"/>
-                <rect y="11.08" width="20" height="1.23" fill="white"/>
-                <rect y="13.54" width="20" height="1.23" fill="white"/>
-                <rect width="8" height="8.62" fill="#3C3B6E"/>
-              </svg>
-              USD
-            </button>
-            <button
-              onClick={() => setCurrency("INR")}
-              className={`px-4 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
-                currency === "INR" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <svg className="w-5 h-5 rounded-sm" viewBox="0 0 20 16" xmlns="http://www.w3.org/2000/svg">
-                <rect width="20" height="5.33" fill="#FF9932"/>
-                <rect y="5.33" width="20" height="5.33" fill="white"/>
-                <rect y="10.67" width="20" height="5.33" fill="#138808"/>
-                <circle cx="10" cy="8" r="1.6" fill="#000080"/>
-                <circle cx="10" cy="8" r="1.3" fill="none" stroke="#000080" strokeWidth="0.15"/>
-              </svg>
-              INR
-            </button>
+          <div className="inline-flex items-center rounded-full border border-slate-900/10 bg-white/80 p-1 shadow-sm backdrop-blur">
+            {(["USD", "INR"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`h-10 rounded-full px-5 text-sm font-medium transition ${
+                  currency === c ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Billing toggle */}
+        {/* billing toggle */}
         <div className="mt-4 flex justify-center">
-          <div className="inline-flex items-center p-1 rounded-full border border-slate-900/10 bg-white/80 backdrop-blur shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-slate-900/10 bg-white/80 p-1 shadow-sm backdrop-blur">
             <button
               onClick={() => setBilling("monthly")}
-              className={`px-5 h-10 rounded-full text-sm font-medium transition ${
+              className={`h-10 rounded-full px-5 text-sm font-medium transition ${
                 billing === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -898,44 +683,48 @@ const Landing = () => {
             </button>
             <button
               onClick={() => setBilling("yearly")}
-              className={`px-5 h-10 rounded-full text-sm font-medium transition inline-flex items-center gap-2 ${
+              className={`inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-medium transition ${
                 billing === "yearly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Yearly
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                billing === "yearly" ? "bg-emerald-400/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"
-              }`}>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  billing === "yearly" ? "bg-emerald-400/20 text-emerald-200" : "bg-emerald-100 text-emerald-700"
+                }`}
+              >
                 Save 25%
               </span>
             </button>
           </div>
         </div>
 
-        {/* Pricing card */}
+        {/* card */}
         <motion.div
-          variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-          className="relative mt-12 max-w-3xl mx-auto"
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="relative mx-auto mt-12 max-w-3xl"
         >
-          <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-blue-500/30 via-blue-500/30 to-sky-400/30 blur-2xl" />
-          <div className="relative rounded-[2rem] border border-slate-900/10 bg-white/90 backdrop-blur-xl shadow-[0_30px_80px_-30px_rgba(139,92,246,0.35)] overflow-hidden transition-transform duration-300 hover:-translate-y-1">
-            {/* Top ribbon */}
-            <div className="absolute top-5 right-5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 shadow-md">
-                <Sparkles className="w-3 h-3" /> Recommended
+          <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-blue-500/30 via-violet-500/20 to-sky-400/30 blur-2xl" />
+          <div className="relative overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/90 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.35)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-1">
+            <div className="absolute right-5 top-5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 px-3 py-1 text-xs font-semibold text-white shadow-md">
+                <Sparkles className="h-3 w-3" /> Recommended
               </span>
             </div>
 
             <div className="p-8 md:p-12">
               <div className="text-sm font-medium text-blue-600">Growth Plan</div>
-              <div className="mt-1 font-agrandir font-bold text-2xl text-slate-900">
-                Everything you need to run marketing on autopilot
+              <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                Your full AI marketing workforce, in one plan
               </div>
 
-              {/* Price */}
-              <div className="mt-8 flex items-end gap-3 flex-wrap">
-                <div className="font-agrandir font-bold text-6xl md:text-7xl tracking-tight text-slate-900 leading-none">
-                  {priceTable[currency].symbol}{fmt(billing === "yearly" ? priceTable[currency].yearly : priceTable[currency].monthly)}
+              <div className="mt-8 flex flex-wrap items-end gap-3">
+                <div className="text-6xl font-bold leading-none tracking-tight text-slate-900 md:text-7xl">
+                  {priceTable[currency].symbol}
+                  {fmt(billing === "yearly" ? priceTable[currency].yearly : priceTable[currency].monthly)}
                 </div>
                 <div className="pb-2 text-slate-600">
                   <div className="text-sm">/ month</div>
@@ -946,32 +735,30 @@ const Landing = () => {
                   </div>
                 </div>
                 {billing === "yearly" && (
-                  <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <TrendingUp className="w-3 h-3" /> Save {priceTable[currency].symbol}{fmt(priceTable[currency].savings)}/year (25% off)
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                    <TrendingUp className="h-3 w-3" /> Save {priceTable[currency].symbol}
+                    {fmt(priceTable[currency].savings)}/year
                   </span>
                 )}
               </div>
 
-              {/* CTA */}
               <div className="mt-8 flex flex-col items-start gap-2">
-                <GradientButton onClick={() => navigate('/auth')}>Start 14-Day Free Trial</GradientButton>
+                <PrimaryButton onClick={goAuth}>Start 14-Day Free Trial</PrimaryButton>
                 <div className="text-xs text-slate-500">No credit card required</div>
               </div>
 
               <div className="my-10 h-px bg-gradient-to-r from-transparent via-slate-900/10 to-transparent" />
 
-              {/* Features grouped */}
-              <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+              <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
                 {[
-                  { title: "Core Automation", icon: <Zap className="w-4 h-4" />, items: ["Run LinkedIn marketing on autopilot", "AI-generated posts, articles & creatives", "Auto-publishing and scheduling"] },
-                  { title: "Growth Engine", icon: <Rocket className="w-4 h-4" />, items: ["Founder-led & company-led distribution", "Automated engagement (comments, interactions)", "Lead generation system"] },
-                  { title: "CRM & Pipeline", icon: <Target className="w-4 h-4" />, items: ["HubSpot integration", "Automatic lead capture", "Pipeline tracking"] },
-                  { title: "Analytics & Intelligence", icon: <BarChart3 className="w-4 h-4" />, items: ["Deep performance analytics", "Industry benchmark comparison", "Best time to post insights", "Decision-maker engagement tracking"] },
-                  { title: "System Capabilities", icon: <BrainCircuit className="w-4 h-4" />, items: ["Multi-account support", "Campaign automation", "Continuous optimization"] },
+                  { title: "Content & Campaigns", icon: <PenSquare className="h-4 w-4" />, items: ["Founder-led content engine", "Campaign planning & execution", "Auto-publishing & scheduling"] },
+                  { title: "Signals & Discovery", icon: <Radar className="h-4 w-4" />, items: ["Event-driven account discovery", "Hiring / launch / growth signals", "ICP-fit account scoring"] },
+                  { title: "Outbound & Pipeline", icon: <Send className="h-4 w-4" />, items: ["Warm outbound workflow", "Contact enrichment", "Meeting booking & pipeline tracking"] },
+                  { title: "Intelligence", icon: <BarChart3 className="h-4 w-4" />, items: ["Marketing analytics", "Weekly performance reports", "Continuous optimization"] },
                 ].map((g) => (
                   <div key={g.title}>
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/15 text-blue-600 flex items-center justify-center">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                         {g.icon}
                       </span>
                       {g.title}
@@ -979,7 +766,7 @@ const Landing = () => {
                     <ul className="mt-3 space-y-2">
                       {g.items.map((it) => (
                         <li key={it} className="flex items-start gap-2 text-sm text-slate-700">
-                          <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                           <span>{it}</span>
                         </li>
                       ))}
@@ -992,61 +779,84 @@ const Landing = () => {
         </motion.div>
       </Section>
 
-      {/* 10. FINAL CTA */}
+      {/* ============ 11. FINAL CTA ============ */}
       <Section>
-        <div className="relative text-center py-16">
-          <GlowOrb className="w-[500px] h-[300px] -top-20 left-1/2 -translate-x-1/2" color="from-blue-500/40" />
-          <H2 className="relative">Start running your marketing<br/> on autopilot.</H2>
-          <div className="relative mt-9 flex items-center justify-center gap-3 flex-wrap">
-            <GradientButton onClick={() => navigate('/auth')}>Get Started Free</GradientButton>
-            <GradientButton variant="ghost" onClick={() => navigate('/auth')}>Run Your First Campaign</GradientButton>
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="relative overflow-hidden rounded-[2.5rem] border border-slate-900/10 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 px-8 py-16 text-center md:px-16 md:py-20"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.35),transparent_60%)]" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-500/30 blur-[120px]" />
+          <div className="relative">
+            <h2 className="mx-auto max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-white md:text-5xl">
+              Stop stitching together content tools, lead lists, and SDR workflows.
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
+              Let Weez act as your AI-native marketing team — from campaign creation to
+              high-intent outbound that books meetings.
+            </p>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+              <button
+                onClick={() => scrollTo("workflow")}
+                className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
+              >
+                <Play className="h-4 w-4" /> See Weez in Action
+              </button>
+            </div>
           </div>
-        </div>
+        </motion.div>
       </Section>
 
-      {/* Footer */}
-      <footer className="relative border-t border-slate-900/5 py-12 px-6">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
+      {/* ============ FOOTER ============ */}
+      <footer className="relative border-t border-slate-900/5 px-6 py-12">
+        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-poppins font-bold text-slate-900">Weez AI</span>
+            <div className="mb-4 flex items-center gap-2">
+              <img src={logo} alt="Weez AI" className="h-7 w-auto" />
             </div>
-            <p className="text-sm text-slate-500">Marketing that runs itself. Built by Dexraflow.</p>
+            <p className="text-sm text-slate-500">
+              Your AI-native marketing workforce for B2B SaaS. Built by Dexraflow.
+            </p>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest text-slate-500 mb-3">Product</div>
+            <div className="mb-3 text-xs uppercase tracking-widest text-slate-500">Product</div>
             <ul className="space-y-2 text-sm text-slate-700">
-              <li><a href="#features" className="hover:text-slate-900">Features</a></li>
-              <li><span onClick={() => navigate('/plans')} className="cursor-pointer hover:text-slate-900">Pricing</span></li>
-              <li><a href="#integrations" className="hover:text-slate-900">Integrations</a></li>
+              <li><button onClick={() => scrollTo("capabilities")} className="hover:text-slate-900">Capabilities</button></li>
+              <li><button onClick={() => scrollTo("team")} className="hover:text-slate-900">The team</button></li>
+              <li><button onClick={() => scrollTo("pricing")} className="hover:text-slate-900">Pricing</button></li>
             </ul>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest text-slate-500 mb-3">Company</div>
+            <div className="mb-3 text-xs uppercase tracking-widest text-slate-500">Company</div>
             <ul className="space-y-2 text-sm text-slate-700">
               <li><a href="mailto:support@dexraflow.com" className="hover:text-slate-900">Contact</a></li>
-              <li><span onClick={() => navigate('/privacy-policy')} className="cursor-pointer hover:text-slate-900">Privacy</span></li>
-              <li><span onClick={() => navigate('/terms-conditions')} className="cursor-pointer hover:text-slate-900">Terms</span></li>
-              <li><span onClick={() => navigate('/data-deletion')} className="cursor-pointer hover:text-slate-900">Delete Account</span></li>
+              <li><span onClick={() => navigate("/privacy-policy")} className="cursor-pointer hover:text-slate-900">Privacy</span></li>
+              <li><span onClick={() => navigate("/terms-conditions")} className="cursor-pointer hover:text-slate-900">Terms</span></li>
+              <li><span onClick={() => navigate("/data-deletion")} className="cursor-pointer hover:text-slate-900">Delete Account</span></li>
             </ul>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest text-slate-500 mb-3">Social</div>
+            <div className="mb-3 text-xs uppercase tracking-widest text-slate-500">Social</div>
             <div className="flex gap-3">
               {[Linkedin, Instagram].map((Icon, i) => (
-                <a key={i} href="#" className="w-9 h-9 rounded-full border border-slate-900/10 bg-slate-900/[0.04] hover:bg-slate-900/[0.06] flex items-center justify-center text-slate-700 hover:text-slate-900 transition">
-                  <Icon className="w-4 h-4" />
+                <a
+                  key={i}
+                  href="#"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900/10 bg-slate-900/[0.04] text-slate-700 transition hover:bg-slate-900/[0.06] hover:text-slate-900"
+                >
+                  <Icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-slate-900/5 flex items-center justify-between text-xs text-slate-500">
+        <div className="mx-auto mt-10 flex max-w-7xl items-center justify-between border-t border-slate-900/5 pt-6 text-xs text-slate-500">
           <span>© {new Date().getFullYear()} Weez AI · Dexraflow Inc.</span>
-          <span>Made with ⚡ for autonomous marketers</span>
+          <span>An AI-native marketing workforce for B2B SaaS.</span>
         </div>
       </footer>
     </div>

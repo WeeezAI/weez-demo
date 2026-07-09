@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target, Link2 } from "lucide-react";
+import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target, Link2, PenLine, Radar, Signal as SignalIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,9 +62,15 @@ const ConversationSidebar = ({
       color: "text-blue-600"
     },
     {
-      label: "Sales",
+      label: "Eva",
+      path: `/eva/${spaceId}`,
+      icon: SignalIcon,
+      color: "text-emerald-500"
+    },
+    {
+      label: "Max",
       path: `/sales/${spaceId}`,
-      icon: Target,
+      icon: Radar,
       color: "text-orange-500"
     },
     {
@@ -72,6 +78,12 @@ const ConversationSidebar = ({
       path: `/growth/${spaceId}`,
       icon: Zap,
       color: "text-emerald-500"
+    },
+    {
+      label: "Content",
+      path: `/robert/${spaceId}`,
+      icon: PenLine,
+      color: "text-indigo-500"
     },
   ];
 
@@ -155,7 +167,7 @@ const ConversationSidebar = ({
                 <button
                   onClick={() => {
                     if (hubspotConnected) {
-                      navigate(`/sales/${spaceId}`);
+                      navigate(`/leads/${spaceId}`);
                     } else {
                       // Navigate to the connectors tab in Autonomous Marketing
                       navigate(`/autonomous-marketing/${spaceId}?tab=connectors`);

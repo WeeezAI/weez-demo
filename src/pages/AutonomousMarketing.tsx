@@ -79,6 +79,7 @@ import { usePosterWebSocket } from "@/hooks/usePosterWebSocket";
 import PosterEditorModal from "@/components/PosterEditorModal";
 import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
 import SageAssistant from "@/components/SageAssistant";
+import NinaGoalIntake from "@/components/NinaGoalIntake";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
 const PublishingControls = lazy(() => import("@/components/PublishingControls"));
@@ -199,6 +200,64 @@ function AgentBar({ phase }: { phase: number }) {
     );
 }
 
+// ── Nina avatar (pfp with graceful gradient fallback) ────────────────────────
+function NinaAvatar({ className = "w-10 h-10" }: { className?: string }) {
+    const [ok, setOk] = useState(true);
+    return (
+        <div className={cn("rounded-full overflow-hidden ring-2 ring-indigo-100 shrink-0 shadow-sm", className)}>
+            {ok ? (
+                <img
+                    src="/assets/nina.png"
+                    alt="Nina"
+                    onError={() => setOk(false)}
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-indigo-600 to-purple-500 text-white flex items-center justify-center font-black">
+                    N
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Build Nina's first-person, conversational summary of the weekly plan from the
+// deterministic explanation — no extra LLM call needed.
+function buildNinaPlannerSummary(exp: any, summary: any, posts: any[] | null): string {
+    if (!exp) return "Here's your content plan — take a look below and let me know what you think.";
+    const isWeekly = exp?.cadence === "weekly" || summary?.cadence === "weekly";
+    const weekNum = exp?.week_number || summary?.week_number || 1;
+    const n = (summary?.total_posts ?? posts?.length ?? 0);
+    const mix = exp?.content_mix;
+    const tierLabel = exp?.acv_tier_label || (exp?.acv_tier ? `${exp.acv_tier} ACV` : null);
+    const ob = exp?.outbound_plan;
+
+    const parts: string[] = [];
+    if (isWeekly) {
+        parts.push(`Here's how I've built week ${weekNum} for you${n ? ` — ${n} posts across the next 7 days` : ""}.`);
+    } else {
+        parts.push(`Here's the plan I've put together${n ? ` — ${n} posts` : ""}.`);
+    }
+    if (tierLabel && mix) {
+        parts.push(
+            `Since you're ${tierLabel}, I've weighted the content ${Math.round((mix.growth || 0) * 100)}% growth, ${Math.round((mix.leads || 0) * 100)}% leads and ${Math.round((mix.trust || 0) * 100)}% trust, and set the founder-vs-org cadence to match.`
+        );
+    } else if (tierLabel) {
+        parts.push(`I've tailored the cadence and content mix to your ${tierLabel} profile.`);
+    }
+    if (ob?.summary) {
+        const chans = Array.isArray(ob.channels) && ob.channels.length ? ` across ${ob.channels.slice(0, 3).join(", ")}` : "";
+        parts.push(`On outbound, ${ob.summary.charAt(0).toLowerCase()}${ob.summary.slice(1)}${chans}.`);
+    }
+    if (exp?.optimization_applied?.summary) {
+        parts.push(exp.optimization_applied.summary);
+    } else if (isWeekly) {
+        parts.push(`This is week ${weekNum} — from next week I'll learn from what your ICP actually engages with and sharpen the plan automatically.`);
+    }
+    parts.push(`Have a look at the calendar in the Content Planner tab. If anything's unclear or you want to change direction, just ask me below — otherwise approve it and I'll start executing.`);
+    return parts.join(" ");
+}
+
 function UserBubble({ msg, userName }: { msg: Message, userName: string }) {
     const initial = userName?.charAt(0).toUpperCase() || "U";
     return (
@@ -224,8 +283,13 @@ function AiBubble({ msg, children }: { msg: Message, children?: React.ReactNode 
     };
 
     return (
-        <div className="flex items-start mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex items-start gap-3 mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <NinaAvatar className="w-10 h-10" />
             <div className="flex flex-col gap-2 max-w-[85%]">
+                <div className="flex items-center gap-2 px-1">
+                    <span className="text-xs font-bold text-zinc-900">Nina</span>
+                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI CMO</span>
+                </div>
                 <div className="px-6 py-5 rounded-3xl rounded-tl-sm bg-white border border-gray-100 shadow-sm relative">
                     <div className="text-sm leading-[1.8] text-gray-800 whitespace-pre-wrap">
                         {renderContent(msg.content)}
@@ -1155,6 +1219,11 @@ export default function AutonomousMarketing() {
     const [plannerExplanation, setPlannerExplanation] = useState<any | null>(null);
     const [campaignSummary, setCampaignSummary] = useState<any | null>(null);
     const [confidenceScore, setConfidenceScore] = useState<number>(0);
+
+    // Ask-Nina mini-thread inside the planning view (doubts about the plan/workflow).
+    const [plannerQA, setPlannerQA] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+    const [ninaQuestion, setNinaQuestion] = useState("");
+    const [askingNina, setAskingNina] = useState(false);
     const [campaignId, setCampaignId] = useState<string | null>(null);
     const [workspaceMode, setWorkspaceMode] = useState<"initial" | "briefing" | "planning" | "active" | "results">("initial");
     const [isStarting, setIsStarting] = useState(false);
@@ -1177,6 +1246,8 @@ export default function AutonomousMarketing() {
     // Founder Voice Onboarding state
     const [voiceCompleted, setVoiceCompleted] = useState(false);
     const [voiceSkipped, setVoiceSkipped] = useState(false);
+    // Initial chat: goal picker (Nina) is primary; free-text prompt is opt-in.
+    const [showFreeText, setShowFreeText] = useState(false);
 
     // Campaign Configuration State
     const [campaignDuration, setCampaignDuration] = useState("30");
@@ -1485,8 +1556,9 @@ export default function AutonomousMarketing() {
         }
     };
 
-    const handleGeneratePlanner = async () => {
-        if (!campaignId) return;
+    const handleGeneratePlanner = async (cidArg?: string) => {
+        const cid = cidArg || campaignId;
+        if (!cid) return;
 
         let phaseInterval: any = null;
         let pollInterval: any = null;
@@ -1522,7 +1594,7 @@ export default function AutonomousMarketing() {
             }, 2500);
 
             const now = new Date().toISOString();
-            const res = await weezAPI.generateCampaignPlanner(campaignId, now);
+            const res = await weezAPI.generateCampaignPlanner(cid, now);
 
             if (res.status === "generating") {
                 // Poll for completion
@@ -1534,15 +1606,15 @@ export default function AutonomousMarketing() {
                             clearInterval(phaseInterval);
 
                             // Load full conversation history to populate messages
-                            await fetchConversation(campaignId);
+                            await fetchConversation(cid);
 
                             // Retrieve actual calendar details
                             try {
-                                const detailsRes = await weezAPI.getCampaignPlannerDetails(campaignId, spaceId!);
+                                const detailsRes = await weezAPI.getCampaignPlannerDetails(cid, spaceId!);
                                 if (detailsRes) {
                                     setPlannerData(detailsRes.planner || []);
                                     
-                                    const convRes = await weezAPI.getCampaignConversation(spaceId!, campaignId);
+                                    const convRes = await weezAPI.getCampaignConversation(spaceId!, cid);
                                     if (convRes.messages && convRes.messages.length > 0) {
                                         const lastPlanner = convRes.messages.findLast((m: any) => m.metadata?.planner);
                                         if (lastPlanner) {
@@ -1605,6 +1677,57 @@ export default function AutonomousMarketing() {
         } catch (err: any) {
             cleanup();
             toast.error(err.message || "Failed to generate planner");
+        }
+    };
+
+    // Called from Nina's strategy view: turn the reviewed strategy into a campaign
+    // and immediately generate this week's content plan.
+    const handleProceedToPlanner = async (target: string, strategy?: any) => {
+        try {
+            const goalPrompt = (target && target.trim())
+                || strategy?.goal?.requested
+                || "Grow qualified pipeline on LinkedIn";
+
+            toast.info("Turning your strategy into this week's content plan…");
+
+            // Create the campaign from the goal (this also sets business type + platform readiness).
+            const res = await weezAPI.getCampaignBrief(
+                spaceId!,
+                goalPrompt,
+                campaignDuration,
+                campaignType,
+                marketingMode
+            );
+            const newCampaignId = res.campaign_id;
+            setCampaignId(newCampaignId);
+            setBriefingData(res.briefing);
+            setActiveStatus({ campaign_id: newCampaignId, status: "briefing", brand_id: spaceId });
+
+            // Kick straight into planner generation — Nina's strategy is the review step.
+            await handleGeneratePlanner(newCampaignId);
+            setActiveTab("planner");
+        } catch (err: any) {
+            toast.error(err.message || "Couldn't start the content plan");
+        }
+    };
+
+    // Ask Nina a question about the plan / workflow, answered in the mini-thread.
+    const handleAskNina = async () => {
+        const q = ninaQuestion.trim();
+        if (!q || askingNina) return;
+        setPlannerQA((prev) => [...prev, { role: "user", content: q }]);
+        setNinaQuestion("");
+        setAskingNina(true);
+        try {
+            const res = await weezAPI.askNina(spaceId!, q, {
+                explanation: plannerExplanation,
+                campaign_summary: campaignSummary,
+            });
+            setPlannerQA((prev) => [...prev, { role: "assistant", content: res.answer || "Here's what I can tell you." }]);
+        } catch (err: any) {
+            setPlannerQA((prev) => [...prev, { role: "assistant", content: "I couldn't answer that just now — mind trying again in a moment?" }]);
+        } finally {
+            setAskingNina(false);
         }
     };
 
@@ -1704,7 +1827,7 @@ export default function AutonomousMarketing() {
                 onComplete={(profile) => {
                     setVoiceCompleted(true);
                     toast.success("Voice profile synthesized and applied!", {
-                        description: "Sage has customized your digital brand persona."
+                        description: "Nina has captured your business and voice — your strategy is next."
                     });
                 }}
                 onSkip={() => {
@@ -1843,21 +1966,39 @@ export default function AutonomousMarketing() {
 
                             {isBrandVoiceGenerating ? (
                                 <BrandVoiceGenerationLoader />
+                            ) : showFreeText ? (
+                                <div className="relative z-10 w-full flex flex-col items-center">
+                                    <DexraflowCampaignChat
+                                        value={input}
+                                        setValue={setInput}
+                                        onGenerate={() => handleSend(input)}
+                                        onAutonomousCampaign={() => handleSend(input)}
+                                        campaignDuration={campaignDuration}
+                                        setCampaignDuration={setCampaignDuration}
+                                        campaignType={campaignType}
+                                        setCampaignType={setCampaignType}
+                                        marketingMode={marketingMode}
+                                        setMarketingMode={setMarketingMode}
+                                        onMicClick={handleMicClick}
+                                        isRecording={isRecording}
+                                    />
+                                    <button
+                                        onClick={() => setShowFreeText(false)}
+                                        className="mt-4 text-xs font-semibold text-zinc-400 hover:text-zinc-700"
+                                    >
+                                        ← Back to goal picker
+                                    </button>
+                                </div>
                             ) : (
-                                <DexraflowCampaignChat
-                                    value={input}
-                                    setValue={setInput}
-                                    onGenerate={() => handleSend(input)}
-                                    onAutonomousCampaign={() => handleSend(input)}
-                                    campaignDuration={campaignDuration}
-                                    setCampaignDuration={setCampaignDuration}
-                                    campaignType={campaignType}
-                                    setCampaignType={setCampaignType}
-                                    marketingMode={marketingMode}
-                                    setMarketingMode={setMarketingMode}
-                                    onMicClick={handleMicClick}
-                                    isRecording={isRecording}
-                                />
+                                <div className="relative z-10 w-full h-full overflow-y-auto flex flex-col items-center justify-start py-10">
+                                    <NinaGoalIntake spaceId={spaceId!} onProceed={handleProceedToPlanner} />
+                                    <button
+                                        onClick={() => setShowFreeText(true)}
+                                        className="mt-4 text-xs font-semibold text-zinc-400 hover:text-zinc-700"
+                                    >
+                                        Prefer to type your own goal instead?
+                                    </button>
+                                </div>
                             )}
                         </div>
                     ) : (
@@ -2079,6 +2220,22 @@ export default function AutonomousMarketing() {
                                 {plannerData && workspaceMode === "planning" && (
                                     <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
 
+                                        {/* Nina presents the plan conversationally */}
+                                        <div className="flex items-start gap-3">
+                                            <NinaAvatar className="w-10 h-10" />
+                                            <div className="flex flex-col gap-2 max-w-[85%]">
+                                                <div className="flex items-center gap-2 px-1">
+                                                    <span className="text-xs font-bold text-zinc-900">Nina</span>
+                                                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI CMO</span>
+                                                </div>
+                                                <div className="px-6 py-5 rounded-3xl rounded-tl-sm bg-white border border-gray-100 shadow-sm">
+                                                    <p className="text-sm leading-[1.8] text-gray-800">
+                                                        {buildNinaPlannerSummary(plannerExplanation, campaignSummary, plannerData)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         {/* Campaign Overview Panel */}
                                         {(campaignSummary || confidenceScore > 0) && (
                                             <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm">
@@ -2102,9 +2259,21 @@ export default function AutonomousMarketing() {
                                                     </div>
                                                     {/* Total Posts */}
                                                     <div className="bg-gray-50 rounded-2xl p-5 text-center">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Total Posts</p>
-                                                        <p className="text-3xl font-black text-gray-900">{campaignSummary?.total_posts || plannerData?.length || 0}</p>
-                                                        <p className="text-xs text-gray-500 mt-1">Over {campaignSummary?.campaign_days || 30} days</p>
+                                                        {(() => {
+                                                            const isWeekly = campaignSummary?.cadence === "weekly" || plannerExplanation?.cadence === "weekly";
+                                                            const weekNum = campaignSummary?.week_number || plannerExplanation?.week_number || 1;
+                                                            return (
+                                                                <>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                                                                        {isWeekly ? "Posts This Week" : "Total Posts"}
+                                                                    </p>
+                                                                    <p className="text-3xl font-black text-gray-900">{campaignSummary?.total_posts || plannerData?.length || 0}</p>
+                                                                    <p className="text-xs text-gray-500 mt-1">
+                                                                        {isWeekly ? `Week ${weekNum} · 7 days` : `Over ${campaignSummary?.campaign_days || 30} days`}
+                                                                    </p>
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     {/* Target */}
                                                     <div className="bg-gray-50 rounded-2xl p-5 text-center">
@@ -2132,29 +2301,123 @@ export default function AutonomousMarketing() {
                                             </div>
                                         )}
 
-                                        {plannerExplanation && (
+                                        {/* Reasoning detail — only render fields that actually have content */}
+                                        {plannerExplanation && (plannerExplanation.why_this_works || plannerExplanation.content_pillar_breakdown || plannerExplanation.template_strategy || plannerExplanation.optimization_focus) && (
                                             <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm">
                                                 <h3 className="text-sm font-black text-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                                                    <Sparkles className="w-4 h-4" /> Strategic Roadmap
+                                                    <Sparkles className="w-4 h-4" /> Why I built it this way
                                                 </h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Why This Works</p>
-                                                        <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.why_this_works}</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Content Pillars</p>
-                                                        <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.content_pillar_breakdown}</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Template Strategy</p>
-                                                        <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.template_strategy}</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Optimization Focus</p>
-                                                        <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.optimization_focus}</p>
-                                                    </div>
+                                                    {plannerExplanation.why_this_works && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Why This Works</p>
+                                                            <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.why_this_works}</p>
+                                                        </div>
+                                                    )}
+                                                    {plannerExplanation.content_pillar_breakdown && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Content Pillars</p>
+                                                            <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.content_pillar_breakdown}</p>
+                                                        </div>
+                                                    )}
+                                                    {plannerExplanation.template_strategy && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Template Strategy</p>
+                                                            <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.template_strategy}</p>
+                                                        </div>
+                                                    )}
+                                                    {plannerExplanation.optimization_focus && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Optimization Focus</p>
+                                                            <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.optimization_focus}</p>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {/* Weekly ACV-tiered strategy + outbound + learning (B2B) */}
+                                        {plannerExplanation?.acv_tier && (
+                                            <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <h3 className="text-sm font-black text-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                                        <Target className="w-4 h-4" /> Weekly LinkedIn Strategy
+                                                    </h3>
+                                                    <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-violet-50 text-violet-700">
+                                                        {plannerExplanation.acv_tier_label || `${plannerExplanation.acv_tier} ACV`}
+                                                    </span>
+                                                </div>
+
+                                                {/* Content mix Growth : Leads : Trust */}
+                                                {plannerExplanation.content_mix && (
+                                                    <div className="mb-6">
+                                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                                            <span>Content Mix</span><span>Growth · Leads · Trust</span>
+                                                        </div>
+                                                        <div className="flex h-3 rounded-full overflow-hidden">
+                                                            <div className="bg-sky-400" style={{ width: `${(plannerExplanation.content_mix.growth || 0) * 100}%` }} />
+                                                            <div className="bg-indigo-500" style={{ width: `${(plannerExplanation.content_mix.leads || 0) * 100}%` }} />
+                                                            <div className="bg-violet-600" style={{ width: `${(plannerExplanation.content_mix.trust || 0) * 100}%` }} />
+                                                        </div>
+                                                        <div className="flex justify-between text-[10px] font-bold text-gray-500 mt-1">
+                                                            <span>{Math.round((plannerExplanation.content_mix.growth || 0) * 100)}% growth</span>
+                                                            <span>{Math.round((plannerExplanation.content_mix.leads || 0) * 100)}% leads</span>
+                                                            <span>{Math.round((plannerExplanation.content_mix.trust || 0) * 100)}% trust</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Outbound plan */}
+                                                {plannerExplanation.outbound_plan && (
+                                                    <div className="rounded-2xl bg-gray-50 p-5 mb-4">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Outbound Targeting</p>
+                                                        <p className="text-sm text-gray-700 leading-relaxed">{plannerExplanation.outbound_plan.summary}</p>
+                                                        {plannerExplanation.outbound_plan.how_it_targets && (
+                                                            <p className="text-xs text-gray-500 mt-2 leading-relaxed">{plannerExplanation.outbound_plan.how_it_targets}</p>
+                                                        )}
+                                                        {Array.isArray(plannerExplanation.outbound_plan.trigger_signals) && (
+                                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                                                {plannerExplanation.outbound_plan.trigger_signals.slice(0, 6).map((sig: string, i: number) => (
+                                                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-gray-600 border border-gray-100">{sig}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {Array.isArray(plannerExplanation.outbound_plan.channels) && plannerExplanation.outbound_plan.channels.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Channels Monitored</p>
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {plannerExplanation.outbound_plan.channels.slice(0, 6).map((ch: string, i: number) => (
+                                                                        <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{ch}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {plannerExplanation.posting_note && (
+                                                    <p className="text-xs text-gray-500 italic leading-relaxed mb-4">{plannerExplanation.posting_note}</p>
+                                                )}
+
+                                                {/* What Nina learned + applied this week */}
+                                                {plannerExplanation.optimization_applied ? (
+                                                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <TrendingUp className="w-4 h-4 text-emerald-600" />
+                                                            <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Learned from last week</p>
+                                                        </div>
+                                                        <p className="text-sm text-emerald-900 leading-relaxed">{plannerExplanation.optimization_applied.summary}</p>
+                                                        {plannerExplanation.optimization_applied.icp?.note && (
+                                                            <p className="text-[11px] text-emerald-700/80 mt-2 leading-relaxed">{plannerExplanation.optimization_applied.icp.note}</p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                                            <span className="font-bold text-gray-700">Week {plannerExplanation.week_number || 1}.</span> From next week, Nina learns from real ICP engagement and re-optimises this plan automatically.
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -2169,6 +2432,13 @@ export default function AutonomousMarketing() {
                                                     <p className="text-xs text-violet-700 mt-1">Switch to the <span className="font-bold">Content Planner</span> tab above to review the day-by-day execution schedule.</p>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Inline hint pointing to the fixed Ask-Nina bar */}
+                                        <div className="flex items-center gap-2.5 justify-center text-center">
+                                            <p className="text-xs text-zinc-500">
+                                                Any doubts about the plan or workflow? <span className="font-semibold text-zinc-700">Ask Nina in the bar below</span> before you approve.
+                                            </p>
                                         </div>
 
                                         {workspaceMode === "planning" && (
@@ -2196,7 +2466,57 @@ export default function AutonomousMarketing() {
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Autonomous Strategy Deployment</p>
                                             </div>
                                         )}
-                                        <div ref={bottomRef} className="h-32" />
+                                        {/* Spacer so the fixed Ask-Nina bar never covers the approve buttons */}
+                                        <div ref={bottomRef} className="h-44" />
+
+                                        {/* ── Fixed Ask-Nina composer: pinned to middle-bottom of the screen ── */}
+                                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,44rem)]">
+                                            {plannerQA.length > 0 && (
+                                                <div className="mb-3 max-h-[42vh] overflow-y-auto rounded-3xl bg-white/95 backdrop-blur-md border border-gray-200 shadow-2xl p-4 space-y-3">
+                                                    {plannerQA.map((m, i) => (
+                                                        m.role === "user" ? (
+                                                            <div key={i} className="flex justify-end">
+                                                                <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tr-sm bg-black text-white text-sm leading-relaxed">{m.content}</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div key={i} className="flex items-start gap-2.5">
+                                                                <NinaAvatar className="w-7 h-7" />
+                                                                <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-50 border border-gray-100 text-sm text-gray-800 leading-relaxed">{m.content}</div>
+                                                            </div>
+                                                        )
+                                                    ))}
+                                                    {askingNina && (
+                                                        <div className="flex items-start gap-2.5">
+                                                            <NinaAvatar className="w-7 h-7" />
+                                                            <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-gray-50 border border-gray-100 text-sm text-gray-500 inline-flex items-center gap-2">
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Nina is thinking…
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2 rounded-3xl bg-white border border-gray-200 shadow-2xl p-2 pl-3">
+                                                <NinaAvatar className="w-8 h-8" />
+                                                <input
+                                                    type="text"
+                                                    value={ninaQuestion}
+                                                    onChange={(e) => setNinaQuestion(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskNina(); } }}
+                                                    placeholder="Ask Nina about the plan or workflow…"
+                                                    disabled={askingNina}
+                                                    className="flex-1 bg-transparent px-2 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60"
+                                                />
+                                                <Button
+                                                    onClick={handleAskNina}
+                                                    disabled={askingNina || !ninaQuestion.trim()}
+                                                    className="h-11 px-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold gap-2 shrink-0"
+                                                >
+                                                    {askingNina ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+                                                    Ask
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -2213,8 +2533,16 @@ export default function AutonomousMarketing() {
                                     <Zap className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-white font-black text-base uppercase tracking-wide">Campaign Execution Plan</p>
-                                    <p className="text-white/70 text-xs mt-0.5">Your full content calendar — Day by Day</p>
+                                    <p className="text-white font-black text-base uppercase tracking-wide">
+                                        {(campaignSummary?.cadence === "weekly" || plannerExplanation?.cadence === "weekly")
+                                            ? `Week ${campaignSummary?.week_number || plannerExplanation?.week_number || 1} Plan`
+                                            : "Campaign Execution Plan"}
+                                    </p>
+                                    <p className="text-white/70 text-xs mt-0.5">
+                                        {(campaignSummary?.cadence === "weekly" || plannerExplanation?.cadence === "weekly")
+                                            ? "This week's content — re-optimised weekly from real engagement"
+                                            : "Your full content calendar — Day by Day"}
+                                    </p>
                                 </div>
                             </div>
                             {/* Day-by-Day grid */}
@@ -2259,9 +2587,9 @@ export default function AutonomousMarketing() {
                                                             {post.platform}
                                                         </Badge>
                                                     )}
-                                                    {(post.strategic_intent || post.content_type) && (
-                                                        <span className="px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[9px] font-black uppercase tracking-wider">
-                                                            {(post.strategic_intent || post.content_type).replace(/_/g, ' ')}
+                                                    {(post.vizier_content_type || post.strategic_intent || post.content_type) && (
+                                                        <span className="px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 text-[9px] font-black uppercase tracking-wider">
+                                                            {String(post.vizier_content_type || post.strategic_intent || post.content_type).replace(/_/g, ' ')}
                                                         </span>
                                                     )}
                                                     {post.funnel_stage && (
@@ -2271,7 +2599,7 @@ export default function AutonomousMarketing() {
                                             </div>
                                             {/* Post detail */}
                                             <div className="p-5 space-y-3">
-                                                <h4 className="text-sm font-bold text-gray-900 leading-snug">{post.poster_idea || post.subject || post.headline || "—"}</h4>
+                                                <h4 className="text-sm font-bold text-gray-900 leading-snug">{post.title || post.subject || post.poster_idea || post.headline || "—"}</h4>
                                                 <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{post.idea_summary || post.hook || post.visual_prompt || ""}</p>
                                                 {/* Scheduled time */}
                                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-50/50 border border-violet-100/50 w-fit">

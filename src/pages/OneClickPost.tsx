@@ -245,17 +245,34 @@ const OneClickPost = () => {
     setIsPosting(true);
     try {
       const brandId = spaceId || "test-brand-123";
-      await weezAPI.approveAndPost(brandId, {
+      const res = await weezAPI.approveAndPost(brandId, {
         image_url: generatedCreative.image_url,
         blob_name: generatedCreative.blob_name,
         caption: editableCaption,
         hashtags: editableHashtags,
       });
+      
+      // Trigger local backend market discovery immediately
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const postUrl = `https://www.linkedin.com/feed/update/urn:li:activity:${res.post_id || Date.now()}`;
+      
+      fetch(`${API_BASE}/api/v1/market-discovery/trigger`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_url: postUrl,
+          post_content: editableCaption,
+          post_author: currentSpace?.name || "Founder",
+          customer_id: spaceId,
+          founder_stage: "early_stage"
+        })
+      }).catch((err) => console.error("Failed to trigger auto market discovery:", err));
+
       setHasPosted(true);
-      toast.success("Artifact deployed successfully");
+      toast.success("Artifact deployed and auto-discovery started!");
       setTimeout(() => {
         setIsPreviewOpen(false);
-        navigate(`/gallery/${spaceId}`);
+        navigate(`/leads/${spaceId}?tab=market-discovery`);
       }, 2000);
     } catch (error) {
       toast.error("Deployment failed");

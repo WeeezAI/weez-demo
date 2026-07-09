@@ -755,6 +755,106 @@ export const weezAPI = {
     return await response.json();
   },
 
+  // ── Nina — AI CMO goal picker + strategy API ──────────────────────────────
+
+  /**
+   * The goal picker cards shown in the chat (e.g. "Increase demo bookings").
+   */
+  listNinaGoals: async (): Promise<{ goals: any[] }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/goals`);
+    if (!response.ok) throw new Error("Failed to load goals");
+    return await response.json();
+  },
+
+  /**
+   * Connection gate: before a founder can pick a goal, both the website and
+   * LinkedIn must be connected. Returns readiness + a warm Nina message and the
+   * list of things still to connect. Goals are returned too so the UI can
+   * preview them behind the gate.
+   */
+  getNinaReadiness: async (brandId: string): Promise<{
+    ready: boolean;
+    connections: {
+      website_connected: boolean;
+      linkedin_connected: boolean;
+      ready: boolean;
+      missing: string[];
+      nina_message: string;
+      connect_actions: Array<{ type: string; label: string; endpoint: string }>;
+    };
+    goals: any[];
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/readiness?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to check readiness");
+    return await response.json();
+  },
+
+  /**
+   * After a goal card is clicked, returns the 2-3 smart questions Nina asks
+   * (only the dimensions we don't already know for this brand). If the brand
+   * isn't fully connected, returns status "needs_connection" + connections.
+   */
+  getNinaGoalIntake: async (brandId: string, goalId: string, answers?: Record<string, any>): Promise<{
+    goal_id: string;
+    goal_label: string;
+    questions: Array<{ field: string; question: string; type: string; options?: string[]; placeholder?: string }>;
+    ready: boolean;
+    nina_message: string;
+    status?: string;
+    connections?: any;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/goal-intake`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, goal_id: goalId, answers }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed to load questions" }));
+      throw new Error(err.detail || "Failed to load questions");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Generates Nina's full go-to-market strategy for a chosen goal + answers.
+   */
+  generateNinaStrategy: async (brandId: string, target: string, answers?: Record<string, any>): Promise<{
+    status: string;
+    strategy?: any;
+    reason?: string;
+    connections?: any;
+    nina_message?: string;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/strategy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, target, answers }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed to build strategy" }));
+      throw new Error(err.detail || "Failed to build strategy");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Ask Nina a question about the strategy, the weekly planner, or the workflow.
+   * Returns a short conversational answer grounded in the stored strategy +
+   * the optional planner context passed from the UI.
+   */
+  askNina: async (brandId: string, question: string, plannerContext?: any): Promise<{ status: string; answer: string }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, question, planner_context: plannerContext }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Nina couldn't answer that" }));
+      throw new Error(err.detail || "Nina couldn't answer that");
+    }
+    return await response.json();
+  },
+
   // ── Sage — Founder Memory & Context Capture API ───────────────────────────
 
   /**
