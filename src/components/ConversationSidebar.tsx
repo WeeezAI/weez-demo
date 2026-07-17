@@ -48,42 +48,37 @@ const ConversationSidebar = ({
     navigate("/spaces");
   };
 
+  // The AI marketing workforce. Nina (the CMO) is the home/command center; the
+  // three specialists report up to her. Planner / LinkedIn / Growth are
+  // intentionally not surfaced here — the founder runs everything through Nina.
   const navItems = [
     {
-      label: "Dashboard",
-      path: `/autonomous-marketing/${spaceId}`,
-      icon: BarChart3,
+      label: "Nina",
+      role: "CMO",
+      path: `/ninna/${spaceId}`,
+      icon: LayoutDashboard,
+      color: "text-indigo-500"
+    },
+    {
+      label: "Robert",
+      role: "Content",
+      path: `/robert/${spaceId}`,
+      icon: PenLine,
       color: "text-violet-500"
     },
     {
-      label: "LinkedIn",
-      path: `/linkedin-analytics/${spaceId}`,
-      icon: Linkedin,
-      color: "text-blue-600"
-    },
-    {
       label: "Eva",
+      role: "Signals",
       path: `/eva/${spaceId}`,
       icon: SignalIcon,
       color: "text-emerald-500"
     },
     {
       label: "Max",
+      role: "Outreach",
       path: `/sales/${spaceId}`,
       icon: Radar,
       color: "text-orange-500"
-    },
-    {
-      label: "Growth",
-      path: `/growth/${spaceId}`,
-      icon: Zap,
-      color: "text-emerald-500"
-    },
-    {
-      label: "Content",
-      path: `/robert/${spaceId}`,
-      icon: PenLine,
-      color: "text-indigo-500"
     },
   ];
 
@@ -108,7 +103,7 @@ const ConversationSidebar = ({
 
             {/* Core Navigation */}
             <div className="space-y-1">
-              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">Workspace</p>
+              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">Workforce</p>
               {navItems.map((item) => {
                 const isActive = location.pathname.includes(item.path);
                 return (
@@ -123,10 +118,13 @@ const ConversationSidebar = ({
                     )}
                   >
                     <item.icon className={cn(
-                      "w-4 h-4 transition-all duration-300",
+                      "w-4 h-4 transition-all duration-300 shrink-0",
                       isActive ? "text-primary scale-110" : "text-muted-foreground group-hover:text-primary"
                     )} />
-                    <span className="text-xs font-bold tracking-tight">{item.label}</span>
+                    <span className="flex flex-col items-start leading-tight min-w-0">
+                      <span className="text-xs font-bold tracking-tight">{item.label}</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">{item.role}</span>
+                    </span>
 
                     {isActive && (
                       <div className="absolute right-3 w-1 h-1 bg-accent rounded-full shadow-glow" />

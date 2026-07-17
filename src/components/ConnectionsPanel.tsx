@@ -8,6 +8,7 @@ import instagramIcon from "@/assets/instagram-icon.jpeg";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { platformAPI } from "@/services/platformAPI";
+import { integrationsAPI, INTEGRATION_PROVIDER_KEYS } from "@/services/integrationsAPI";
 import { metadataAPI } from "@/services/metadataAPI";
 import FolderSelectionModal from "./connections/FolderSelectionModal";
 import { toast } from "sonner";
@@ -118,6 +119,23 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
           return c;
         })
       );
+
+      // 3. Load mailbox + calendar integrations (main backend — powers Max's
+      //    email sending & meeting booking). Overrides the generic status for
+      //    the Gmail / Outlook / Calendar keys.
+      try {
+        const integ = await integrationsAPI.getStatus(currentSpace.id, token);
+        const map = integ.connected || {};
+        setConnectors((prev) =>
+          prev.map((c) =>
+            INTEGRATION_PROVIDER_KEYS.includes(c.providerKey as never)
+              ? { ...c, connected: !!map[c.providerKey] }
+              : c
+          )
+        );
+      } catch (integErr) {
+        console.error("Failed to load mailbox/calendar integrations:", integErr);
+      }
     } catch (err) {
       console.error("Failed to load connections:", err);
     }
@@ -143,6 +161,14 @@ const ConnectionsPanel = ({ onConnectorSync }: ConnectionsPanelProps) => {
         console.error("Failed to get Instagram auth URL:", err);
         toast.error("Failed to start Instagram connection");
       }
+      return;
+    }
+
+    // Mailbox + calendar (Gmail / Outlook / Google + Microsoft Calendar) —
+    // backend-driven OAuth on the main backend. Connecting Gmail also grants
+    // Google Calendar (and Outlook also grants Microsoft Calendar) in one consent.
+    if (INTEGRATION_PROVIDER_KEYS.includes(connector.providerKey as never)) {
+      integrationsAPI.startConnect(currentSpace.id, connector.providerKey);
       return;
     }
 

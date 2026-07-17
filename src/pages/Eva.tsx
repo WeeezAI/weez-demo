@@ -113,6 +113,22 @@ function LogoMark({ seed, className = "h-9 w-9" }: { seed: string; className?: s
   );
 }
 
+// Brand logo with graceful fallback: backend logoUrl (Clearbit) → favicon → initials.
+function CompanyLogo({ logoUrl, domain, company, className = "h-9 w-9" }: { logoUrl?: string; domain?: string; company: string; className?: string }) {
+  const seed = (company || "AC").slice(0, 2).toUpperCase();
+  const favicon = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : "";
+  const sources = useMemo(() => [logoUrl, favicon].filter(Boolean) as string[], [logoUrl, favicon]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { setIdx(0); }, [logoUrl, domain]);
+
+  if (idx >= sources.length) return <LogoMark seed={seed} className={className} />;
+  return (
+    <div className={cn("relative shrink-0 overflow-hidden rounded-xl border border-zinc-200/70 bg-white", className)}>
+      <img src={sources[idx]} alt={`${company} logo`} onError={() => setIdx((i) => i + 1)} className="h-full w-full object-contain p-1" />
+    </div>
+  );
+}
+
 // ─── Scan progress ─────────────────────────────────────────────────────────────
 
 const SCAN_STEPS: { keys: ScanStage[]; label: string; hint: string; Icon: typeof Layers }[] = [
@@ -282,7 +298,7 @@ function LeadCard({ lead, onAction }: { lead: QualifiedLead; onAction: (action: 
       <div className="flex flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <LogoMark seed={(lead.company || "AC").slice(0, 2).toUpperCase()} className="h-10 w-10" />
+            <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-10 w-10" />
             <div className="min-w-0">
               <h3 className="truncate text-[15px] font-semibold text-zinc-900">{lead.company}</h3>
               <p className="truncate text-[11px] text-zinc-400">{lead.industry} · {lead.employeeRange} · {lead.hqLocation}</p>
@@ -338,7 +354,10 @@ function LeadCard({ lead, onAction }: { lead: QualifiedLead; onAction: (action: 
           {rejected ? (
             <Button size="sm" variant="ghost" className="h-7 text-[11px] text-zinc-500" onClick={() => onAction("reset")}>Restore</Button>
           ) : handed ? (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
+            <>
+              <button title="Not a fit — pull back from Max" onClick={() => onAction("reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
+            </>
           ) : (
             <>
               <button title="Not a fit" onClick={() => onAction("reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
@@ -455,6 +474,17 @@ function EvaChat({ ws, spaceId, open, onClose }: { ws: EvaWorkspace; spaceId?: s
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
 type TierFilter = "all" | ACVTier;
+type QualityFilter = "all" | "latest" | "high" | "low";
+
+// Quality is graded off Eva's ICP fit (0–100); "latest" sorts by discovery time.
+const QUALITY_FILTERS: { key: QualityFilter; label: string }[] = [
+  { key: "all", label: "All quality" },
+  { key: "latest", label: "Latest" },
+  { key: "high", label: "High quality" },
+  { key: "low", label: "Low quality" },
+];
+const HIGH_QUALITY_FIT = 70;
+const LOW_QUALITY_FIT = 50;
 
 export default function Eva() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -467,6 +497,7 @@ export default function Eva() {
   const [stage, setStage] = useState<ScanStage | null>(null);
   const [chatOpen, setChatOpen] = useState(true);
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
+  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
   const reqRef = useRef(0);
 
   const load = useCallback(async (force: boolean, isScan: boolean) => {
@@ -496,11 +527,17 @@ export default function Eva() {
 
   const leads = useMemo(() => {
     if (!ws) return [];
-    return ws.leads
+    let list = ws.leads
       .filter((l) => l.status !== "rejected")
-      .filter((l) => tierFilter === "all" || l.acvTier === tierFilter)
-      .sort((a, b) => b.icpFit - a.icpFit);
-  }, [ws, tierFilter]);
+      .filter((l) => tierFilter === "all" || l.acvTier === tierFilter);
+    if (qualityFilter === "high") list = list.filter((l) => l.icpFit >= HIGH_QUALITY_FIT);
+    else if (qualityFilter === "low") list = list.filter((l) => l.icpFit < LOW_QUALITY_FIT);
+    return [...list].sort((a, b) =>
+      qualityFilter === "latest"
+        ? +new Date(b.createdAt) - +new Date(a.createdAt)
+        : b.icpFit - a.icpFit
+    );
+  }, [ws, tierFilter, qualityFilter]);
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) => prev ? {
@@ -574,15 +611,26 @@ export default function Eva() {
 
                 <div className="grid gap-4 lg:grid-cols-3">
                   <div className="space-y-4 lg:col-span-2">
-                    {/* tier filter */}
-                    <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
-                      {(["all", "low", "medium", "high"] as TierFilter[]).map((t) => (
-                        <button key={t} onClick={() => setTierFilter(t)}
-                          className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                            tierFilter === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
-                          {t === "all" ? `All ${ws.leads.filter((l) => l.status !== "rejected").length}` : `${TIER_META[t as ACVTier].label} ${ws.metrics.byTier[t as ACVTier]}`}
-                        </button>
-                      ))}
+                    {/* filters: ACV tier + quality / recency */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
+                        {(["all", "low", "medium", "high"] as TierFilter[]).map((t) => (
+                          <button key={t} onClick={() => setTierFilter(t)}
+                            className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                              tierFilter === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
+                            {t === "all" ? `All ${ws.leads.filter((l) => l.status !== "rejected").length}` : `${TIER_META[t as ACVTier].label} ${ws.metrics.byTier[t as ACVTier]}`}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
+                        {QUALITY_FILTERS.map((f) => (
+                          <button key={f.key} onClick={() => setQualityFilter(f.key)}
+                            className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                              qualityFilter === f.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {leads.length === 0 ? (

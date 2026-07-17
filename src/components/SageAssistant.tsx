@@ -17,6 +17,26 @@ import { Button } from "@/components/ui/button";
 
 interface SageAssistantProps {
     spaceId: string;
+    /** Position of the floating check-in button (defaults to bottom-right). */
+    fabClassName?: string;
+}
+
+// Nina's face for the check-in (reuses the shipped CMO avatar, graceful "N" fallback).
+const NINA_AVATAR = "/assets/nina.png";
+
+function NinaFace({ className = "" }: { className?: string }) {
+    const [ok, setOk] = useState(true);
+    return (
+        <div className={`overflow-hidden shrink-0 ${className}`}>
+            {ok ? (
+                <img src={NINA_AVATAR} alt="Nina" onError={() => setOk(false)} className="w-full h-full object-cover" />
+            ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-indigo-600 to-purple-500 text-white flex items-center justify-center font-black">
+                    N
+                </div>
+            )}
+        </div>
+    );
 }
 
 interface MessageLog {
@@ -44,7 +64,7 @@ interface SageStatus {
  * chat drawer powered by the OpenAI Realtime API (via the backend's ephemeral
  * WebRTC session). When a check-in is due, the button pulses with a soft glow.
  */
-export default function SageAssistant({ spaceId }: SageAssistantProps) {
+export default function SageAssistant({ spaceId, fabClassName = "bottom-6 right-6" }: SageAssistantProps) {
     const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<SageStatus | null>(null);
 
@@ -89,7 +109,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
     useEffect(() => {
         if (status?.due && !remindedRef.current && !open) {
             remindedRef.current = true;
-            toast.message("Sage check-in is due", {
+            toast.message("Your weekly check-in with Nina is due", {
                 description: status.reminder_message,
                 icon: <Bell className="w-4 h-4 text-indigo-600" />,
                 action: { label: "Start", onClick: () => setOpen(true) },
@@ -145,7 +165,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 localStreamRef.current = localStream;
             } catch {
-                toast.error("Sage needs microphone access for your voice check-in. Enable it in your browser settings.");
+                toast.error("Nina needs microphone access for your voice check-in. Enable it in your browser settings.");
                 setStep("idle");
                 return;
             }
@@ -210,7 +230,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
             await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: sdpAnswer }));
         } catch (err: any) {
             console.error("Sage check-in failed to start:", err);
-            toast.error(err.message || "Couldn't reach Sage right now. Try again in a moment.");
+            toast.error(err.message || "Couldn't reach Nina right now. Try again in a moment.");
             cleanupWebRTC();
             setStep("idle");
         }
@@ -324,11 +344,11 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
         <>
             {/* ── FLOATING ACTION BUTTON ──────────────────────────────────────── */}
             {!open && (
-                <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-center gap-2">
+                <div className={`fixed ${fabClassName} z-[90] flex flex-col items-center gap-2`}>
                     <button
                         onClick={() => setOpen(true)}
-                        aria-label="Open Sage check-in"
-                        className="group relative w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-500 shadow-2xl shadow-indigo-600/30 flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95"
+                        aria-label="Open your Nina check-in"
+                        className="group relative w-16 h-16 rounded-full shadow-2xl shadow-indigo-600/30 transition-transform hover:scale-105 active:scale-95"
                     >
                         {/* Soft glow pulse when a check-in is due */}
                         {due && (
@@ -337,13 +357,13 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                 <span className="absolute -inset-1 rounded-full bg-indigo-400/20 blur-md animate-pulse" />
                             </>
                         )}
-                        <Sparkles className="relative w-7 h-7" />
+                        <NinaFace className="relative w-16 h-16 rounded-full ring-2 ring-white" />
                         {due && (
                             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-400 border-2 border-white" />
                         )}
                     </button>
                     <span className="px-2 py-0.5 rounded-full bg-white/90 backdrop-blur text-[11px] font-bold text-zinc-700 shadow-sm border border-zinc-100">
-                        Sage
+                        Check-in
                     </span>
                 </div>
             )}
@@ -359,11 +379,9 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center text-white shadow-lg">
-                                    <Sparkles className="w-5 h-5" />
-                                </div>
+                                <NinaFace className="w-10 h-10 rounded-2xl shadow-lg" />
                                 <div>
-                                    <h3 className="text-sm font-black text-zinc-900 leading-none">Sage</h3>
+                                    <h3 className="text-sm font-black text-zinc-900 leading-none">Nina</h3>
                                     <p className="text-[11px] text-zinc-400 font-semibold mt-0.5">
                                         {status?.has_sessions
                                             ? `${status.session_count} check-in${status.session_count === 1 ? "" : "s"} captured`
@@ -375,14 +393,14 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                 <button
                                     onClick={() => setShowSettings((s) => !s)}
                                     className="w-9 h-9 rounded-xl hover:bg-zinc-100 flex items-center justify-center text-zinc-500"
-                                    aria-label="Sage settings"
+                                    aria-label="Check-in settings"
                                 >
                                     <Settings2 className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={closeModal}
                                     className="w-9 h-9 rounded-xl hover:bg-zinc-100 flex items-center justify-center text-zinc-500"
-                                    aria-label="Close Sage"
+                                    aria-label="Close check-in"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -420,13 +438,11 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                 <div className="flex-1 flex flex-col items-center justify-center text-center px-8 space-y-6">
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full" />
-                                        <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-2xl">
-                                            <Sparkles className="w-9 h-9 text-white" />
-                                        </div>
+                                        <NinaFace className="relative w-20 h-20 rounded-3xl shadow-2xl ring-2 ring-white" />
                                     </div>
                                     <div className="space-y-2">
                                         <h2 className="text-xl font-black text-zinc-900">
-                                            {status?.due ? "Time for this week's check-in" : "Talk to Sage"}
+                                            {status?.due ? "Time for this week's check-in" : "Talk to Nina"}
                                         </h2>
                                         <p className="text-sm text-zinc-500 font-medium leading-relaxed max-w-xs">
                                             {status?.reminder_message ||
@@ -440,7 +456,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                         <Mic className="w-4 h-4" /> Start voice check-in
                                     </Button>
                                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                                        🎙️ Sage Voice · ⚡ Realtime · 🔒 Private
+                                        🎙️ Nina Voice · ⚡ Realtime · 🔒 Private
                                     </p>
                                 </div>
                             )}
@@ -478,12 +494,12 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                         </div>
                                         <p className="text-xs font-black uppercase tracking-widest text-zinc-700">
                                             {step === "connecting"
-                                                ? "Connecting to Sage..."
+                                                ? "Connecting to Nina..."
                                                 : isMuted
                                                 ? "Microphone muted"
                                                 : agentSpeaking
-                                                ? "Sage is speaking..."
-                                                : "Sage is listening..."}
+                                                ? "Nina is speaking..."
+                                                : "Nina is listening..."}
                                         </p>
                                     </div>
 
@@ -500,7 +516,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                             <div className="h-full flex flex-col items-center justify-center text-center text-zinc-300 gap-2 py-8">
                                                 <Volume2 className="w-7 h-7 opacity-40 animate-pulse" />
                                                 <p className="text-xs font-semibold max-w-[200px]">
-                                                    Your conversation will appear here as you and Sage talk.
+                                                    Your conversation will appear here as you and Nina talk.
                                                 </p>
                                             </div>
                                         ) : (
@@ -513,7 +529,7 @@ export default function SageAssistant({ spaceId }: SageAssistantProps) {
                                                 >
                                                     {msg.sender === "assistant" && (
                                                         <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[9px] font-black text-indigo-600 shrink-0">
-                                                            S
+                                                            N
                                                         </div>
                                                     )}
                                                     <div

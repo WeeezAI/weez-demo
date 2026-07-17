@@ -79,7 +79,8 @@ const Spaces = () => {
 
   const handleSpaceClick = (space: any) => {
     selectSpace(space);
-    navigate(`/autonomous-marketing/${space.id}`);
+    // Ninna (the AI CMO command center) is the single interface into a workspace.
+    navigate(`/ninna/${space.id}`);
   };
 
   const handleLogout = () => {

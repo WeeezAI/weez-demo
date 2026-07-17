@@ -81,6 +81,7 @@ export interface QualifiedLead {
   company: string;
   domain: string;
   website: string;
+  logoUrl?: string;
   industry: string;
   employeeRange: string;
   hqLocation: string;
@@ -267,6 +268,7 @@ function buildDemoWorkspace(): EvaWorkspace {
     leads.push({
       id: `lead_${i}`, entityId: `ent_${i}`, company: s.company,
       domain: `${s.company.toLowerCase().split(" ")[0]}.com`, website: sig.website!,
+      logoUrl: `https://logo.clearbit.com/${s.company.toLowerCase().split(" ")[0]}.com`,
       industry: s.industry, employeeRange: s.emp, hqLocation: s.hq,
       acvTier: s.tier, icpFit: s.fit, recommendedAction: s.action, escalation: "",
       qualificationReason: s.reason, primaryEvent: `[${s.event}] ${s.eventDetail}`, eventType: s.event,

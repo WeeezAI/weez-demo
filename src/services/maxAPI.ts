@@ -102,6 +102,9 @@ export interface ContactRecord {
   touchHistory: unknown[];
   linkedinHint: string;
   relationshipStatus: string;
+  email?: string;             // enriched contact email (Eva)
+  emailVerified?: boolean;
+  headline?: string;
 }
 
 export interface OutboundOpportunity {
@@ -126,7 +129,154 @@ export interface OutboundOpportunity {
   notes: string;
   angle?: string;
   recommendedContactId?: string | null;
-  draftSource?: string;
+  draftSource?: string; // "template" | "llm" | "pipeline"
+  // ── Who + where to send (resolved from the enriched contact) ──
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientEmailVerified?: boolean;
+  // ── Multi-stage reasoning + lifecycle (surfaced whole from the backend) ──
+  subjectAlternatives?: string[];
+  reasoning?: ReasoningArtifact | null;
+  qualityReview?: QualityReview | null;
+  disposition?: ApprovalDisposition | null;
+  tracking?: OutboundTracking | null;
+}
+
+// ─── Multi-stage reasoning artifacts (mirror core/max/pipeline.py) ───────────────
+// Max is an outbound strategist, not an email generator: every email is the
+// output of an explicit reasoning chain, each stage emitting structured JSON.
+
+export interface ReasoningStageSummary {
+  id:
+    | "research"
+    | "problem"
+    | "solution"
+    | "strategy"
+    | "generation"
+    | "review"
+    | "approval"
+    | string;
+  label: string;
+  status: "complete" | "skipped" | string;
+  headline: string;
+}
+
+export interface WebsiteIntelligence {
+  businessSummary?: string;
+  icp?: string;
+  positioning?: string;
+  currentMessaging?: string;
+  productCategory?: string;
+  productMaturity?: string;
+  likelyGtmMotion?: string;
+  growthSignals?: string[];
+  uniqueSellingPoints?: string[];
+  currentMarketingAngle?: string;
+  observed?: string[];
+  inferred?: string[];
+  confidence?: ConfidenceLabel | string;
+  gaps?: string;
+}
+
+export interface ProblemInference {
+  observedEvidence?: string[];
+  possibleProblems?: { problem: string; confidence: string; rationale: string }[];
+  primaryProblem?: string;
+  businessImpact?: string;
+  confidence?: ConfidenceLabel | string;
+}
+
+export interface SolutionMapping {
+  mappings?: { problem: string; capability: string; expectedOutcome: string; strength: number }[];
+  strongestAngle?: string;
+  rationale?: string;
+  relevanceConfidence?: ConfidenceLabel | string;
+}
+
+export interface EmailStrategyPlan {
+  conversationGoal?: string;
+  focus?: string[];
+  openingAngle?: string;
+  primaryPain?: string;
+  secondaryPain?: string;
+  productMapping?: string;
+  personalization?: string;
+  trustBuilder?: string;
+  socialProofDirection?: string;
+  ctaType?: string;
+  meetingGoal?: string;
+  avoid?: string[];
+  riskLevel?: string;
+  confidence?: ConfidenceLabel | string;
+}
+
+export interface GeneratedEmail {
+  subject?: string;
+  subjectAlternatives?: string[];
+  body?: string;
+  cta?: string;
+  ctaReady?: boolean;
+  angle?: string;
+  whyNow?: string;
+  confidenceLabel?: ConfidenceLabel;
+}
+
+export interface QualityReview {
+  scores?: {
+    personalization: number;
+    clarity: number;
+    relevance: number;
+    trust: number;
+    humanTone: number;
+    meetingProbability: number;
+  };
+  overall?: number;
+  hasRealObservation?: boolean;
+  personalizationAuthentic?: boolean;
+  soundsAiGenerated?: boolean;
+  connectsProblemToSolution?: boolean;
+  leadsToConversation?: boolean;
+  wouldSend?: boolean;
+  issues?: string[];
+  improvementHints?: string[];
+}
+
+export type DispositionDecision = "auto_send" | "queue_for_approval" | string;
+
+export interface ApprovalDisposition {
+  decision?: DispositionDecision;
+  mode?: "autopilot" | "approval" | string;
+  reason?: string;
+  qualityOk?: boolean;
+  confidenceOk?: boolean;
+  mailboxOk?: boolean;
+  overall?: number;
+}
+
+export interface ReasoningArtifact {
+  research?: WebsiteIntelligence;
+  problem?: ProblemInference;
+  solution?: SolutionMapping;
+  strategy?: EmailStrategyPlan;
+  email?: GeneratedEmail;
+  review?: QualityReview;
+  disposition?: ApprovalDisposition;
+  stages?: ReasoningStageSummary[];
+  regenerated?: boolean;
+  generatedAt?: string;
+}
+
+export interface OutboundTracking {
+  status: string; // not_sent | queued | sent | delivered | opened | clicked | replied | meeting_booked | bounced | no_reply
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  openedAt?: string | null;
+  clickedAt?: string | null;
+  repliedAt?: string | null;
+  meetingBooked?: boolean;
+  bounced?: boolean;
+  outcome?: string;
+  history?: { event: string; at: string; note?: string }[];
 }
 
 export interface CommitteeMember {
@@ -230,6 +380,8 @@ export interface MaxWorkspace {
   last_monitor_at?: string;
   metrics: MaxMetrics;
   isDemo?: boolean;
+  isSample?: boolean;            // backend synthetic sample feed (no real leads yet)
+  reasoningInProgress?: boolean; // Max is personalizing the top opportunities in the background
 }
 
 export type MonitorStage =
@@ -237,6 +389,7 @@ export type MonitorStage =
   | "context"
   | "scanning"
   | "qualifying"
+  | "reasoning"
   | "drafting"
   | string;
 
@@ -468,6 +621,124 @@ function demoTemplateDraft(tier: ACVTier, company: string, signalLine: string): 
   };
 }
 
+function buildDemoReasoning(
+  seed: DemoSeed,
+  draft: { subject: string; body: string; cta: string; ready: boolean },
+  top: SignalBundleItem
+): ReasoningArtifact {
+  const overall = seed.tier === "high" ? 68 : 82;
+  const decision: DispositionDecision = seed.tier === "low" ? "auto_send" : "queue_for_approval";
+  const sig = SIGNAL_META[top.type].label.toLowerCase();
+  return {
+    research: {
+      businessSummary: `${seed.company} is a ${seed.segment.toLowerCase()} company (${seed.emp} employees, ${seed.hq}).`,
+      productCategory: "B2B SaaS",
+      productMaturity: seed.tier === "high" ? "mature" : "growth",
+      likelyGtmMotion: seed.tier === "low" ? "plg" : "sales-led",
+      growthSignals: seed.signals.map((s) => s.detail),
+      observed: [top.detail],
+      inferred: [`Given the ${sig}, they are likely scaling the ${seed.contact.dept} function.`],
+      confidence: seed.conf,
+      gaps: "Public signals only — no confirmed buying intent.",
+    },
+    problem: {
+      observedEvidence: [top.detail],
+      primaryProblem:
+        seed.tier === "high"
+          ? "Scaling GTM without losing account control"
+          : "Needs more predictable pipeline as the team scales",
+      possibleProblems: [
+        { problem: "Pipeline / acquisition pressure", confidence: seed.conf, rationale: `Follows from the ${sig}.` },
+      ],
+      businessImpact: "Slower revenue ramp if the motion isn't scaled deliberately.",
+      confidence: seed.conf,
+    },
+    solution: {
+      mappings: [
+        {
+          problem: "Pipeline pressure",
+          capability: "Event-driven outbound workforce",
+          expectedOutcome: "More qualified, better-timed conversations",
+          strength: overall,
+        },
+      ],
+      strongestAngle: "Connect the recent signal to a faster, better-timed path to pipeline.",
+      relevanceConfidence: seed.conf,
+    },
+    strategy: {
+      conversationGoal: seed.tier === "high" ? "Earn a first conversation with a relevant POV" : "Book a short working session",
+      focus: [sig],
+      openingAngle: `Reference ${seed.company}'s ${sig}.`,
+      primaryPain: "Scaling the motion without adding headcount noise",
+      productMapping: "Event-driven outbound → better-timed, qualified pipeline",
+      ctaType: seed.tier === "high" ? "no-cta-yet" : seed.tier === "low" ? "meeting-link" : "agenda-based",
+      meetingGoal: "A specific idea tailored to their setup",
+      avoid: ["fake urgency", "unverifiable claims"],
+      riskLevel: seed.tier === "high" ? "medium" : "low",
+      confidence: seed.conf,
+    },
+    email: {
+      subject: draft.subject,
+      subjectAlternatives: [draft.subject, `A quick idea for ${seed.company}`],
+      body: draft.body,
+      cta: draft.cta,
+      ctaReady: draft.ready,
+      angle: "signal tied to a persona-relevant outcome",
+      whyNow: `${top.detail} (${top.recency}).`,
+      confidenceLabel: seed.conf,
+    },
+    review: {
+      scores: {
+        personalization: overall - 4,
+        clarity: overall + 3,
+        relevance: overall,
+        trust: overall - 2,
+        humanTone: overall + 1,
+        meetingProbability: seed.tier === "high" ? 55 : 72,
+      },
+      overall,
+      hasRealObservation: true,
+      personalizationAuthentic: true,
+      soundsAiGenerated: false,
+      connectsProblemToSolution: true,
+      leadsToConversation: true,
+      wouldSend: overall >= 70,
+      issues: overall >= 70 ? [] : ["First touch leans slightly generic — tie the observation tighter to their world."],
+      improvementHints: overall >= 70 ? [] : ["Open with the specific signal, then the inferred problem in one line."],
+    },
+    disposition: {
+      decision,
+      mode: "approval",
+      reason:
+        decision === "auto_send"
+          ? "Auto-send eligible (approval-mode low-ACV lane): quality passes and mailbox is healthy."
+          : seed.tier === "high"
+          ? "High-ACV first touch — Max never blind-sends; a human decides the move."
+          : "Queued for approval — workspace is in approval mode.",
+      qualityOk: overall >= 70,
+      confidenceOk: seed.conf !== "hypothesis",
+      mailboxOk: true,
+      overall,
+    },
+    stages: [
+      { id: "research", label: "Research", status: "complete", headline: `${seed.company} — ${seed.segment}` },
+      { id: "problem", label: "Problem Inference", status: "complete", headline: "Pipeline pressure as the team scales" },
+      { id: "solution", label: "Solution Mapping", status: "complete", headline: "Event-driven outbound → better-timed pipeline" },
+      { id: "strategy", label: "Email Strategy", status: "complete", headline: "Reference the signal, offer a specific idea" },
+      { id: "generation", label: "Email Generation", status: "complete", headline: draft.subject },
+      { id: "review", label: "Quality Review", status: "complete", headline: `Overall ${overall}/100` },
+      {
+        id: "approval",
+        label: "Approval Decision",
+        status: "complete",
+        headline: decision === "auto_send" ? "Auto-send" : "Queued for approval",
+      },
+    ],
+    regenerated: false,
+    generatedAt: isoDaysAgo(0),
+  };
+}
+
 function buildDemoWorkspace(acvTier: ACVTier): MaxWorkspace {
   const signals: SignalEvent[] = [];
   const accounts: AccountRecord[] = [];
@@ -569,6 +840,7 @@ function buildDemoWorkspace(acvTier: ACVTier): MaxWorkspace {
         : ["leadership_hire", "funding", "engagement"].includes(top.type)
         ? "ae_alert"
         : "brief_only";
+    const reasoning = buildDemoReasoning(seed, draft, top);
     opportunities.push({
       id: `demo_opp_${i}`,
       accountId: accId,
@@ -590,6 +862,15 @@ function buildDemoWorkspace(acvTier: ACVTier): MaxWorkspace {
       snoozedUntil: null,
       notes: "",
       angle: seed.tier === "high" ? "account-level POV, product-agnostic" : "signal tied to a persona-relevant outcome",
+      draftSource: "pipeline",
+      recipientName: seed.contact.name,
+      recipientEmail: `${seed.contact.name.toLowerCase().split(" ")[0]}@${seed.company.toLowerCase().split(" ")[0]}.com`,
+      recipientEmailVerified: true,
+      subjectAlternatives: reasoning.email?.subjectAlternatives || [draft.subject],
+      reasoning,
+      qualityReview: reasoning.review,
+      disposition: reasoning.disposition,
+      tracking: { status: "not_sent", history: [] },
     });
   });
 
@@ -829,6 +1110,26 @@ export const maxAPI = {
       { method: "POST", body: JSON.stringify({ opportunity_id: opportunityId, angle_hint: angleHint }) }
     );
     return res.opportunity;
+  },
+
+  /** Record a lifecycle outcome on a sent opportunity (Tracking & Learning layer). */
+  recordOutcome: async (
+    spaceId: string | undefined,
+    opportunityId: string,
+    event: string,
+    note = ""
+  ): Promise<OutboundOpportunity | null> => {
+    if (!isRealBrandId(spaceId)) return null; // demo: no live tracking backend
+    try {
+      const res = await maxFetch<{ updated: boolean; opportunity?: OutboundOpportunity }>(
+        `/opportunity/outcome?brand_id=${encodeURIComponent(spaceId)}`,
+        { method: "POST", body: JSON.stringify({ opportunity_id: opportunityId, event, note }) }
+      );
+      return res.opportunity || null;
+    } catch (e) {
+      console.warn("[max] outcome record failed (non-blocking):", e);
+      return null;
+    }
   },
 
   /** Update a tracked account (status / priority / routing / notes). */

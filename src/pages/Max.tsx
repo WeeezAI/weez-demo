@@ -38,6 +38,9 @@ import {
   Briefcase,
   GitBranch,
   Sparkles,
+  Brain,
+  ChevronDown,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,6 +79,8 @@ import {
   type MaxChatMessage,
   type MonitorStage,
   type ConfidenceLabel,
+  type ReasoningArtifact,
+  type ReasoningStageSummary,
 } from "@/services/maxAPI";
 
 // ─── Tone → tailwind chip classes ────────────────────────────────────────────────
@@ -178,10 +183,10 @@ const GEN_STEPS: { keys: MonitorStage[]; label: string; hint: string; Icon: type
     Icon: Target,
   },
   {
-    keys: ["drafting"],
-    label: "Drafting warm outreach & briefs",
-    hint: "Writing grounded first touches and preparing the queue and account briefs.",
-    Icon: Pencil,
+    keys: ["reasoning", "drafting"],
+    label: "Reasoning through each opportunity",
+    hint: "Research → problem → solution → strategy → email → quality review → approval for the top accounts.",
+    Icon: Brain,
   },
 ];
 
@@ -547,6 +552,54 @@ function LiveSignalFeed({ signals, companies }: { signals: SignalEvent[]; compan
   );
 }
 
+// ─── Queue quality / recency filter (shared by Low + Medium modes) ───────────────
+
+type QueueFilter = "all" | "latest" | "high" | "low";
+
+const QUEUE_FILTERS: { key: QueueFilter; label: string }[] = [
+  { key: "all", label: "All quality" },
+  { key: "latest", label: "Latest" },
+  { key: "high", label: "High quality" },
+  { key: "low", label: "Low quality" },
+];
+const HIGH_QUALITY_SCORE = 70;
+const LOW_QUALITY_SCORE = 50;
+
+// Quality = Max's own review score when available, else the fit score.
+function oppQuality(o: OutboundOpportunity): number {
+  return typeof o.qualityReview?.overall === "number" ? o.qualityReview.overall : o.fitScore;
+}
+
+function applyQueueFilter(opps: OutboundOpportunity[], filter: QueueFilter): OutboundOpportunity[] {
+  let list = opps;
+  if (filter === "high") list = list.filter((o) => oppQuality(o) >= HIGH_QUALITY_SCORE);
+  else if (filter === "low") list = list.filter((o) => oppQuality(o) < LOW_QUALITY_SCORE);
+  return [...list].sort((a, b) =>
+    filter === "latest"
+      ? +new Date(b.createdAt) - +new Date(a.createdAt)
+      : b.fitScore - a.fitScore
+  );
+}
+
+function QueueFilterBar({ value, onChange }: { value: QueueFilter; onChange: (f: QueueFilter) => void }) {
+  return (
+    <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
+      {QUEUE_FILTERS.map((f) => (
+        <button
+          key={f.key}
+          onClick={() => onChange(f.key)}
+          className={cn(
+            "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
+            value === f.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+          )}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Low ACV mode — monitoring & exception ───────────────────────────────────────
 
 function AutoRow({
@@ -593,12 +646,16 @@ function LowMode({
   metrics: MaxMetrics;
   onOppAction: (opp: OutboundOpportunity, action: string) => void;
 }) {
+  const [filter, setFilter] = useState<QueueFilter>("all");
   const accById = useMemo(() => new Map(workspace.accounts.map((a) => [a.id, a])), [workspace.accounts]);
   const lowCompanies = useMemo(
     () => new Set(workspace.accounts.filter((a) => a.acvTier === "low").map((a) => a.company)),
     [workspace.accounts]
   );
-  const lowOpps = workspace.opportunities.filter((o) => o.acvTier === "low");
+  const lowOpps = useMemo(
+    () => applyQueueFilter(workspace.opportunities.filter((o) => o.acvTier === "low"), filter),
+    [workspace.opportunities, filter]
+  );
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -608,6 +665,9 @@ function LowMode({
           <PanelTitle icon={Zap} right={<span className="text-[10px] font-medium text-zinc-400">{lowOpps.length} sequences</span>}>
             Auto-sequences (inspect on exception)
           </PanelTitle>
+          <div className="mb-3">
+            <QueueFilterBar value={filter} onChange={setFilter} />
+          </div>
           <div className="space-y-1.5">
             {lowOpps.map((o) => (
               <AutoRow
@@ -661,11 +721,394 @@ function IconAction({
   );
 }
 
+// ─── Reasoning inspector (multi-stage pipeline) ──────────────────────────────────
+
+const STAGE_ICON: Record<string, typeof Layers> = {
+  research: Layers,
+  problem: AlertTriangle,
+  solution: GitBranch,
+  strategy: Target,
+  generation: Mail,
+  review: ShieldCheck,
+  approval: CheckCheck,
+};
+
+const SCORE_BAR_COLOR: Record<string, string> = {
+  emerald: "bg-emerald-500",
+  sky: "bg-sky-500",
+  amber: "bg-amber-500",
+  rose: "bg-rose-500",
+};
+
+const DEFAULT_STAGE_ORDER: ReasoningStageSummary[] = [
+  { id: "research", label: "Research", status: "complete", headline: "" },
+  { id: "problem", label: "Problem Inference", status: "complete", headline: "" },
+  { id: "solution", label: "Solution Mapping", status: "complete", headline: "" },
+  { id: "strategy", label: "Email Strategy", status: "complete", headline: "" },
+  { id: "generation", label: "Email Generation", status: "complete", headline: "" },
+  { id: "review", label: "Quality Review", status: "complete", headline: "" },
+  { id: "approval", label: "Approval Decision", status: "complete", headline: "" },
+];
+
+function scoreTone(v: number): string {
+  if (v >= 80) return "emerald";
+  if (v >= 70) return "sky";
+  if (v >= 50) return "amber";
+  return "rose";
+}
+
+function ScoreBar({ label, value }: { label: string; value: number }) {
+  const v = Math.max(0, Math.min(100, value || 0));
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[10px] font-medium text-zinc-500">
+        <span className="capitalize">{label.replace(/([A-Z])/g, " $1")}</span>
+        <span className="tabular-nums">{v}</span>
+      </div>
+      <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+        <div className={cn("h-full rounded-full", SCORE_BAR_COLOR[scoreTone(v)])} style={{ width: `${v}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function KV({ label, children }: { label: string; children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-400">{label}</p>
+      <div className="mt-0.5 text-[12px] leading-relaxed text-zinc-700">{children}</div>
+    </div>
+  );
+}
+
+function Bullets({ items }: { items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <ul className="mt-0.5 list-disc space-y-0.5 pl-4 text-[12px] leading-relaxed text-zinc-600">
+      {items.map((it, i) => (
+        <li key={i}>{it}</li>
+      ))}
+    </ul>
+  );
+}
+
+function SafeConfidence({ label }: { label?: string }) {
+  if (!label || !(label in CONFIDENCE_META)) return null;
+  return <ConfidenceChip label={label as ConfidenceLabel} />;
+}
+
+function CheckChip({ ok, yes, no }: { ok?: boolean; yes: string; no: string }) {
+  return (
+    <Chip tone={ok ? "emerald" : "rose"} icon={ok ? Check : X}>
+      {ok ? yes : no}
+    </Chip>
+  );
+}
+
+function StageDetail({ stageId, reasoning }: { stageId: string; reasoning: ReasoningArtifact }) {
+  if (stageId === "research") {
+    const r = reasoning.research || {};
+    return (
+      <div className="space-y-2.5">
+        <KV label="Business summary">{r.businessSummary}</KV>
+        <div className="flex flex-wrap gap-1.5">
+          {r.productCategory && <Chip tone="indigo">{r.productCategory}</Chip>}
+          {r.productMaturity && <Chip tone="sky">{r.productMaturity}</Chip>}
+          {r.likelyGtmMotion && <Chip tone="violet">{r.likelyGtmMotion}</Chip>}
+          <SafeConfidence label={r.confidence} />
+        </div>
+        {r.observed?.length ? <KV label="Observed"><Bullets items={r.observed} /></KV> : null}
+        {r.inferred?.length ? <KV label="Inferred"><Bullets items={r.inferred} /></KV> : null}
+        {r.growthSignals?.length ? <KV label="Growth signals"><Bullets items={r.growthSignals} /></KV> : null}
+        {r.gaps ? <KV label="Gaps / unknowns">{r.gaps}</KV> : null}
+      </div>
+    );
+  }
+  if (stageId === "problem") {
+    const p = reasoning.problem || {};
+    return (
+      <div className="space-y-2.5">
+        <KV label="Primary problem">{p.primaryProblem}</KV>
+        <KV label="Business impact">{p.businessImpact}</KV>
+        {p.possibleProblems?.length ? (
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-400">Possible problems</p>
+            <div className="mt-1 space-y-1.5">
+              {p.possibleProblems.map((pp, i) => (
+                <div key={i} className="rounded-lg border border-zinc-100 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[12px] font-medium text-zinc-700">{pp.problem}</p>
+                    <SafeConfidence label={pp.confidence} />
+                  </div>
+                  {pp.rationale && <p className="mt-0.5 text-[11px] text-zinc-500">{pp.rationale}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {p.observedEvidence?.length ? <KV label="Observed evidence"><Bullets items={p.observedEvidence} /></KV> : null}
+      </div>
+    );
+  }
+  if (stageId === "solution") {
+    const s = reasoning.solution || {};
+    return (
+      <div className="space-y-2.5">
+        <KV label="Strongest angle">{s.strongestAngle}</KV>
+        {s.mappings?.length ? (
+          <div className="space-y-1.5">
+            {s.mappings.map((m, i) => (
+              <div key={i} className="rounded-lg border border-zinc-100 p-2 text-[12px] text-zinc-600">
+                <p className="font-medium text-zinc-700">{m.problem}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-[11px]">
+                  <ArrowRight className="h-3 w-3 text-zinc-400" /> {m.capability}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-emerald-600">
+                  <ArrowRight className="h-3 w-3" /> {m.expectedOutcome}
+                </p>
+                {typeof m.strength === "number" && (
+                  <div className="mt-1">
+                    <ScoreBar label="strength" value={m.strength} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {s.rationale ? <KV label="Rationale">{s.rationale}</KV> : null}
+      </div>
+    );
+  }
+  if (stageId === "strategy") {
+    const st = reasoning.strategy || {};
+    return (
+      <div className="space-y-2.5">
+        <KV label="Conversation goal">{st.conversationGoal}</KV>
+        <KV label="Opening angle">{st.openingAngle}</KV>
+        <div className="grid grid-cols-2 gap-2">
+          <KV label="Primary pain">{st.primaryPain}</KV>
+          <KV label="Secondary pain">{st.secondaryPain}</KV>
+        </div>
+        <KV label="Product mapping">{st.productMapping}</KV>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {st.ctaType && <Chip tone="sky">CTA: {st.ctaType}</Chip>}
+          {st.riskLevel && (
+            <Chip tone={st.riskLevel === "high" ? "rose" : st.riskLevel === "medium" ? "amber" : "emerald"}>
+              {st.riskLevel} risk
+            </Chip>
+          )}
+          {(st.focus || []).map((f, i) => (
+            <Chip key={i} tone="indigo">{f}</Chip>
+          ))}
+        </div>
+        {st.avoid?.length ? <KV label="Avoid"><Bullets items={st.avoid} /></KV> : null}
+      </div>
+    );
+  }
+  if (stageId === "generation") {
+    const e = reasoning.email || {};
+    return (
+      <div className="space-y-2.5">
+        <KV label="Chosen subject">{e.subject}</KV>
+        {e.subjectAlternatives?.length ? (
+          <KV label="Subject alternatives"><Bullets items={e.subjectAlternatives} /></KV>
+        ) : null}
+        {e.whyNow ? <KV label="Why now">{e.whyNow}</KV> : null}
+        {e.cta ? <KV label="CTA">{e.cta}</KV> : null}
+        <div className="flex items-center gap-1.5">
+          <SafeConfidence label={e.confidenceLabel} />
+          <Chip tone={e.ctaReady ? "emerald" : "zinc"}>{e.ctaReady ? "CTA ready" : "CTA held"}</Chip>
+        </div>
+        <p className="text-[10px] text-zinc-400">The full email body is shown in the card above.</p>
+      </div>
+    );
+  }
+  if (stageId === "review") {
+    const rv = reasoning.review || {};
+    const scores = rv.scores;
+    return (
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <span className={cn("rounded-lg px-2 py-0.5 text-[12px] font-bold text-white", SCORE_BAR_COLOR[scoreTone(rv.overall || 0)])}>
+            {rv.overall ?? 0}
+          </span>
+          <span className="text-[11px] text-zinc-500">overall quality {rv.wouldSend ? "· would send" : "· would NOT send"}</span>
+        </div>
+        {scores && (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            {Object.entries(scores).map(([k, v]) => (
+              <ScoreBar key={k} label={k} value={v as number} />
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          <CheckChip ok={rv.hasRealObservation} yes="Real observation" no="No real observation" />
+          <CheckChip ok={!rv.soundsAiGenerated} yes="Human tone" no="Sounds AI" />
+          <CheckChip ok={rv.connectsProblemToSolution} yes="Problem→solution" no="Weak link" />
+          <CheckChip ok={rv.leadsToConversation} yes="Starts a convo" no="No hook" />
+        </div>
+        {rv.issues?.length ? <KV label="Issues"><Bullets items={rv.issues} /></KV> : null}
+        {rv.improvementHints?.length ? <KV label="Improvement hints"><Bullets items={rv.improvementHints} /></KV> : null}
+      </div>
+    );
+  }
+  if (stageId === "approval") {
+    const d = reasoning.disposition || {};
+    const auto = d.decision === "auto_send";
+    return (
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-1.5">
+          <Chip tone={auto ? "emerald" : "amber"} icon={auto ? Zap : ShieldCheck}>
+            {auto ? "Auto-send" : "Queue for approval"}
+          </Chip>
+          {d.mode && <Chip tone="zinc">{d.mode} mode</Chip>}
+        </div>
+        <KV label="Reason">{d.reason}</KV>
+        <div className="flex flex-wrap gap-1.5">
+          <CheckChip ok={d.qualityOk} yes="Quality OK" no="Below bar" />
+          <CheckChip ok={d.confidenceOk} yes="Confidence OK" no="Low confidence" />
+          <CheckChip ok={d.mailboxOk} yes="Mailbox healthy" no="Mailbox risk" />
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function ReasoningInspector({ reasoning }: { reasoning: ReasoningArtifact }) {
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const stages = reasoning.stages && reasoning.stages.length ? reasoning.stages : DEFAULT_STAGE_ORDER;
+  const overall = reasoning.review?.overall;
+
+  return (
+    <div className="rounded-xl border border-zinc-100 bg-white">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+      >
+        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+          <Brain className="h-3.5 w-3.5 text-orange-500" /> How Max reasoned this
+        </span>
+        <span className="flex items-center gap-2">
+          {typeof overall === "number" && (
+            <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white", SCORE_BAR_COLOR[scoreTone(overall)])}>
+              {overall}
+            </span>
+          )}
+          <ChevronDown className={cn("h-4 w-4 text-zinc-400 transition-transform", open && "rotate-180")} />
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-zinc-100 p-2">
+          <div className="space-y-1">
+            {stages.map((stage) => {
+              const Icon = STAGE_ICON[stage.id] || Layers;
+              const isOpen = expanded === stage.id;
+              const skipped = stage.status === "skipped";
+              return (
+                <div key={stage.id} className="rounded-lg border border-zinc-100">
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : stage.id)}
+                    className="flex w-full items-start gap-2 px-2.5 py-2 text-left"
+                  >
+                    <div
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                        skipped ? "bg-zinc-100 text-zinc-400" : "bg-orange-50 text-orange-600"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-zinc-800">{stage.label}</p>
+                      {stage.headline && <p className="truncate text-[11px] text-zinc-500">{stage.headline}</p>}
+                    </div>
+                    <ChevronDown className={cn("mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform", isOpen && "rotate-180")} />
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-zinc-100 px-2.5 py-2.5">
+                      <StageDetail stageId={stage.id} reasoning={reasoning} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {reasoning.regenerated && (
+            <p className="mt-2 flex items-center gap-1 px-1 text-[10px] text-zinc-400">
+              <RefreshCw className="h-3 w-3" /> Max regenerated this after its own quality review.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SendTo({ opp, contact }: { opp: OutboundOpportunity; contact?: ContactRecord }) {
+  const email = opp.recipientEmail || contact?.email || "";
+  const verified = opp.recipientEmailVerified || contact?.emailVerified;
+  return (
+    <div className="mt-1 flex items-center gap-1.5 pl-5">
+      <Mail className="h-3 w-3 shrink-0 text-zinc-400" />
+      {email ? (
+        <span className="truncate text-[11px] text-zinc-500">
+          Send to <span className="font-medium text-zinc-700">{email}</span>
+          {verified && <span className="ml-1 text-emerald-600">· verified</span>}
+        </span>
+      ) : (
+        <span className="text-[11px] font-medium text-amber-600">
+          Email not found yet — Eva is still enriching this contact.
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Live "Max is writing" state shown in place of a lead's message while its
+// personalized email is still being reasoned in the background — so the queue
+// feels alive (Max working on THIS company) instead of showing a bare template.
+function GeneratingDraft({ company }: { company?: string }) {
+  return (
+    <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3.5">
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-5 w-5 items-center justify-center">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-300/50" />
+          <Sparkles className="relative h-4 w-4 text-violet-500" />
+        </span>
+        <p className="text-[12.5px] font-semibold text-violet-700">
+          Max is writing a personalized email{company ? <> for {company}</> : null}…
+        </p>
+      </div>
+      <div className="mt-3 space-y-2" aria-hidden>
+        {["94%", "100%", "86%", "72%", "60%"].map((w, i) => (
+          <div
+            key={i}
+            className="h-2.5 animate-pulse rounded-full bg-violet-200/70"
+            style={{ width: w, animationDelay: `${i * 160}ms` }}
+          />
+        ))}
+      </div>
+      <p className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-violet-500/90">
+        <span className="flex gap-1">
+          {[0, 150, 300].map((d) => (
+            <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style={{ animationDelay: `${d}ms` }} />
+          ))}
+        </span>
+        Researching the account and drafting the angle
+      </p>
+    </div>
+  );
+}
+
 function OpportunityCard({
   opp,
   account,
   contact,
   accountContacts,
+  generating = false,
   onAction,
   onRegenerate,
   onChangeContact,
@@ -674,6 +1117,7 @@ function OpportunityCard({
   account?: AccountRecord;
   contact?: ContactRecord;
   accountContacts: ContactRecord[];
+  generating?: boolean;
   onAction: (action: string, payload?: Record<string, unknown>) => void;
   onRegenerate: () => Promise<void>;
   onChangeContact: (contactId: string) => void;
@@ -730,24 +1174,28 @@ function OpportunityCard({
           </div>
         </div>
 
-        {/* contact */}
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2">
-          <div className="flex items-center gap-2 text-[12px]">
-            <UsersIcon className="h-3.5 w-3.5 text-zinc-400" />
-            {contact ? (
-              <span className="text-zinc-600">
-                <span className="font-semibold text-zinc-800">{contact.name}</span> · {contact.role}
-                <span className="ml-1 rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-zinc-400">
-                  {contact.entryPointType.replace("_", " ")}
+        {/* contact + send-to */}
+        <div className="flex items-start justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[12px]">
+              <UsersIcon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+              {contact ? (
+                <span className="text-zinc-600">
+                  <span className="font-semibold text-zinc-800">{contact.name || opp.recipientName || "Contact"}</span>
+                  {contact.role ? <> · {contact.role}</> : null}
+                  <span className="ml-1 rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-zinc-400">
+                    {contact.entryPointType.replace("_", " ")}
+                  </span>
                 </span>
-              </span>
-            ) : (
-              <span className="text-zinc-400">No contact selected</span>
-            )}
+              ) : (
+                <span className="font-semibold text-zinc-800">{opp.recipientName || "No contact selected"}</span>
+              )}
+            </div>
+            <SendTo opp={opp} contact={contact} />
           </div>
           {accountContacts.length > 1 && (
             <Select value={contact?.id} onValueChange={onChangeContact}>
-              <SelectTrigger className="h-7 w-[130px] rounded-lg border-zinc-200 text-[11px]">
+              <SelectTrigger className="h-7 w-[130px] shrink-0 rounded-lg border-zinc-200 text-[11px]">
                 <SelectValue placeholder="Change" />
               </SelectTrigger>
               <SelectContent>
@@ -769,7 +1217,12 @@ function OpportunityCard({
           <SignalChips bundle={opp.signalBundle} />
         </div>
 
-        {/* draft */}
+        {/* draft — while Max is still reasoning this lead, show a live "generating"
+            animation with the company name instead of the bare template message, so
+            the user sees Max actively working on THIS lead rather than feeling stuck. */}
+        {generating ? (
+          <GeneratingDraft company={account?.company} />
+        ) : (
         <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-3.5">
           {editing ? (
             <div className="space-y-2">
@@ -809,34 +1262,58 @@ function OpportunityCard({
             </>
           )}
         </div>
+        )}
+
+        {/* multi-stage reasoning inspector */}
+        {opp.reasoning && <ReasoningInspector reasoning={opp.reasoning} />}
       </div>
 
       {/* action bar */}
       <div className="flex items-center justify-between gap-2 border-t border-zinc-100 px-5 py-3">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <ConfidenceChip label={opp.confidenceLabel} />
-          {opp.draftSource === "llm" && <span className="text-[10px] font-medium text-zinc-400">· Max-written</span>}
+          {opp.draftSource === "pipeline" ? (
+            <Chip tone="violet" icon={Brain}>Max reasoned</Chip>
+          ) : opp.draftSource === "llm" ? (
+            <span className="text-[10px] font-medium text-zinc-400">· Max-written</span>
+          ) : null}
+          {typeof opp.qualityReview?.overall === "number" && (
+            <Chip tone={scoreTone(opp.qualityReview.overall)} icon={Gauge}>
+              Q {opp.qualityReview.overall}
+            </Chip>
+          )}
+          {opp.disposition?.decision === "auto_send" && (
+            <Chip tone="emerald" icon={Zap}>Auto-send</Chip>
+          )}
         </div>
         <div className="flex items-center gap-1">
-          <IconAction title="Edit draft" onClick={() => setEditing((e) => !e)} icon={Pencil} />
-          <IconAction title="Regenerate angle" onClick={handleRegen} icon={RefreshCw} spinning={regenerating} />
-          <IconAction title="Skip" onClick={() => onAction("skip")} icon={Trash2} danger />
-          {sent ? (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
-              <CheckCheck className="h-3.5 w-3.5" /> Sent
+          {generating ? (
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-600">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Personalizing…
             </span>
-          ) : approved ? (
-            <Button size="sm" className="h-7 gap-1 bg-emerald-600 text-[11px] font-semibold hover:bg-emerald-700" onClick={() => onAction("send")}>
-              <Send className="h-3.5 w-3.5" /> Send now
-            </Button>
           ) : (
             <>
-              <Button size="sm" variant="outline" className="h-7 gap-1 border-zinc-200 text-[11px]" onClick={() => onAction("approve")}>
-                <Check className="h-3.5 w-3.5" /> Approve
-              </Button>
-              <Button size="sm" className="h-7 gap-1 bg-zinc-900 text-[11px] font-semibold hover:bg-zinc-800" onClick={() => onAction("send")}>
-                <Send className="h-3.5 w-3.5" /> Send
-              </Button>
+              <IconAction title="Edit draft" onClick={() => setEditing((e) => !e)} icon={Pencil} />
+              <IconAction title="Regenerate angle" onClick={handleRegen} icon={RefreshCw} spinning={regenerating} />
+              <IconAction title="Skip" onClick={() => onAction("skip")} icon={Trash2} danger />
+              {sent ? (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                  <CheckCheck className="h-3.5 w-3.5" /> Sent
+                </span>
+              ) : approved ? (
+                <Button size="sm" className="h-7 gap-1 bg-emerald-600 text-[11px] font-semibold hover:bg-emerald-700" onClick={() => onAction("send")}>
+                  <Send className="h-3.5 w-3.5" /> Send now
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" variant="outline" className="h-7 gap-1 border-zinc-200 text-[11px]" onClick={() => onAction("approve")}>
+                    <Check className="h-3.5 w-3.5" /> Approve
+                  </Button>
+                  <Button size="sm" className="h-7 gap-1 bg-zinc-900 text-[11px] font-semibold hover:bg-zinc-800" onClick={() => onAction("send")}>
+                    <Send className="h-3.5 w-3.5" /> Send
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -854,6 +1331,7 @@ function MediumMode({
   onOppAction: (opp: OutboundOpportunity, action: string, payload?: Record<string, unknown>) => void;
   onRegenerate: (opp: OutboundOpportunity) => Promise<void>;
 }) {
+  const [filter, setFilter] = useState<QueueFilter>("all");
   const accById = useMemo(() => new Map(workspace.accounts.map((a) => [a.id, a])), [workspace.accounts]);
   const conById = useMemo(() => new Map(workspace.contacts.map((c) => [c.id, c])), [workspace.contacts]);
   const contactsByAccount = useMemo(() => {
@@ -868,15 +1346,17 @@ function MediumMode({
 
   const queue = useMemo(
     () =>
-      workspace.opportunities
-        .filter((o) => o.acvTier === "medium" && o.approvalState !== "skipped")
-        .sort((a, b) => b.fitScore - a.fitScore),
-    [workspace.opportunities]
+      applyQueueFilter(
+        workspace.opportunities.filter((o) => o.acvTier === "medium" && o.approvalState !== "skipped"),
+        filter
+      ),
+    [workspace.opportunities, filter]
   );
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
+        <QueueFilterBar value={filter} onChange={setFilter} />
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 py-16 text-zinc-400">
             <Info className="h-5 w-5" />
@@ -891,6 +1371,7 @@ function MediumMode({
                 account={accById.get(o.accountId)}
                 contact={o.contactId ? conById.get(o.contactId) : undefined}
                 accountContacts={contactsByAccount.get(o.accountId) || []}
+                generating={!!workspace.reasoningInProgress && o.draftSource !== "pipeline"}
                 onAction={(action, payload) => onOppAction(o, action, payload)}
                 onRegenerate={() => onRegenerate(o)}
                 onChangeContact={(cid) => onOppAction(o, "change_contact_local", { contact_id: cid })}
@@ -1403,6 +1884,33 @@ export default function Max() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spaceId]);
 
+  // Max marks the workspace ready fast (template drafts), then reasons the top
+  // opportunities in the background. While that runs, silently refetch so the
+  // personalized drafts replace the templates live — no manual reload needed.
+  useEffect(() => {
+    if (!workspace?.reasoningInProgress) return;
+    let cancelled = false;
+    const deadline = Date.now() + 5 * 60 * 1000;
+    (async () => {
+      while (!cancelled && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 5000));
+        if (cancelled) break;
+        try {
+          const ws = await maxAPI.getWorkspace(spaceId || "demo", acvTier, false);
+          if (cancelled) break;
+          setWorkspace(ws);
+          if (!ws.reasoningInProgress) break;
+        } catch {
+          /* transient hiccup — keep polling until the deadline */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace?.reasoningInProgress]);
+
   const metrics = useMemo<MaxMetrics | null>(
     () => (workspace ? computeMetrics(workspace, acvTier) : null),
     [workspace, acvTier]
@@ -1563,6 +2071,22 @@ export default function Max() {
                       Showing <span className="font-semibold">sample accounts</span> — this space isn't linked to a real brand,
                       so Max can't monitor live sources here. Open a real workspace to track your market.
                     </span>
+                  </div>
+                )}
+                {!workspace.isDemo && workspace.isSample && (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-[12px] text-amber-700">
+                    <Info className="h-4 w-4 shrink-0" />
+                    <span>
+                      Showing <span className="font-semibold">illustrative sample accounts</span> — Eva hasn't handed off real
+                      qualified leads yet. Once discovery produces real leads, Max replaces these with your actual market and
+                      writes a personalized message for each one.
+                    </span>
+                  </div>
+                )}
+                {!workspace.isDemo && workspace.reasoningInProgress && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-2.5 text-[12px] font-medium text-violet-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Max is researching each lead and personalizing its message — drafts refine themselves as it finishes.</span>
                   </div>
                 )}
 
