@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target, Link2, PenLine, Radar, Signal as SignalIcon } from "lucide-react";
+import { Sparkles, Users, ArrowLeft, BarChart3, Zap, LayoutDashboard, Database, Activity, Linkedin, Target, Link2, PenLine, Radar, Signal as SignalIcon, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
@@ -162,6 +162,27 @@ const ConversationSidebar = ({
               <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">Integrations</p>
 
               <div className="px-3 space-y-3">
+                {/* Connectors — direct entry to the connected-accounts manager
+                    (the connectors tab in Autonomous Marketing). This is the
+                    hub for connecting Gmail/Outlook, LinkedIn, Instagram, etc. */}
+                <button
+                  onClick={() => navigate(`/autonomous-marketing/${spaceId}?tab=connectors`)}
+                  className="flex items-center justify-between w-full group rounded-2xl px-3 py-3 transition-all duration-300 hover:bg-secondary/40 border border-transparent hover:border-border/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-primary/10 group-hover:scale-110 transition-all shadow-sm">
+                      <Link2 className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-[11px] font-black text-foreground/80 tracking-tight">Connectors</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground/60 transition-colors">
+                        Manage accounts
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all" />
+                </button>
+
                 <button
                   onClick={() => {
                     if (hubspotConnected) {
