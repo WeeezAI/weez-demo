@@ -19,6 +19,11 @@ import {
 import { cn } from "@/lib/utils";
 import { weezAPI } from "@/services/weezAPI";
 import { getHubSpotStatus, getHubSpotAuthorizeUrl, disconnectHubSpot } from "@/services/salesAPI";
+import {
+    getIntegrationsStatus,
+    getIntegrationAuthorizeUrl,
+    disconnectIntegration,
+} from "@/services/integrationsAPI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,40 +69,22 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
                 allConnectors.push({ type: "hubspot", connected: false });
             }
 
-            // Fetch email connections
+            // Fetch mailbox + calendar connections from the deployed integrations
+            // API (Gmail/Outlook + Google/Microsoft Calendar). One Google
+            // connection powers Gmail + Google Calendar; one Microsoft connection
+            // powers Outlook + Microsoft Calendar.
             try {
-                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-                const emailRes = await fetch(`${API_BASE}/api/v1/email/connections?customer_id=${brandId}`);
-                if (emailRes.ok) {
-                    const emailConnections = await emailRes.json();
-                    emailConnections.forEach((conn: any) => {
-                        allConnectors.push({
-                            type: conn.provider,
-                            connected: conn.connected,
-                            identifier: conn.mailbox_email,
-                        });
-                    });
-                }
+                const status = await getIntegrationsStatus(brandId);
+                const googleEmail = status.connections.find((c) => c.provider === "google")?.email;
+                const microsoftEmail = status.connections.find((c) => c.provider === "microsoft")?.email;
+                allConnectors.push(
+                    { type: "gmail", connected: status.connected.gmail, identifier: googleEmail },
+                    { type: "outlook", connected: status.connected.outlook, identifier: microsoftEmail },
+                    { type: "google_calendar", connected: status.connected.google_calendar, identifier: googleEmail },
+                    { type: "microsoft_calendar", connected: status.connected.microsoft_calendar, identifier: microsoftEmail },
+                );
             } catch {
-                // Email connections not available
-            }
-
-            // Fetch calendar connections
-            try {
-                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-                const calendarRes = await fetch(`${API_BASE}/api/v1/calendar/connections?customer_id=${brandId}`);
-                if (calendarRes.ok) {
-                    const calendarConnections = await calendarRes.json();
-                    calendarConnections.forEach((conn: any) => {
-                        allConnectors.push({
-                            type: conn.provider,
-                            connected: conn.connected,
-                            identifier: conn.mailbox_email,
-                        });
-                    });
-                }
-            } catch {
-                // Calendar connections not available
+                // Mailbox/calendar status not available — leave them unconnected.
             }
 
             setConnectors(allConnectors);
@@ -146,18 +133,15 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
     };
 
     const handleConnectGmail = () => {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-        window.location.href = `${API_BASE}/api/v1/email/auth/url?provider=gmail&customer_id=${brandId}`;
+        window.location.href = getIntegrationAuthorizeUrl("gmail", brandId);
     };
 
     const handleConnectOutlook = () => {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-        window.location.href = `${API_BASE}/api/v1/email/auth/url?provider=outlook&customer_id=${brandId}`;
+        window.location.href = getIntegrationAuthorizeUrl("outlook", brandId);
     };
 
     const handleConnectGoogleCalendar = () => {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-        window.location.href = `${API_BASE}/api/v1/calendar/auth/url?provider=google_calendar&customer_id=${brandId}`;
+        window.location.href = getIntegrationAuthorizeUrl("google_calendar", brandId);
     };
 
     const handleResyncAll = async () => {
@@ -184,34 +168,19 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
             } else if (platformId === "hubspot") {
                 await disconnectHubSpot(brandId);
                 toast.success("HubSpot CRM disconnected.");
-            } else if (platformId === "gmail" || platformId === "outlook") {
-                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-                // Find the connection ID
-                const emailRes = await fetch(`${API_BASE}/api/v1/email/connections?customer_id=${brandId}`);
-                if (emailRes.ok) {
-                    const emailConnections = await emailRes.json();
-                    const connection = emailConnections.find((c: any) => c.provider === platformId);
-                    if (connection) {
-                        await fetch(`${API_BASE}/api/v1/email/connections/${connection.id}?customer_id=${brandId}`, {
-                            method: "DELETE",
-                        });
-                        toast.success(`${platformId === "gmail" ? "Gmail" : "Outlook"} disconnected.`);
-                    }
-                }
-            } else if (platformId === "google_calendar" || platformId === "microsoft_calendar") {
-                const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-                // Find the connection ID
-                const calendarRes = await fetch(`${API_BASE}/api/v1/calendar/connections?customer_id=${brandId}`);
-                if (calendarRes.ok) {
-                    const calendarConnections = await calendarRes.json();
-                    const connection = calendarConnections.find((c: any) => c.provider === platformId);
-                    if (connection) {
-                        await fetch(`${API_BASE}/api/v1/calendar/connections/${connection.id}?customer_id=${brandId}`, {
-                            method: "DELETE",
-                        });
-                        toast.success(`${platformId === "google_calendar" ? "Google Calendar" : "Microsoft Calendar"} disconnected.`);
-                    }
-                }
+            } else if (
+                platformId === "gmail" ||
+                platformId === "outlook" ||
+                platformId === "google_calendar" ||
+                platformId === "microsoft_calendar"
+            ) {
+                await disconnectIntegration(platformId, brandId);
+                const label =
+                    platformId === "gmail" ? "Gmail"
+                    : platformId === "outlook" ? "Outlook"
+                    : platformId === "google_calendar" ? "Google Calendar"
+                    : "Microsoft Calendar";
+                toast.success(`${label} disconnected.`);
             }
             fetchStatus();
         } catch (err: any) {
