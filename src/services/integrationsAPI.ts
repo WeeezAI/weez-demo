@@ -69,3 +69,33 @@ export async function disconnectIntegration(
   if (!resp.ok) throw new Error(`Integration disconnect failed: ${resp.status}`);
   return resp.json();
 }
+
+/** Friendly provider keys handled by this integrations API (mailbox + calendar). */
+export const INTEGRATION_PROVIDER_KEYS = [
+  "gmail",
+  "outlook",
+  "google_calendar",
+  "microsoft_calendar",
+] as const;
+
+/**
+ * Object-style facade over the functions above, for callers (e.g. ConnectionsPanel)
+ * that prefer `integrationsAPI.getStatus(...)` / `integrationsAPI.startConnect(...)`.
+ */
+export const integrationsAPI = {
+  /** Connected mailbox/calendar providers for a brand (optional explicit token). */
+  async getStatus(brandId: string, token?: string): Promise<IntegrationsStatus> {
+    const headers: HeadersInit = token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : authHeaders();
+    const resp = await fetch(`${BASE}/integrations/status?brand_id=${brandId}`, { headers });
+    if (!resp.ok) throw new Error(`Integrations status failed: ${resp.status}`);
+    return resp.json();
+  },
+  /** Kick off OAuth by navigating the browser to the provider's consent screen. */
+  startConnect(brandId: string, provider: string): void {
+    window.location.href = getIntegrationAuthorizeUrl(provider, brandId);
+  },
+  authorizeUrl: getIntegrationAuthorizeUrl,
+  disconnect: disconnectIntegration,
+};

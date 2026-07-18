@@ -16,6 +16,7 @@ const PlatformCallback = () => {
   const [isFetchingPages, setIsFetchingPages] = useState(false);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [hasSelectedPage, setHasSelectedPage] = useState(false);
+  
 
   const isConnected = params.get("connected") === "true";
   const brandId = params.get("state") || "";
@@ -134,6 +135,8 @@ const PlatformCallback = () => {
             <AlertCircle className="w-12 h-12 text-amber-500" />
           </div>
         </div>
+
+      
 
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-black uppercase tracking-tighter">{title}</h1>

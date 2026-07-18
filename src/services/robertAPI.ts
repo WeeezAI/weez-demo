@@ -1147,7 +1147,7 @@ export function robertReply(
   }
 
   if (has("why", "this week", "plan", "reason")) {
-    return `${plan.strategyNote}\n\nThe week is built for ${cfg.label} (${cfg.range}), where the goal is: ${cfg.goal.toLowerCase()}. That's why the mix is weighted Growth ${plan.targetMix.growth} : Leads ${plan.targetMix.leads} : Trust ${plan.targetMix.trust}.`;
+    return `m${plan.strategyNote}\n\nThe week is built for ${cfg.label} (${cfg.range}), where the goal is: ${cfg.goal.toLowerCase()}. That's why the mix is weighted Growth ${plan.targetMix.growth} : Leads ${plan.targetMix.leads} : Trust ${plan.targetMix.trust}.`;
   }
 
   // Default
