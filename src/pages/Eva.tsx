@@ -35,12 +35,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ConversationSidebar from "@/components/ConversationSidebar";
@@ -282,93 +283,177 @@ function SignalFeed({ signals }: { signals: ChannelSignal[] }) {
   );
 }
 
-// ─── Qualified lead card ─────────────────────────────────────────────────────
+// ─── Qualified leads table ───────────────────────────────────────────────────
 
-function LeadCard({ lead, onAction }: { lead: QualifiedLead; onAction: (action: "hand_to_max" | "reject" | "reset") => void }) {
-  const action = ACTION_META[lead.recommendedAction];
+// The distinct sources a lead's intel came from: the discovery channels behind
+// each captured signal, plus the enrichment provider that resolved the email.
+function leadSources(lead: QualifiedLead): { label: string; tone: string }[] {
+  const seen = new Set<string>();
+  const out: { label: string; tone: string }[] = [];
+  for (const s of lead.signals || []) {
+    const label = s.channel || SIGNAL_META[s.signalType]?.label || s.signalType;
+    const key = label.toLowerCase();
+    if (label && !seen.has(key)) {
+      seen.add(key);
+      out.push({ label, tone: SIGNAL_META[s.signalType]?.tone || "zinc" });
+    }
+  }
+  const src = lead.contact?.emailSource;
+  if (src && !seen.has(src.toLowerCase())) {
+    seen.add(src.toLowerCase());
+    out.push({ label: src.charAt(0).toUpperCase() + src.slice(1), tone: "emerald" });
+  }
+  if (out.length === 0 && lead.eventType) {
+    out.push({ label: SIGNAL_META[lead.eventType]?.label || lead.eventType, tone: SIGNAL_META[lead.eventType]?.tone || "zinc" });
+  }
+  return out;
+}
+
+// Hover "i" → why Eva qualified this lead (event, reason, tier, routing).
+function WhyQualified({ lead }: { lead: QualifiedLead }) {
   const tier = TIER_META[lead.acvTier];
-  const enrich = ENRICHMENT_META[lead.enrichment?.status] || ENRICHMENT_META.pending;
+  const action = ACTION_META[lead.recommendedAction];
+  return (
+    <HoverCard openDelay={80} closeDelay={40}>
+      <HoverCardTrigger asChild>
+        <button
+          aria-label="Why this lead qualified"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
+        >
+          <Info className="h-3 w-3" />
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent align="end" className="w-80">
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            {lead.eventType && <Chip tone={SIGNAL_META[lead.eventType]?.tone || "zinc"}>{SIGNAL_META[lead.eventType]?.label || lead.eventType}</Chip>}
+            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Why it qualified</span>
+          </div>
+          {lead.primaryEvent && (
+            <p className="text-[12px] font-medium text-zinc-800">{lead.primaryEvent.replace(/^\[[^\]]+\]\s*/, "")}</p>
+          )}
+          <p className="text-[12px] leading-relaxed text-zinc-600">{lead.qualificationReason}</p>
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <Chip tone={tier.tone}>{tier.label} · fit {lead.icpFit}</Chip>
+            <Chip tone={action.tone} icon={Zap}>{action.label}</Chip>
+          </div>
+          {lead.escalation && <p className="text-[10.5px] text-zinc-400"><ShieldCheck className="mr-1 inline h-3 w-3" />{lead.escalation}</p>}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void }) {
+  const tier = TIER_META[lead.acvTier];
   const handed = lead.handoffState === "handed_to_max";
-  const rejected = lead.status === "rejected";
+  const sources = leadSources(lead);
+  const siteHost = lead.website?.replace(/^https?:\/\//, "") || lead.domain;
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.5 : 1, y: 0 }}
-      className={cn("flex flex-col rounded-2xl border bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
-        handed ? "border-violet-200 ring-1 ring-violet-100" : "border-zinc-200/80")}>
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-10 w-10" />
-            <div className="min-w-0">
-              <h3 className="truncate text-[15px] font-semibold text-zinc-900">{lead.company}</h3>
-              <p className="truncate text-[11px] text-zinc-400">{lead.industry} · {lead.employeeRange} · {lead.hqLocation}</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
+    <tr className={cn("border-t border-zinc-100 align-middle transition-colors hover:bg-zinc-50/60", handed && "bg-violet-50/30")}>
+      {/* Logo + company */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-9 w-9" />
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="rounded-lg bg-zinc-900 px-2 py-0.5 text-[11px] font-bold text-white">{lead.icpFit}</span>
-              <span className="text-[9px] font-bold uppercase tracking-wide text-zinc-400">fit</span>
+              <span className="truncate text-[13px] font-semibold text-zinc-900">{lead.company}</span>
+              {handed && <span title="Handed to Max" className="text-violet-600"><CheckCheck className="h-3.5 w-3.5" /></span>}
             </div>
-            <Chip tone={tier.tone}>{tier.label}</Chip>
-          </div>
-        </div>
-
-        {/* event + why now */}
-        <div className="rounded-xl bg-zinc-50 px-3 py-2.5">
-          <div className="mb-1 flex items-center gap-1.5">
-            {lead.eventType && <Chip tone={SIGNAL_META[lead.eventType]?.tone || "zinc"}>{SIGNAL_META[lead.eventType]?.label || lead.eventType}</Chip>}
-            <span className="text-[11px] font-medium text-zinc-500">{lead.primaryEvent?.replace(/^\[[^\]]+\]\s*/, "")}</span>
-          </div>
-          <p className="text-[12px] leading-relaxed text-zinc-600"><span className="font-semibold text-zinc-700">Why it qualified:</span> {lead.qualificationReason}</p>
-        </div>
-
-        {/* routing + enrichment */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip tone={action.tone} icon={Zap}>{action.label}</Chip>
-          <Chip tone={enrich.tone} icon={lead.contact?.emailVerified ? MailCheck : Mail}>{enrich.label}</Chip>
-          {lead.escalation && <span className="text-[10px] text-zinc-400" title={lead.escalation}><ShieldCheck className="mr-1 inline h-3 w-3" />escalation set</span>}
-        </div>
-
-        {/* contact */}
-        {(lead.contact?.name || lead.contact?.email) && (
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-100 px-3 py-2 text-[12px]">
-            <div className="min-w-0">
-              <span className="font-semibold text-zinc-800">{lead.contact.name || "Contact"}</span>
-              {lead.contact.role && <span className="text-zinc-500"> · {lead.contact.role}</span>}
-            </div>
-            {lead.contact.email ? (
-              <span className="inline-flex items-center gap-1 truncate text-[11px] font-medium text-emerald-600">
-                <MailCheck className="h-3.5 w-3.5" /> {lead.contact.email}
-              </span>
-            ) : (
-              <span className="text-[11px] text-zinc-400">email pending</span>
+            {siteHost && (
+              <a href={lead.website || `https://${lead.domain}`} target="_blank" rel="noreferrer"
+                className="block max-w-[180px] truncate text-[11px] text-zinc-400 hover:text-emerald-600">{siteHost}</a>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      </td>
 
-      {/* actions */}
-      <div className="flex items-center justify-between gap-2 border-t border-zinc-100 px-4 py-3">
-        <span className="text-[11px] font-medium text-zinc-400">{lead.website?.replace(/^https?:\/\//, "") || lead.domain}</span>
+      {/* What they do */}
+      <td className="px-4 py-3">
+        <p className="max-w-[220px] text-[12.5px] leading-snug text-zinc-700">{lead.industry || "—"}</p>
+        <p className="text-[10.5px] text-zinc-400">{[lead.employeeRange, lead.hqLocation].filter(Boolean).join(" · ")}</p>
+      </td>
+
+      {/* ICP fit */}
+      <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
-          {rejected ? (
-            <Button size="sm" variant="ghost" className="h-7 text-[11px] text-zinc-500" onClick={() => onAction("reset")}>Restore</Button>
-          ) : handed ? (
+          <span className="rounded-lg bg-zinc-900 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">{lead.icpFit}</span>
+          <Chip tone={tier.tone}>{tier.label}</Chip>
+        </div>
+      </td>
+
+      {/* Email */}
+      <td className="px-4 py-3">
+        {lead.contact?.email ? (
+          <a href={`mailto:${lead.contact.email}`} className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
+            {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
+            <span className="max-w-[190px] truncate">{lead.contact.email}</span>
+          </a>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400">
+            <Mail className="h-3.5 w-3.5" /> {ENRICHMENT_META[lead.enrichment?.status]?.label || "Enriching…"}
+          </span>
+        )}
+        {lead.contact?.name && (
+          <p className="mt-0.5 max-w-[190px] truncate text-[10.5px] text-zinc-400">
+            {lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}
+          </p>
+        )}
+      </td>
+
+      {/* Sources + why-qualified info */}
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {sources.slice(0, 3).map((s, i) => <Chip key={i} tone={s.tone}>{s.label}</Chip>)}
+          {sources.length > 3 && <span className="text-[10px] font-medium text-zinc-400">+{sources.length - 3}</span>}
+          <WhyQualified lead={lead} />
+        </div>
+      </td>
+
+      {/* Actions */}
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
+          {handed ? (
             <>
-              <button title="Not a fit — pull back from Max" onClick={() => onAction("reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
               <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
+              <button title="Not a fit — pull back from Max" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
             </>
           ) : (
             <>
-              <button title="Not a fit" onClick={() => onAction("reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
-              <Button size="sm" className="h-7 gap-1 bg-violet-600 text-[11px] font-semibold hover:bg-violet-700" onClick={() => onAction("hand_to_max")}>
+              <button title="Not a fit" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
+              <Button size="sm" className="h-7 gap-1 bg-violet-600 text-[11px] font-semibold hover:bg-violet-700" onClick={() => onAction(lead, "hand_to_max")}>
                 Hand to Max <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
         </div>
+      </td>
+    </tr>
+  );
+}
+
+function LeadsTable({ leads, onAction }: { leads: QualifiedLead[]; onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] border-collapse text-left">
+          <thead>
+            <tr className="bg-zinc-50/70 text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+              <th className="px-4 py-2.5 font-bold">Company</th>
+              <th className="px-4 py-2.5 font-bold">What they do</th>
+              <th className="px-4 py-2.5 font-bold">ICP fit</th>
+              <th className="px-4 py-2.5 font-bold">Email</th>
+              <th className="px-4 py-2.5 font-bold">Sources</th>
+              <th className="px-4 py-2.5 text-right font-bold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map((l) => <LeadRow key={l.id} lead={l} onAction={onAction} />)}
+          </tbody>
+        </table>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -639,9 +724,7 @@ export default function Eva() {
                         <p className="text-sm font-medium">No qualified leads in this view yet.</p>
                       </div>
                     ) : (
-                      <AnimatePresence>
-                        {leads.map((l) => <LeadCard key={l.id} lead={l} onAction={(a) => onLeadAction(l, a)} />)}
-                      </AnimatePresence>
+                      <LeadsTable leads={leads} onAction={onLeadAction} />
                     )}
                   </div>
 
