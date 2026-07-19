@@ -239,72 +239,84 @@ function PanelTitle({ icon: Icon, children, right }: { icon: typeof Radar; child
   );
 }
 
-function ChannelsPanel({ ws }: { ws: EvaWorkspace }) {
+// Compact, horizontal channels legend (chips with live counts).
+function ChannelsStrip({ ws }: { ws: EvaWorkspace }) {
+  const channels = ws.channels || [];
+  if (channels.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-zinc-200/70 bg-white p-4">
-      <PanelTitle icon={Radar}>Channels monitored</PanelTitle>
-      <div className="space-y-1.5">
-        {(ws.channels || []).map((c) => (
-          <div key={c.key} className="flex items-center justify-between gap-2 text-[12px]">
-            <span className="flex items-center gap-1.5 text-zinc-600">
-              <span className={cn("h-1.5 w-1.5 rounded-full", c.live ? "bg-emerald-500" : "bg-amber-400")} />
-              {c.displayName}
-            </span>
-            <span className="font-semibold text-zinc-400">{ws.metrics.bySignalType[c.signalType] || 0}</span>
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-[10px] leading-relaxed text-zinc-400">Green = live connector · amber = not yet wired.</p>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+        <Radar className="h-3.5 w-3.5" /> Channels
+      </span>
+      {channels.map((c) => (
+        <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600">
+          <span className={cn("h-1.5 w-1.5 rounded-full", c.live ? "bg-emerald-500" : "bg-amber-400")} />
+          <span className="max-w-[200px] truncate">{c.displayName}</span>
+          <span className="font-bold tabular-nums text-zinc-400">{ws.metrics.bySignalType[c.signalType] || 0}</span>
+        </span>
+      ))}
     </div>
   );
 }
 
-function SignalFeed({ signals }: { signals: ChannelSignal[] }) {
+// Live signal feed as a single horizontal, scrollable row of compact cards.
+function LiveSignalStrip({ signals }: { signals: ChannelSignal[] }) {
+  if (!signals || signals.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-zinc-200/70 bg-white p-4">
-      <PanelTitle icon={Activity} right={<span className="text-[10px] font-medium text-zinc-400">{signals.length}</span>}>Live signal feed</PanelTitle>
-      <ScrollArea className="h-[360px] pr-2">
-        <div className="space-y-1.5">
-          {signals.slice(0, 40).map((s) => (
-            <div key={s.id} className="flex items-start gap-2.5 rounded-xl border border-zinc-100 px-3 py-2">
+    <div>
+      <PanelTitle icon={Activity} right={<span className="text-[10px] font-medium text-zinc-400">{signals.length} captured</span>}>Live signal feed</PanelTitle>
+      <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1.5">
+        {signals.slice(0, 30).map((s) => (
+          <div key={s.id} className="flex w-[248px] shrink-0 flex-col gap-1.5 rounded-xl border border-zinc-200/70 bg-white p-3">
+            <div className="flex items-center justify-between gap-2">
               <Chip tone={SIGNAL_META[s.signalType]?.tone || "zinc"}>{SIGNAL_META[s.signalType]?.label || s.signalType}</Chip>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[12.5px] font-medium text-zinc-700">
-                  <span className="font-semibold text-zinc-900">{s.company}</span> · {s.detail}
-                </p>
-                <p className="text-[10px] text-zinc-400">{s.channel}</p>
-              </div>
+              <span className="max-w-[104px] truncate text-[10px] text-zinc-400">{s.channel}</span>
             </div>
-          ))}
-          {signals.length === 0 && <p className="py-8 text-center text-[12px] text-zinc-400">No signals captured yet.</p>}
-        </div>
-      </ScrollArea>
+            <p className="line-clamp-2 text-[12px] leading-snug text-zinc-600">
+              <span className="font-semibold text-zinc-900">{s.company}</span> · {s.detail}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ─── Qualified leads table ───────────────────────────────────────────────────
 
+// Normalise a raw channel/source into a short, clean label so the column stays
+// compact + aligned:  "DISCOVERY ENGINE · JOB_BOARD" -> "Discovery engine",
+// "Job boards (Lever / Greenhouse / Ashby)" -> "Job boards".
+function cleanSourceLabel(raw: string): string {
+  let s = (raw || "").split(" · ")[0].split(" (")[0].trim();
+  if (!s) return "";
+  if (/^[A-Z0-9_ /-]+$/.test(s)) {
+    s = s.toLowerCase().replace(/_/g, " ").trim();
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return s;
+}
+
 // The distinct sources a lead's intel came from: the discovery channels behind
 // each captured signal, plus the enrichment provider that resolved the email.
+// Labels are cleaned + de-duplicated so the column stays compact and aligned.
 function leadSources(lead: QualifiedLead): { label: string; tone: string }[] {
   const seen = new Set<string>();
   const out: { label: string; tone: string }[] = [];
-  for (const s of lead.signals || []) {
-    const label = s.channel || SIGNAL_META[s.signalType]?.label || s.signalType;
+  const push = (raw: string, tone: string) => {
+    const label = cleanSourceLabel(raw);
     const key = label.toLowerCase();
     if (label && !seen.has(key)) {
       seen.add(key);
-      out.push({ label, tone: SIGNAL_META[s.signalType]?.tone || "zinc" });
+      out.push({ label, tone });
     }
+  };
+  for (const s of lead.signals || []) {
+    push(s.channel || SIGNAL_META[s.signalType]?.label || s.signalType, SIGNAL_META[s.signalType]?.tone || "zinc");
   }
-  const src = lead.contact?.emailSource;
-  if (src && !seen.has(src.toLowerCase())) {
-    seen.add(src.toLowerCase());
-    out.push({ label: src.charAt(0).toUpperCase() + src.slice(1), tone: "emerald" });
-  }
+  if (lead.contact?.emailSource) push(lead.contact.emailSource, "emerald");
   if (out.length === 0 && lead.eventType) {
-    out.push({ label: SIGNAL_META[lead.eventType]?.label || lead.eventType, tone: SIGNAL_META[lead.eventType]?.tone || "zinc" });
+    push(SIGNAL_META[lead.eventType]?.label || lead.eventType, SIGNAL_META[lead.eventType]?.tone || "zinc");
   }
   return out;
 }
@@ -337,6 +349,12 @@ function WhyQualified({ lead }: { lead: QualifiedLead }) {
             <Chip tone={tier.tone}>{tier.label} · fit {lead.icpFit}</Chip>
             <Chip tone={action.tone} icon={Zap}>{action.label}</Chip>
           </div>
+          <div className="pt-1">
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Sources</p>
+            <div className="flex flex-wrap items-center gap-1">
+              {leadSources(lead).map((s, i) => <Chip key={i} tone={s.tone}>{s.label}</Chip>)}
+            </div>
+          </div>
           {lead.escalation && <p className="text-[10.5px] text-zinc-400"><ShieldCheck className="mr-1 inline h-3 w-3" />{lead.escalation}</p>}
         </div>
       </HoverCardContent>
@@ -351,19 +369,19 @@ function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: Qua
   const siteHost = lead.website?.replace(/^https?:\/\//, "") || lead.domain;
 
   return (
-    <tr className={cn("border-t border-zinc-100 align-middle transition-colors hover:bg-zinc-50/60", handed && "bg-violet-50/30")}>
-      {/* Logo + company */}
+    <tr className={cn("border-t border-zinc-100 transition-colors hover:bg-zinc-50/70", handed && "bg-violet-50/25")}>
+      {/* Company */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-9 w-9" />
+        <div className="flex items-center gap-2.5">
+          <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-8 w-8" />
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <span className="truncate text-[13px] font-semibold text-zinc-900">{lead.company}</span>
-              {handed && <span title="Handed to Max" className="text-violet-600"><CheckCheck className="h-3.5 w-3.5" /></span>}
+              {handed && <CheckCheck className="h-3.5 w-3.5 shrink-0 text-violet-600" />}
             </div>
             {siteHost && (
               <a href={lead.website || `https://${lead.domain}`} target="_blank" rel="noreferrer"
-                className="block max-w-[180px] truncate text-[11px] text-zinc-400 hover:text-emerald-600">{siteHost}</a>
+                className="block truncate text-[11px] text-zinc-400 hover:text-emerald-600">{siteHost}</a>
             )}
           </div>
         </div>
@@ -371,14 +389,14 @@ function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: Qua
 
       {/* What they do */}
       <td className="px-4 py-3">
-        <p className="max-w-[220px] text-[12.5px] leading-snug text-zinc-700">{lead.industry || "—"}</p>
-        <p className="text-[10.5px] text-zinc-400">{[lead.employeeRange, lead.hqLocation].filter(Boolean).join(" · ")}</p>
+        <p className="truncate text-[12.5px] text-zinc-700">{lead.industry || "—"}</p>
+        <p className="truncate text-[10.5px] text-zinc-400">{[lead.employeeRange, lead.hqLocation].filter(Boolean).join(" · ") || "—"}</p>
       </td>
 
       {/* ICP fit */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
-          <span className="rounded-lg bg-zinc-900 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">{lead.icpFit}</span>
+          <span className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-white">{lead.icpFit}</span>
           <Chip tone={tier.tone}>{tier.label}</Chip>
         </div>
       </td>
@@ -386,43 +404,41 @@ function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: Qua
       {/* Email */}
       <td className="px-4 py-3">
         {lead.contact?.email ? (
-          <a href={`mailto:${lead.contact.email}`} className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
+          <a href={`mailto:${lead.contact.email}`} className="flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
             {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
-            <span className="max-w-[190px] truncate">{lead.contact.email}</span>
+            <span className="truncate">{lead.contact.email}</span>
           </a>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400">
-            <Mail className="h-3.5 w-3.5" /> {ENRICHMENT_META[lead.enrichment?.status]?.label || "Enriching…"}
+          <span className="flex items-center gap-1 text-[11px] text-zinc-400">
+            <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{ENRICHMENT_META[lead.enrichment?.status]?.label || "Enriching…"}</span>
           </span>
         )}
         {lead.contact?.name && (
-          <p className="mt-0.5 max-w-[190px] truncate text-[10.5px] text-zinc-400">
-            {lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}
-          </p>
+          <p className="truncate text-[10.5px] text-zinc-400">{lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}</p>
         )}
       </td>
 
-      {/* Sources + why-qualified info */}
+      {/* Sources (capped + info hover) */}
       <td className="px-4 py-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {sources.slice(0, 3).map((s, i) => <Chip key={i} tone={s.tone}>{s.label}</Chip>)}
-          {sources.length > 3 && <span className="text-[10px] font-medium text-zinc-400">+{sources.length - 3}</span>}
+        <div className="flex items-center gap-1 overflow-hidden">
+          {sources.slice(0, 2).map((s, i) => <Chip key={i} tone={s.tone} className="max-w-full truncate">{s.label}</Chip>)}
+          {sources.length > 2 && <span className="shrink-0 text-[10px] font-semibold text-zinc-400">+{sources.length - 2}</span>}
           <WhyQualified lead={lead} />
         </div>
       </td>
 
-      {/* Actions */}
-      <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-1.5">
+      {/* Action */}
+      <td className="px-3 py-3">
+        <div className="flex items-center justify-end gap-1">
           {handed ? (
             <>
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
-              <button title="Not a fit — pull back from Max" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
+              <span className="hidden items-center gap-1 text-[11px] font-semibold text-violet-600 xl:flex"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
+              <button title="Pull back from Max" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
             </>
           ) : (
             <>
-              <button title="Not a fit" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
-              <Button size="sm" className="h-7 gap-1 bg-violet-600 text-[11px] font-semibold hover:bg-violet-700" onClick={() => onAction(lead, "hand_to_max")}>
+              <button title="Not a fit" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
+              <Button size="sm" className="h-7 shrink-0 gap-1 whitespace-nowrap bg-violet-600 px-2.5 text-[11px] font-semibold hover:bg-violet-700" onClick={() => onAction(lead, "hand_to_max")}>
                 Hand to Max <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </>
@@ -437,9 +453,18 @@ function LeadsTable({ leads, onAction }: { leads: QualifiedLead[]; onAction: (le
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] border-collapse text-left">
+        {/* table-fixed + colgroup = identical column widths on every row (even spacing) */}
+        <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
+          <colgroup>
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "21%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "14%" }} />
+          </colgroup>
           <thead>
-            <tr className="bg-zinc-50/70 text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+            <tr className="border-b border-zinc-100 bg-zinc-50/70 text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-400">
               <th className="px-4 py-2.5 font-bold">Company</th>
               <th className="px-4 py-2.5 font-bold">What they do</th>
               <th className="px-4 py-2.5 font-bold">ICP fit</th>
@@ -665,7 +690,7 @@ export default function Eva() {
         </header>
 
         <div className="relative flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl space-y-5 px-6 pb-10 pt-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1500px] space-y-5 px-6 pb-10 pt-6 lg:px-8">
             {loading ? (
               <ScanProgress stage={stage} />
             ) : error && !ws ? (
@@ -694,45 +719,44 @@ export default function Eva() {
 
                 <SummaryHeader ws={ws} metrics={ws.metrics} />
 
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="space-y-4 lg:col-span-2">
-                    {/* filters: ACV tier + quality / recency */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
-                        {(["all", "low", "medium", "high"] as TierFilter[]).map((t) => (
-                          <button key={t} onClick={() => setTierFilter(t)}
-                            className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                              tierFilter === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
-                            {t === "all" ? `All ${ws.leads.filter((l) => l.status !== "rejected").length}` : `${TIER_META[t as ACVTier].label} ${ws.metrics.byTier[t as ACVTier]}`}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
-                        {QUALITY_FILTERS.map((f) => (
-                          <button key={f.key} onClick={() => setQualityFilter(f.key)}
-                            className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                              qualityFilter === f.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {leads.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 py-16 text-zinc-400">
-                        <Target className="h-5 w-5" />
-                        <p className="text-sm font-medium">No qualified leads in this view yet.</p>
-                      </div>
-                    ) : (
-                      <LeadsTable leads={leads} onAction={onLeadAction} />
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <ChannelsPanel ws={ws} />
-                    <SignalFeed signals={ws.signals} />
-                  </div>
+                {/* Market activity — channels + live signal feed, horizontal, above the table */}
+                <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/60 p-4">
+                  <ChannelsStrip ws={ws} />
+                  <LiveSignalStrip signals={ws.signals} />
                 </div>
+
+                {/* filters: ACV tier + quality / recency */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
+                    {(["all", "low", "medium", "high"] as TierFilter[]).map((t) => (
+                      <button key={t} onClick={() => setTierFilter(t)}
+                        className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                          tierFilter === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
+                        {t === "all" ? `All ${ws.leads.filter((l) => l.status !== "rejected").length}` : `${TIER_META[t as ACVTier].label} ${ws.metrics.byTier[t as ACVTier]}`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1 rounded-full bg-zinc-100/80 p-1 w-fit">
+                    {QUALITY_FILTERS.map((f) => (
+                      <button key={f.key} onClick={() => setQualityFilter(f.key)}
+                        className={cn("rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                          qualityFilter === f.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800")}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="ml-auto text-[11px] font-medium text-zinc-400">{leads.length} shown</span>
+                </div>
+
+                {/* Full-width Clay-style leads table */}
+                {leads.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 py-16 text-zinc-400">
+                    <Target className="h-5 w-5" />
+                    <p className="text-sm font-medium">No qualified leads in this view yet.</p>
+                  </div>
+                ) : (
+                  <LeadsTable leads={leads} onAction={onLeadAction} />
+                )}
               </>
             ) : null}
           </div>
