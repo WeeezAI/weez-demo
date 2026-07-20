@@ -1369,7 +1369,7 @@ function MediumMode({
                 key={o.id}
                 opp={o}
                 account={accById.get(o.accountId)}
-                contact={o.contactId ? conById.get(o.contactId) : undefined}
+                contact={conById.get(o.contactId || "") || (contactsByAccount.get(o.accountId) || [])[0]}
                 accountContacts={contactsByAccount.get(o.accountId) || []}
                 generating={!!workspace.reasoningInProgress && o.draftSource !== "pipeline"}
                 onAction={(action, payload) => onOppAction(o, action, payload)}
