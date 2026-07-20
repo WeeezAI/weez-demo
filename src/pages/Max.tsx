@@ -56,6 +56,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ConversationSidebar from "@/components/ConversationSidebar";
@@ -1842,6 +1852,8 @@ export default function Max() {
   const [error, setError] = useState<string | null>(null);
   const [genStage, setGenStage] = useState<MonitorStage | null>(null);
   const [chatOpen, setChatOpen] = useState(true);
+  const [modeBusy, setModeBusy] = useState(false);
+  const [confirmAutopilot, setConfirmAutopilot] = useState(false);
 
   const [selectedHighId, setSelectedHighId] = useState<string | null>(null);
   const [brief, setBrief] = useState<AccountBrief | null>(null);
@@ -1998,6 +2010,37 @@ export default function Max() {
   };
 
   const cfg = TIER_CONFIG[acvTier];
+  const outboundMode = workspace?.outboundMode ?? "approval";
+  const autopilotOn = outboundMode === "autopilot";
+
+  // Toggle Max's outbound autonomy. Autopilot sends quality-checked drafts
+  // directly (each still passes the review + deliverability double-check on the
+  // backend); approval queues every draft for a human. Optimistic with revert.
+  const applyOutboundMode = async (next: "autopilot" | "approval") => {
+    const prev = workspace?.outboundMode ?? "approval";
+    setConfirmAutopilot(false);
+    setModeBusy(true);
+    setWorkspace((ws) => (ws ? { ...ws, outboundMode: next } : ws));
+    try {
+      const res = await maxAPI.setOutboundMode(spaceId, next, true);
+      if (next === "autopilot") {
+        const sent = res.sent ?? 0;
+        toast.success(
+          sent > 0
+            ? `Autopilot on — Max sent ${sent} quality-checked email${sent === 1 ? "" : "s"}.`
+            : "Autopilot on — Max will send quality-checked emails as leads qualify."
+        );
+        void loadWorkspace(false, false); // refresh so freshly-sent items reflect
+      } else {
+        toast.success("Autopilot paused — Max will queue every draft for your approval.");
+      }
+    } catch (e) {
+      setWorkspace((ws) => (ws ? { ...ws, outboundMode: prev } : ws)); // revert
+      toast.error(e instanceof Error ? e.message : "Couldn't update autopilot mode");
+    } finally {
+      setModeBusy(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#FAFAFB] font-inter">
@@ -2020,6 +2063,38 @@ export default function Max() {
             <Button
               variant="outline"
               size="sm"
+              className={cn(
+                "h-8 gap-1.5 rounded-full text-xs transition-colors",
+                autopilotOn
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                  : "border-zinc-200"
+              )}
+              onClick={() => (autopilotOn ? applyOutboundMode("approval") : setConfirmAutopilot(true))}
+              disabled={modeBusy || loading || !workspace}
+              title={
+                autopilotOn
+                  ? "Autopilot is on — Max sends quality-checked emails automatically. Click to switch back to approval."
+                  : "Turn on autopilot — Max sends each draft automatically after a quality + deliverability double-check."
+              }
+            >
+              {modeBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : autopilotOn ? (
+                <Zap className="h-3.5 w-3.5" />
+              ) : (
+                <ShieldCheck className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">{autopilotOn ? "Autopilot on" : "Autopilot off"}</span>
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  autopilotOn ? "bg-emerald-500" : "bg-zinc-300"
+                )}
+              />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
               onClick={() => loadWorkspace(true, true)}
               disabled={scanning || loading}
@@ -2038,6 +2113,40 @@ export default function Max() {
             </Button>
           </div>
         </header>
+
+        <AlertDialog open={confirmAutopilot} onOpenChange={setConfirmAutopilot}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-emerald-600" /> Turn on autopilot?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2.5 text-left">
+                <span className="block">
+                  Max will send outbound emails automatically — including the leads already approved
+                  in your queue.
+                </span>
+                <span className="block rounded-lg bg-zinc-50 p-3 text-[12.5px] leading-relaxed text-zinc-600">
+                  <span className="mb-1 flex items-center gap-1.5 font-semibold text-zinc-700">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Every email is
+                    double-checked before it goes out:
+                  </span>
+                  <span className="block">• a quality review scores the draft and only sends if it passes;</span>
+                  <span className="block">• the recipient address is verified (syntax + deliverability) at send time.</span>
+                </span>
+                <span className="block">You can switch back to approval anytime.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep approval</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => applyOutboundMode("autopilot")}
+              >
+                Turn on autopilot
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="relative flex-1 overflow-y-auto">
           <div className="mx-auto max-w-6xl space-y-5 px-6 pb-10 pt-6 lg:px-8">

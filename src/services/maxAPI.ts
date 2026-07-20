@@ -379,6 +379,7 @@ export interface MaxWorkspace {
   recommendedFocusByTier?: Record<ACVTier, string>;
   last_monitor_at?: string;
   metrics: MaxMetrics;
+  outboundMode?: "autopilot" | "approval"; // autonomy lane: autopilot auto-sends, approval queues
   isDemo?: boolean;
   isSample?: boolean;            // backend synthetic sample feed (no real leads yet)
   reasoningInProgress?: boolean; // Max is personalizing the top opportunities in the background
@@ -1210,6 +1211,45 @@ export const maxAPI = {
     }
     await new Promise((r) => setTimeout(r, 400));
     return maxReply(question, ws);
+  },
+
+  /**
+   * Set Max's outbound autonomy mode.
+   *  • "autopilot" — Max sends quality-checked drafts directly to leads. Every
+   *    email still passes the same pre-send double-check as a manual send: the
+   *    staged quality review + the recipient deliverability (email-check) gate.
+   *    Switching on also mails the already-approved / auto-send leads right away.
+   *  • "approval" — every draft waits in the queue for a human.
+   * Returns the stored mode + a send summary when autopilot kicks off a send.
+   */
+  setOutboundMode: async (
+    spaceId: string | undefined,
+    mode: "autopilot" | "approval",
+    autosend = true
+  ): Promise<{ ok?: boolean; mode: "autopilot" | "approval"; sent?: number; attempted?: number; blocked?: number }> => {
+    if (!isRealBrandId(spaceId)) {
+      await new Promise((r) => setTimeout(r, 300));
+      return { ok: true, mode, sent: 0, attempted: 0, blocked: 0 };
+    }
+    return maxFetch(`/settings/outbound-mode?brand_id=${encodeURIComponent(spaceId)}`, {
+      method: "POST",
+      body: JSON.stringify({ mode, autosend }),
+    });
+  },
+
+  /** Autopilot only: send every approved / auto_send, unsent opportunity now. */
+  autosend: async (
+    spaceId: string | undefined,
+    acvTier: ACVTier = "medium"
+  ): Promise<{ mode?: string; attempted: number; sent: number; blocked: number }> => {
+    if (!isRealBrandId(spaceId)) {
+      await new Promise((r) => setTimeout(r, 300));
+      return { attempted: 0, sent: 0, blocked: 0 };
+    }
+    return maxFetch(`/autosend?brand_id=${encodeURIComponent(spaceId)}`, {
+      method: "POST",
+      body: JSON.stringify({ acv_tier: acvTier }),
+    });
   },
 };
 
