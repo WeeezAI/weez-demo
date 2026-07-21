@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, Instagram, Facebook, ArrowRight, ShieldCheck, Zap, Linkedin } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Instagram, Facebook, ArrowRight, ShieldCheck, Zap, Linkedin, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { weezAPI } from "@/services/weezAPI";
 import { EducationalLoader } from "@/components/EducationalLoader";
@@ -28,6 +28,23 @@ const PlatformCallback = () => {
   const accountType = params.get("account_type");
   const publishingEnabled = params.get("publishing_enabled") === "true";
   const provider = params.get("provider") || "instagram";
+  // The real, human-readable failure reason forwarded by the backend callback
+  // (e.g. a Microsoft "AADSTS…" message) so we can show WHAT went wrong.
+  const errorDetail = params.get("detail") || "";
+  const isMailbox = ["microsoft", "outlook", "google", "gmail"].includes(provider);
+  const providerLabel =
+    (
+      {
+        instagram: "Instagram",
+        facebook: "Facebook",
+        linkedin: "LinkedIn",
+        hubspot: "HubSpot",
+        microsoft: "Outlook",
+        outlook: "Outlook",
+        google: "Gmail",
+        gmail: "Gmail",
+      } as Record<string, string>
+    )[provider] || "your account";
 
   useEffect(() => {
     if (isConnected && brandId && !isSuccess) {
@@ -37,11 +54,11 @@ const PlatformCallback = () => {
         // Skip full brand analysis — backend already stored the token
         setIsSuccess(true);
       } else {
-        // Instagram: Skip brand analysis — the backend callback already stored
-        // the token and account info. Brand voice is synthesized from the website
-        // (primary source), not Instagram OAuth. Just mark success.
+        // Instagram + mailbox providers (Outlook / Gmail): the backend callback
+        // already stored the token/connection, so just mark success. (Instagram
+        // brand voice is synthesized from the website, not the OAuth call.)
         setIsSuccess(true);
-        toast.success("Instagram connected successfully!");
+        toast.success(`${providerLabel} connected successfully!`);
       }
     }
   }, [isConnected, brandId, provider, isSuccess]);
@@ -106,7 +123,7 @@ const PlatformCallback = () => {
 
   const renderFailure = () => {
     let title = "Connection Failed";
-    let description = "We couldn't synchronize your Instagram account.";
+    let description = `We couldn't connect your ${providerLabel} account.`;
     let steps: string[] = [];
 
     if (error === "no_ig_business_found") {
@@ -126,6 +143,23 @@ const PlatformCallback = () => {
         "Verify you are an Admin of that Facebook Page",
         "Try creating a fresh Page if your legacy one is restricted"
       ];
+    } else if (isMailbox) {
+      if (error === "store_failed") {
+        title = `${providerLabel} Not Saved`;
+        description = `${providerLabel} authorized successfully, but we couldn't save the connection. Please try connecting again.`;
+      } else if (error === "access_denied" || error === "consent_required") {
+        title = "Permission Needed";
+        description = `Connecting ${providerLabel} needs you to grant the requested mail permissions. Please try again and accept the consent screen.`;
+      } else {
+        // token_exchange_failed and other last-step failures
+        title = `Couldn't Finish Connecting ${providerLabel}`;
+        description = `Sign-in completed, but the final authorization step failed.${errorDetail ? ` ${providerLabel} reported the reason below.` : ""}`;
+        steps = [
+          "Retry the connection — transient provider errors often clear on a second try",
+          "Make sure you're signing in with the mailbox you intend to send from",
+          "If it keeps failing, the app's OAuth settings may need attention (redirect URI, client secret, or allowed account types)",
+        ];
+      }
     }
 
     return (
@@ -142,6 +176,15 @@ const PlatformCallback = () => {
           <h1 className="text-3xl font-black uppercase tracking-tighter">{title}</h1>
           <p className="text-muted-foreground font-medium">{description}</p>
         </div>
+
+        {errorDetail && (
+          <div className="rounded-2xl border border-amber-200/60 bg-amber-50/50 p-5">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-amber-600/80">
+              Reason from {providerLabel}
+            </p>
+            <p className="break-words text-sm font-medium leading-relaxed text-foreground/80">{errorDetail}</p>
+          </div>
+        )}
 
         {steps.length > 0 && (
           <div className="bg-secondary/30 rounded-[2.5rem] p-10 space-y-6 border border-border/40">
@@ -196,13 +239,50 @@ const PlatformCallback = () => {
               ? "Your LinkedIn profile is now connected and ready for B2B publishing."
               : provider === "hubspot"
                 ? "Your HubSpot CRM is now synced for real-time lead automation."
-                : "Your brand identity is now synchronized and live."}
+                : isMailbox
+                  ? `Your ${providerLabel} mailbox is connected — Max can now send outbound email and book meetings from it.`
+                  : "Your brand identity is now synchronized and live."}
           </p>
         </div>
 
         <div className="grid gap-4">
           <div className="p-8 rounded-[2.5rem] bg-white border border-border/80 shadow-xl shadow-black/[0.02] space-y-6">
-            {isLinkedIn ? (
+            {isMailbox ? (
+              /* Mailbox (Outlook / Gmail) Success Details */
+              <>
+                <div className="flex items-center justify-between border-b border-border/40 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/10 flex items-center justify-center">
+                      <Mail className="w-6 h-6 text-sky-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Mailbox</span>
+                      <span className="text-lg font-black uppercase tracking-tight">{providerLabel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Outbound Email</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Send Enabled</span>
+                      </span>
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Calendar</span>
+                      <span className="flex items-center gap-2 mt-1">
+                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Booking Ready</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : isLinkedIn ? (
               /* LinkedIn Success Details */
               <>
                 <div className="flex items-center justify-between border-b border-border/40 pb-6">
@@ -289,10 +369,10 @@ const PlatformCallback = () => {
         </div>
 
         <Button
-          onClick={() => navigate(`/one-click-post/${brandId}`)}
+          onClick={() => navigate(isMailbox ? "/spaces" : `/one-click-post/${brandId}`)}
           className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20"
         >
-          Enter Dashboard Hub
+          {isMailbox ? "Done" : "Enter Dashboard Hub"}
         </Button>
       </div>
     );
