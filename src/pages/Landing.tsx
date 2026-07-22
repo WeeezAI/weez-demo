@@ -10,7 +10,8 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 import AnimatedBackground from "@/components/landing/AnimatedBackground";
-import HeroWorkforce from "@/components/HeroWorkforce";
+import AsciiForest from "@/components/landing/AsciiForest";
+import LogoMarquee from "@/components/landing/LogoMarquee";
 import HeroAITeam from "@/components/HeroAITeam";
 import WeezWorkflow from "@/components/landing/WeezWorkflow";
 import PostToMeeting from "@/components/landing/PostToMeeting";
@@ -90,15 +91,6 @@ const PrimaryButton = ({ children, onClick }: any) => (
       {children}
       <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
     </span>
-  </button>
-);
-
-const GhostButton = ({ children, onClick }: any) => (
-  <button
-    onClick={onClick}
-    className="group inline-flex h-12 items-center gap-2 rounded-full border border-slate-900/15 bg-slate-900/[0.03] px-6 text-sm font-medium text-slate-900 backdrop-blur transition hover:bg-slate-900/[0.06]"
-  >
-    {children}
   </button>
 );
 
@@ -220,6 +212,15 @@ const Landing = () => {
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
 
+  // Nav is transparent over the dark ASCII hero, and solidifies once scrolled.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const [currency, setCurrency] = useState<"USD" | "INR">("USD");
   const priceTable = {
@@ -235,23 +236,51 @@ const Landing = () => {
       <AnimatedBackground />
 
       {/* ============ NAV ============ */}
-      <header className="fixed top-0 z-50 w-full border-b border-slate-900/5 bg-white/70 backdrop-blur-xl">
+      <header
+        className={`fixed top-0 z-50 w-full border-b transition-colors duration-300 ${
+          scrolled
+            ? "border-slate-900/5 bg-white/70 backdrop-blur-xl"
+            : "border-transparent bg-transparent"
+        }`}
+      >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex cursor-pointer items-center gap-3" onClick={() => navigate("/")}>
-            <img src={logo} alt="Weez AI" className="h-7 w-auto" />
+            <img
+              src={logo}
+              alt="Weez AI"
+              className={`h-7 w-auto transition ${scrolled ? "" : "brightness-0 invert"}`}
+            />
           </div>
-          <nav className="hidden items-center gap-8 text-sm text-slate-700 md:flex">
-            <button onClick={() => scrollTo("how")} className="transition hover:text-slate-900">How it works</button>
-            <button onClick={() => scrollTo("team")} className="transition hover:text-slate-900">The team</button>
-            <button onClick={() => scrollTo("capabilities")} className="transition hover:text-slate-900">Capabilities</button>
-            <button onClick={() => scrollTo("why")} className="transition hover:text-slate-900">Why Weez</button>
-            <button onClick={() => scrollTo("pricing")} className="transition hover:text-slate-900">Pricing</button>
+          <nav
+            className={`hidden items-center gap-8 text-sm md:flex ${
+              scrolled ? "text-slate-700" : "text-slate-300"
+            }`}
+          >
+            {[
+              ["how", "How it works"],
+              ["team", "The team"],
+              ["capabilities", "Capabilities"],
+              ["why", "Why Weez"],
+              ["pricing", "Pricing"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => scrollTo(id)}
+                className={`transition ${scrolled ? "hover:text-slate-900" : "hover:text-white"}`}
+              >
+                {label}
+              </button>
+            ))}
           </nav>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               onClick={goAuth}
-              className="hidden rounded-full text-slate-800 hover:bg-slate-900/[0.04] hover:text-slate-900 sm:inline-flex"
+              className={`hidden rounded-full sm:inline-flex ${
+                scrolled
+                  ? "text-slate-800 hover:bg-slate-900/[0.04] hover:text-slate-900"
+                  : "text-slate-200 hover:bg-white/10 hover:text-white"
+              }`}
             >
               Log in
             </Button>
@@ -259,7 +288,7 @@ const Landing = () => {
             <div className="md:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-slate-900"><Menu /></Button>
+                  <Button variant="ghost" size="icon" className={scrolled ? "text-slate-900" : "text-white"}><Menu /></Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="border-slate-900/10 bg-white pt-20 text-slate-900">
                   <nav className="flex flex-col gap-5 text-lg">
@@ -277,99 +306,132 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* ============ 1. HERO ============ */}
-      <section className="relative px-6 pb-24 pt-32 md:pt-40">
-        <motion.div style={{ y: heroY }} className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
-          {/* Left: copy */}
-          <div className="relative text-center lg:text-left">
-            <Eyebrow>AI-Native Marketing Workforce · Built for B2B SaaS</Eyebrow>
+      {/* ============ 1. HERO (cinematic ASCII) ============ */}
+      <section className="relative min-h-[100svh] w-full overflow-hidden bg-[#05070d]">
+        {/* Animated ASCII-art background */}
+        <AsciiForest className="absolute inset-0 h-full w-full" />
 
-            <motion.h1
-              variants={fadeUp}
-              custom={1}
-              initial="hidden"
-              animate="show"
-              className="mt-6 text-[2.6rem] font-bold leading-[1.02] tracking-tight text-slate-900 sm:text-6xl lg:text-[4.1rem]"
+        {/* Legibility overlays — vignette + bottom fade into the marquee band */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,13,0.45)_55%,rgba(5,7,13,0.92)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#05070d] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent to-[#05070d]" />
+
+        {/* Content */}
+        <motion.div
+          style={{ y: heroY }}
+          className="relative z-10 mx-auto flex min-h-[100svh] max-w-4xl flex-col items-center justify-center px-6 pb-24 pt-28 text-center"
+        >
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
+          >
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
+            AI-Native Marketing Workforce · Built for B2B SaaS
+          </motion.div>
+
+          <motion.h1
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            animate="show"
+            className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[4.6rem]"
+          >
+            B2B SaaS growth without hiring a{" "}
+            <span className="bg-gradient-to-r from-sky-300 via-blue-400 to-sky-300 bg-clip-text text-transparent">
+              full marketing team
+            </span>
+          </motion.h1>
+
+          <motion.p
+            variants={fadeUp}
+            custom={2}
+            initial="hidden"
+            animate="show"
+            className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300/90 md:text-lg"
+          >
+            Weez is your AI-native marketing workforce — learning your founder voice, product, and
+            ICP to create content, track high-intent accounts, and run warm outbound that turns
+            into meetings.
+          </motion.p>
+
+          <motion.div
+            variants={fadeUp}
+            custom={3}
+            initial="hidden"
+            animate="show"
+            className="mt-9 flex flex-wrap items-center justify-center gap-3"
+          >
+            <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+            <button
+              onClick={() => scrollTo("workflow")}
+              className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
             >
-              B2B SaaS growth without hiring a{" "}
-              <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 bg-clip-text text-transparent">
-                full marketing team
-              </span>
-            </motion.h1>
+              <Play className="h-4 w-4" /> See Weez in Action
+            </button>
+          </motion.div>
 
-            <motion.p
-              variants={fadeUp}
-              custom={2}
-              initial="hidden"
-              animate="show"
-              className="mx-auto mt-6 max-w-xl text-lg text-slate-600 lg:mx-0"
-            >
-              Weez is your AI-native marketing workforce — learning your founder voice, product,
-              and ICP to create content, track high-intent accounts, and run warm outbound that
-              turns into meetings.
-            </motion.p>
+          {/* mini team + proof */}
+          <motion.div
+            variants={fadeUp}
+            custom={4}
+            initial="hidden"
+            animate="show"
+            className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
+          >
+            <div className="flex -space-x-3">
+              {TEAM_MINI.map((m) => (
+                <div
+                  key={m.name}
+                  className={`h-10 w-10 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-[#05070d] ${m.ring}`}
+                >
+                  <img src={m.img} alt={m.name} className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+            <div className="text-sm text-slate-400">
+              <span className="font-semibold text-slate-200">Ninna, Eva, Max &amp; Robert</span> — your
+              AI team, online now.
+            </div>
+          </motion.div>
 
-            <motion.div
-              variants={fadeUp}
-              custom={3}
-              initial="hidden"
-              animate="show"
-              className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
-            >
-              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
-              <GhostButton onClick={() => scrollTo("workflow")}>
-                <Play className="h-4 w-4" /> See Weez in Action
-              </GhostButton>
-            </motion.div>
-
-            {/* mini team + proof */}
-            <motion.div
-              variants={fadeUp}
-              custom={4}
-              initial="hidden"
-              animate="show"
-              className="mt-9 flex flex-col items-center gap-4 lg:flex-row lg:items-center"
-            >
-              <div className="flex -space-x-3">
-                {TEAM_MINI.map((m) => (
-                  <div key={m.name} className={`h-10 w-10 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-[#FBFCFE] ${m.ring}`}>
-                    <img src={m.img} alt={m.name} className="h-full w-full object-cover" />
-                  </div>
-                ))}
-              </div>
-              <div className="text-sm text-slate-600">
-                <span className="font-semibold text-slate-900">Ninna, Eva, Max &amp; Robert</span> — your
-                AI team, online now.
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeUp}
-              custom={5}
-              initial="hidden"
-              animate="show"
-              className="mt-6 flex justify-center lg:justify-start"
-            >
-              <a
-                href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  alt="Weez AI on Product Hunt"
-                  width="230"
-                  height="50"
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=light&t=1778051193830"
-                />
-              </a>
-            </motion.div>
-          </div>
-
-          {/* Right: dynamic team-at-work console */}
-          <div className="relative">
-            <HeroWorkforce />
-          </div>
+          <motion.a
+            variants={fadeUp}
+            custom={5}
+            initial="hidden"
+            animate="show"
+            href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-8"
+          >
+            <img
+              alt="Weez AI on Product Hunt"
+              width="230"
+              height="50"
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=dark&t=1778051193830"
+            />
+          </motion.a>
         </motion.div>
+
+        {/* scroll cue */}
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2">
+          <div className="flex h-9 w-6 items-start justify-center rounded-full border border-white/25 p-1.5">
+            <span className="h-2 w-1 animate-bounce rounded-full bg-white/60" />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ 1b. INTEGRATIONS MARQUEE (dark → light bridge) ============ */}
+      <section className="relative bg-[#05070d] pb-20 pt-2">
+        <div className="mx-auto max-w-7xl px-6">
+          <p className="mb-8 text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+            Connects with the tools you already use
+          </p>
+          <LogoMarquee />
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#FBFCFE]" />
       </section>
 
       {/* ============ 2. HOW IT WORKS ============ */}
