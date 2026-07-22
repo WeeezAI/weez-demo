@@ -223,6 +223,16 @@ const PlatformCallback = () => {
 
   const renderSuccess = () => {
     const isLinkedIn = provider === "linkedin";
+    // After a LinkedIn or mailbox connect, return to the Connectors tab so the
+    // user immediately sees the connected status — NOT the OneClickPost page,
+    // whose Instagram gate looked like a "disconnected" screen. Other providers
+    // (e.g. Instagram) keep going to their dashboard hub. Falls back to /spaces
+    // if we somehow don't have the brand/space id.
+    const connectorsHref = brandId
+      ? `/autonomous-marketing/${brandId}?tab=connectors`
+      : "/spaces";
+    const successDestination =
+      isLinkedIn || isMailbox ? connectorsHref : `/one-click-post/${brandId}`;
 
     return (
       <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
@@ -369,10 +379,10 @@ const PlatformCallback = () => {
         </div>
 
         <Button
-          onClick={() => navigate(isMailbox ? "/spaces" : `/one-click-post/${brandId}`)}
+          onClick={() => navigate(successDestination)}
           className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20"
         >
-          {isMailbox ? "Done" : "Enter Dashboard Hub"}
+          {isLinkedIn || isMailbox ? "View Connections" : "Enter Dashboard Hub"}
         </Button>
       </div>
     );

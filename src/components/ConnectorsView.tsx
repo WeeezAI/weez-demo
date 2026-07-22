@@ -1,32 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-    Globe,
-    Linkedin,
-    Instagram,
     CheckCircle2,
-    AlertCircle,
-    Link2,
     RefreshCw,
-    Zap,
-    ExternalLink,
     Loader2,
-    Check,
-    Clock,
-    Target,
-    Mail,
-    Calendar as CalendarIcon
+    ShieldCheck,
+    Plug,
+    ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { weezAPI } from "@/services/weezAPI";
-import { getHubSpotStatus, getHubSpotAuthorizeUrl, disconnectHubSpot } from "@/services/salesAPI";
 import {
     getIntegrationsStatus,
     getIntegrationAuthorizeUrl,
     disconnectIntegration,
 } from "@/services/integrationsAPI";
+import {
+    LinkedInLogo,
+    GmailLogo,
+    OutlookLogo,
+    GoogleCalendarLogo,
+} from "@/components/brand-logos";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -40,445 +34,357 @@ interface ConnectorStatus {
     identifier?: string;
 }
 
+// The four integrations that matter. Each renders its real brand logo and owns
+// its own connect / disconnect wiring. `accent` drives the connected-state glow.
+type ConnectorId = "linkedin" | "gmail" | "outlook" | "google_calendar";
+
+interface ConnectorMeta {
+    id: ConnectorId;
+    name: string;
+    tagline: string;
+    description: string;
+    Logo: (props: { className?: string }) => JSX.Element;
+    accent: string;   // tailwind text color for the pulse/glow
+    glow: string;     // tailwind shadow color for the connected ring
+}
+
+const CONNECTORS: ConnectorMeta[] = [
+    {
+        id: "linkedin",
+        name: "LinkedIn",
+        tagline: "B2B publishing & signals",
+        description:
+            "Publish directly to your LinkedIn profile or page and let Weez read your professional voice for sharper outbound.",
+        Logo: LinkedInLogo,
+        accent: "text-[#0A66C2]",
+        glow: "shadow-[0_0_0_4px_rgba(10,102,194,0.12)]",
+    },
+    {
+        id: "gmail",
+        name: "Gmail",
+        tagline: "Outbound email",
+        description:
+            "Send outbound email from your Gmail mailbox — Max composes, checks, and sends replies straight from your inbox.",
+        Logo: GmailLogo,
+        accent: "text-[#EA4335]",
+        glow: "shadow-[0_0_0_4px_rgba(234,67,53,0.12)]",
+    },
+    {
+        id: "outlook",
+        name: "Outlook",
+        tagline: "Outbound email",
+        description:
+            "Connect your Microsoft Outlook mailbox so Max can send and track outbound email across your Microsoft 365 account.",
+        Logo: OutlookLogo,
+        accent: "text-[#0F6CBD]",
+        glow: "shadow-[0_0_0_4px_rgba(15,108,189,0.12)]",
+    },
+    {
+        id: "google_calendar",
+        name: "Google Calendar",
+        tagline: "Meeting booking",
+        description:
+            "Let Max book meetings with your prospects automatically and keep every scheduled call in sync with your calendar.",
+        Logo: GoogleCalendarLogo,
+        accent: "text-[#34A853]",
+        glow: "shadow-[0_0_0_4px_rgba(52,168,83,0.12)]",
+    },
+];
+
 export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
     const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [websiteUrl, setWebsiteUrl] = useState("");
-    const [isConnectingWebsite, setIsConnectingWebsite] = useState(false);
-    const [isResyncing, setIsResyncing] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    // The connector whose "Connect" was just clicked (shows a spinner before the
+    // browser navigates to the OAuth consent screen).
+    const [connectingId, setConnectingId] = useState<ConnectorId | null>(null);
+    const [disconnectingId, setDisconnectingId] = useState<ConnectorId | null>(null);
 
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async () => {
         try {
-            setIsLoading(true);
-            const data = await weezAPI.getConnectorsStatus(brandId);
-            const allConnectors = data.connectors || [];
+            const merged: ConnectorStatus[] = [];
 
-            // Set website URL if already connected
-            const web = allConnectors.find((c: any) => c.type === "website");
-            if (web?.identifier) setWebsiteUrl(web.identifier);
-
-            // Also fetch HubSpot status and merge into connectors list
+            // LinkedIn status comes from the connectors API.
             try {
-                const hsStatus = await getHubSpotStatus(brandId);
-                allConnectors.push({
-                    type: "hubspot",
-                    connected: hsStatus.connected,
-                    identifier: hsStatus.connected ? "HubSpot CRM" : undefined,
+                const data = await weezAPI.getConnectorsStatus(brandId);
+                const li = (data.connectors || []).find((c: any) => c.type === "linkedin");
+                merged.push({
+                    type: "linkedin",
+                    connected: !!li?.connected,
+                    identifier: li?.identifier,
                 });
             } catch {
-                allConnectors.push({ type: "hubspot", connected: false });
+                merged.push({ type: "linkedin", connected: false });
             }
 
-            // Fetch mailbox + calendar connections from the deployed integrations
-            // API (Gmail/Outlook + Google/Microsoft Calendar). One Google
-            // connection powers Gmail + Google Calendar; one Microsoft connection
-            // powers Outlook + Microsoft Calendar.
+            // Gmail / Outlook / Google Calendar come from the mailbox+calendar
+            // integrations API. One Google connection powers Gmail + Google
+            // Calendar; one Microsoft connection powers Outlook.
             try {
                 const status = await getIntegrationsStatus(brandId);
                 const googleEmail = status.connections.find((c) => c.provider === "google")?.email;
                 const microsoftEmail = status.connections.find((c) => c.provider === "microsoft")?.email;
-                allConnectors.push(
+                merged.push(
                     { type: "gmail", connected: status.connected.gmail, identifier: googleEmail },
                     { type: "outlook", connected: status.connected.outlook, identifier: microsoftEmail },
                     { type: "google_calendar", connected: status.connected.google_calendar, identifier: googleEmail },
-                    { type: "microsoft_calendar", connected: status.connected.microsoft_calendar, identifier: microsoftEmail },
                 );
             } catch {
-                // Mailbox/calendar status not available — leave them unconnected.
+                merged.push(
+                    { type: "gmail", connected: false },
+                    { type: "outlook", connected: false },
+                    { type: "google_calendar", connected: false },
+                );
             }
 
-            setConnectors(allConnectors);
+            setConnectors(merged);
         } catch (err) {
             console.error("Failed to fetch connectors status:", err);
             toast.error("Could not load connector status");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        if (brandId) fetchStatus();
     }, [brandId]);
 
-    const handleConnectWebsite = async () => {
-        if (!websiteUrl) return;
-        try {
-            setIsConnectingWebsite(true);
-            await weezAPI.connectWebsite(brandId, websiteUrl);
-            toast.success("Website connected! Your brand voice is being synthesized — this may take a minute.");
+    useEffect(() => {
+        if (brandId) {
+            setIsLoading(true);
             fetchStatus();
-        } catch (err: any) {
-            toast.error(err.message || "Failed to connect website");
-        } finally {
-            setIsConnectingWebsite(false);
         }
+    }, [brandId, fetchStatus]);
+
+    // Re-check status whenever the user returns to the tab (e.g. after finishing
+    // an OAuth consent flow in the same window), so the connected state appears
+    // without a manual refresh.
+    useEffect(() => {
+        const onFocus = () => {
+            if (brandId) fetchStatus();
+        };
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
+    }, [brandId, fetchStatus]);
+
+    const isConnected = (id: string) => connectors.find((c) => c.type === id)?.connected;
+    const getIdentifier = (id: string) => connectors.find((c) => c.type === id)?.identifier;
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchStatus();
+        setIsRefreshing(false);
     };
 
-    const handleConnectLinkedIn = () => {
-        const authUrl = weezAPI.getLinkedInAuthUrl(brandId);
-        window.location.href = authUrl;
-    };
-
-    const handleConnectInstagram = async () => {
+    const handleConnect = (id: ConnectorId) => {
+        setConnectingId(id);
         try {
-            const authUrl = await weezAPI.getInstagramAuthUrl(brandId);
-            window.location.href = authUrl;
-        } catch (err: any) {
-            toast.error(err.message || "Failed to get Instagram auth URL");
-        }
-    };
-
-    const handleConnectHubSpot = () => {
-        window.location.href = getHubSpotAuthorizeUrl(brandId);
-    };
-
-    const handleConnectGmail = () => {
-        window.location.href = getIntegrationAuthorizeUrl("gmail", brandId);
-    };
-
-    const handleConnectOutlook = () => {
-        window.location.href = getIntegrationAuthorizeUrl("outlook", brandId);
-    };
-
-    const handleConnectGoogleCalendar = () => {
-        window.location.href = getIntegrationAuthorizeUrl("google_calendar", brandId);
-    };
-
-    const handleResyncAll = async () => {
-        try {
-            setIsResyncing(true);
-            await weezAPI.triggerAnalysis(brandId);
-            toast.success("Brand Memory re-sync triggered! Analyzing all sources...");
-            fetchStatus();
-        } catch (err) {
-            toast.error("Failed to trigger re-sync");
-        } finally {
-            setIsResyncing(false);
-        }
-    };
-
-    const isConnected = (type: string) => connectors.find(c => c.type === type)?.connected;
-    const getIdentifier = (type: string) => connectors.find(c => c.type === type)?.identifier;
-
-    const handleDisconnect = async (platformId: string) => {
-        try {
-            if (platformId === "linkedin") {
-                await weezAPI.disconnectLinkedIn(brandId);
-                toast.success("LinkedIn disconnected successfully.");
-            } else if (platformId === "hubspot") {
-                await disconnectHubSpot(brandId);
-                toast.success("HubSpot CRM disconnected.");
-            } else if (
-                platformId === "gmail" ||
-                platformId === "outlook" ||
-                platformId === "google_calendar" ||
-                platformId === "microsoft_calendar"
-            ) {
-                await disconnectIntegration(platformId, brandId);
-                const label =
-                    platformId === "gmail" ? "Gmail"
-                    : platformId === "outlook" ? "Outlook"
-                    : platformId === "google_calendar" ? "Google Calendar"
-                    : "Microsoft Calendar";
-                toast.success(`${label} disconnected.`);
+            if (id === "linkedin") {
+                window.location.href = weezAPI.getLinkedInAuthUrl(brandId);
+            } else {
+                window.location.href = getIntegrationAuthorizeUrl(id, brandId);
             }
-            fetchStatus();
         } catch (err: any) {
-            toast.error(err.message || `Failed to disconnect ${platformId}`);
+            setConnectingId(null);
+            toast.error(err?.message || `Failed to start ${id} connection`);
         }
     };
 
-    const CONNECTOR_METADATA = [
-        {
-            id: "website",
-            name: "Official Website",
-            description: "Your primary brand identity source. Connect your website first for the best experience — we'll analyze your brand voice, products, and visual identity.",
-            icon: Globe,
-            color: "text-emerald-600",
-            bg: "bg-emerald-600/10",
-            action: null, // Handled by inline form
-            comingSoon: false,
-            isOptional: false,
-            isPrimary: true
-        },
-        {
-            id: "linkedin",
-            name: "LinkedIn",
-            description: "Your distribution channel. Connect to publish content directly to LinkedIn and analyze your professional voice and B2B messaging.",
-            icon: Linkedin,
-            color: "text-blue-600",
-            bg: "bg-blue-600/10",
-            action: handleConnectLinkedIn,
-            comingSoon: false,
-            isOptional: false,
-            isPrimary: false
-        },
-        {
-            id: "instagram",
-            name: "Instagram",
-            description: "Enhance your brand memory with visual identity from Instagram. Connect to track visuals, captions, and publish to your IG profile.",
-            icon: Instagram,
-            color: "text-pink-500",
-            bg: "bg-pink-500/10",
-            action: handleConnectInstagram,
-            comingSoon: false,
-            isOptional: true,
-            isPrimary: false
-        },
-        {
-            id: "hubspot",
-            name: "HubSpot CRM",
-            description: "Your sales intelligence layer. Connect HubSpot to auto-sync discovered leads as contacts, log LinkedIn interactions as notes, and track deal conversions.",
-            icon: Target,
-            color: "text-orange-500",
-            bg: "bg-orange-500/10",
-            action: handleConnectHubSpot,
-            comingSoon: false,
-            isOptional: true,
-            isPrimary: false
-        },
-        {
-            id: "gmail",
-            name: "Gmail",
-            description: "Email outreach automation. Connect Gmail to track email responses, schedule follow-ups, and integrate email engagement with your revenue attribution.",
-            icon: Mail,
-            color: "text-red-500",
-            bg: "bg-red-500/10",
-            action: handleConnectGmail,
-            comingSoon: false,
-            isOptional: true,
-            isPrimary: false
-        },
-        {
-            id: "outlook",
-            name: "Outlook",
-            description: "Microsoft email integration. Connect Outlook to sync email communications, track responses, and unify your email outreach across platforms.",
-            icon: Mail,
-            color: "text-blue-500",
-            bg: "bg-blue-500/10",
-            action: handleConnectOutlook,
-            comingSoon: false,
-            isOptional: true,
-            isPrimary: false
-        },
-        {
-            id: "google_calendar",
-            name: "Google Calendar",
-            description: "Meeting scheduling automation. Connect Google Calendar to automatically schedule meetings with discovered leads and sync with your revenue tracking.",
-            icon: CalendarIcon,
-            color: "text-green-500",
-            bg: "bg-green-500/10",
-            action: handleConnectGoogleCalendar,
-            comingSoon: false,
-            isOptional: true,
-            isPrimary: false
+    const handleDisconnect = async (id: ConnectorId, name: string) => {
+        setDisconnectingId(id);
+        try {
+            if (id === "linkedin") {
+                await weezAPI.disconnectLinkedIn(brandId);
+            } else {
+                await disconnectIntegration(id, brandId);
+            }
+            toast.success(`${name} disconnected.`);
+            await fetchStatus();
+        } catch (err: any) {
+            toast.error(err?.message || `Failed to disconnect ${name}`);
+        } finally {
+            setDisconnectingId(null);
         }
-    ];
+    };
+
+    const connectedCount = CONNECTORS.filter((c) => isConnected(c.id)).length;
 
     return (
-        <div className="flex-1 overflow-y-auto px-8 py-10 bg-[#F9FAFB]/50">
-            <div className="max-w-4xl mx-auto space-y-10">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="space-y-2">
-                        <Badge className="bg-black/5 text-black border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest">Connectors Base</Badge>
-                        <h2 className="text-4xl font-black text-zinc-900 tracking-tight leading-none uppercase">Source Intelligence</h2>
-                        <p className="text-sm text-zinc-500 font-medium">Connect all your brand touchpoints to build a unified, authoritative Brand Memory.</p>
+        <div className="flex-1 overflow-y-auto px-6 md:px-8 py-10 bg-[#F9FAFB]/60">
+            <div className="max-w-3xl mx-auto space-y-8">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+                    <div className="space-y-3">
+                        <Badge className="bg-black/5 text-black border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-black/5">
+                            Connectors
+                        </Badge>
+                        <h2 className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tight leading-none uppercase">
+                            Connected accounts
+                        </h2>
+                        <p className="text-sm text-zinc-500 font-medium max-w-lg">
+                            Link your channels so Weez can publish, send outbound email, and book meetings on your behalf.
+                        </p>
                     </div>
-                    <Button
-                        onClick={handleResyncAll}
-                        disabled={isResyncing}
-                        className="h-12 px-6 rounded-2xl bg-black text-white font-bold gap-3 shadow-xl transition-all hover:scale-105 active:scale-95"
-                    >
-                        {isResyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        Recalibrate Brand Memory
-                    </Button>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-2xl font-black text-zinc-900 leading-none">
+                                {connectedCount}<span className="text-zinc-300">/{CONNECTORS.length}</span>
+                            </span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mt-1">
+                                Connected
+                            </span>
+                        </div>
+                        <Button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing || isLoading}
+                            variant="outline"
+                            className="h-11 px-4 rounded-2xl border-zinc-200 bg-white text-zinc-700 font-bold gap-2 hover:bg-zinc-50 hover:border-zinc-300 transition-all"
+                        >
+                            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Guided Onboarding Hint — show when website is not connected */}
-                {!isLoading && !isConnected("website") && (
-                    <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
-                            <Globe className="w-5 h-5 text-emerald-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-emerald-900">Start by connecting your website</p>
-                            <p className="text-xs text-emerald-700/70 mt-1 leading-relaxed">
-                                Your website is the primary source of truth for your brand identity. Connect it first and we'll synthesize your brand voice, visual identity, and product catalog automatically.
-                            </p>
-                        </div>
+                {/* Connector list */}
+                {isLoading ? (
+                    <div className="space-y-4">
+                        {CONNECTORS.map((c) => (
+                            <div
+                                key={c.id}
+                                className="h-28 rounded-[1.75rem] bg-white border border-zinc-100 animate-pulse"
+                            />
+                        ))}
                     </div>
-                )}
+                ) : (
+                    <div className="space-y-4">
+                        {CONNECTORS.map((c) => {
+                            const connected = !!isConnected(c.id);
+                            const identifier = getIdentifier(c.id);
+                            const isConnecting = connectingId === c.id;
+                            const isDisconnecting = disconnectingId === c.id;
+                            const Logo = c.Logo;
 
-                {/* Main Grid */}
-                <div className="grid grid-cols-1 gap-6">
-                    {CONNECTOR_METADATA.map((platform) => {
-                        const connected = isConnected(platform.id);
-                        const identifier = getIdentifier(platform.id);
-                        const Icon = platform.icon;
+                            return (
+                                <div
+                                    key={c.id}
+                                    className={cn(
+                                        "group relative rounded-[1.75rem] bg-white border p-5 md:p-6 transition-all duration-500",
+                                        connected
+                                            ? "border-emerald-200/70 shadow-[0_8px_30px_-12px_rgba(16,185,129,0.25)]"
+                                            : "border-zinc-100 hover:border-zinc-200 hover:shadow-lg hover:shadow-black/[0.03]"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-4 md:gap-5">
+                                        {/* Logo tile */}
+                                        <div
+                                            className={cn(
+                                                "relative shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center transition-all duration-500 group-hover:scale-105",
+                                                connected && c.glow
+                                            )}
+                                        >
+                                            <Logo className="w-8 h-8 md:w-9 md:h-9" />
+                                            {connected && (
+                                                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center">
+                                                    <span className="absolute inline-flex h-5 w-5 rounded-full bg-emerald-400/40 animate-ping" />
+                                                    <CheckCircle2 className="relative w-5 h-5 text-emerald-500 fill-white animate-in zoom-in duration-500" />
+                                                </span>
+                                            )}
+                                        </div>
 
-                        return (
-                            <Card key={platform.id} className="border-none shadow-sm bg-white rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-500">
-                                <CardContent className="p-8">
-                                    <div className="flex flex-col md:flex-row gap-8 items-start">
-                                        {/* Left Side: Identity */}
-                                        <div className="flex-1 space-y-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-500", platform.bg, platform.color, "group-hover:scale-110")}>
-                                                    <Icon className="w-7 h-7" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight">{platform.name}</h3>
-                                                        {platform.comingSoon && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
-                                                                <Clock className="w-3 h-3" />
-                                                                <span className="text-[9px] font-black uppercase tracking-wider">Coming Soon</span>
-                                                            </div>
-                                                        )}
-                                                        {!platform.comingSoon && connected && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                                <CheckCircle2 className="w-3 h-3" />
-                                                                <span className="text-[9px] font-black uppercase tracking-wider">Active</span>
-                                                            </div>
-                                                        )}
-                                                        {platform.isPrimary && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                                <Zap className="w-3 h-3" />
-                                                                <span className="text-[9px] font-black uppercase tracking-wider">Primary Source</span>
-                                                            </div>
-                                                        )}
-                                                        {platform.isOptional && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-50 text-zinc-500 border border-zinc-200">
-                                                                <span className="text-[9px] font-black uppercase tracking-wider">Optional</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">
-                                                        {platform.comingSoon ? 'Verification Pending — Launching Soon' : connected ? `Connected as ${identifier || 'Verified Account'}` : 'Not Integrated'}
-                                                    </p>
-                                                </div>
+                                        {/* Identity + status */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="text-lg font-black text-zinc-900 uppercase tracking-tight">
+                                                    {c.name}
+                                                </h3>
+                                                {connected ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                        <span className="relative flex h-1.5 w-1.5">
+                                                            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                                                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                                                        </span>
+                                                        <span className="text-[9px] font-black uppercase tracking-wider">Connected</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-50 text-zinc-400 border border-zinc-200">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider">Not connected</span>
+                                                    </span>
+                                                )}
                                             </div>
-
-                                            <p className="text-sm text-zinc-600 leading-relaxed font-medium">
-                                                {platform.description}
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mt-1 truncate">
+                                                {connected
+                                                    ? identifier
+                                                        ? identifier
+                                                        : "Active"
+                                                    : c.tagline}
                                             </p>
-
-                                            {/* Specific behavior for Website */}
-                                            {platform.id === "website" && (
-                                                <div className="flex items-center gap-2 mt-4">
-                                                    <div className="relative flex-1">
-                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                                                            <Link2 className="w-4 h-4" />
-                                                        </div>
-                                                        <Input
-                                                            placeholder="https://yourbrand.com"
-                                                            value={websiteUrl}
-                                                            onChange={(e) => setWebsiteUrl(e.target.value)}
-                                                            className="h-12 pl-12 pr-4 rounded-xl border-zinc-100 bg-zinc-50 focus:ring-black focus:border-black font-medium"
-                                                        />
-                                                    </div>
-                                                    <Button
-                                                        onClick={handleConnectWebsite}
-                                                        disabled={isConnectingWebsite || !websiteUrl}
-                                                        className="h-12 px-6 rounded-xl bg-black text-white font-bold gap-2"
-                                                    >
-                                                        {isConnectingWebsite ? <Loader2 className="w-4 h-4 animate-spin" /> : connected ? 'Update' : 'Verify'}
-                                                    </Button>
-                                                </div>
-                                            )}
+                                            <p className="hidden md:block text-sm text-zinc-500 font-medium leading-relaxed mt-2 pr-4">
+                                                {c.description}
+                                            </p>
                                         </div>
 
-                                        {/* Right Side: Action/Status */}
-                                        <div className="md:w-48 w-full flex flex-col gap-3">
-                                            {platform.comingSoon ? (
-                                                <div className="space-y-3">
-                                                    <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 space-y-1">
-                                                        <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Status</p>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                                            <span className="text-xs font-bold text-amber-700">Under Verification</span>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        disabled
-                                                        className="h-12 w-full rounded-xl border border-zinc-100 bg-zinc-50 text-zinc-300 font-bold gap-2 cursor-not-allowed"
-                                                    >
-                                                        <Clock className="w-4 h-4" /> Coming Soon
-                                                    </Button>
-                                                </div>
-                                            ) : !connected ? (
-                                                platform.id !== "website" && (
-                                                    <Button
-                                                        onClick={platform.action!}
-                                                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 font-bold gap-2 transition-all hover:border-black"
-                                                    >
-                                                        <Zap className="w-4 h-4" /> Connect {platform.name}
-                                                    </Button>
-                                                )
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-100 space-y-1">
-                                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Health Check</p>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                            <span className="text-xs font-bold text-zinc-900">Synchronized</span>
-                                                        </div>
-                                                    </div>
-                                                    {platform.id !== "website" && (
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => handleDisconnect(platform.id)}
-                                                            className="h-10 w-full rounded-xl text-[10px] font-black uppercase tracking-widest border-zinc-100 text-zinc-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all"
-                                                        >
-                                                            Disconnect
-                                                        </Button>
+                                        {/* Action */}
+                                        <div className="shrink-0">
+                                            {connected ? (
+                                                <Button
+                                                    onClick={() => handleDisconnect(c.id, c.name)}
+                                                    disabled={isDisconnecting}
+                                                    variant="outline"
+                                                    className="h-11 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest border-zinc-200 text-zinc-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all"
+                                                >
+                                                    {isDisconnecting ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        "Disconnect"
                                                     )}
-                                                </div>
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => handleConnect(c.id)}
+                                                    disabled={isConnecting}
+                                                    className="h-11 px-5 rounded-2xl bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-black transition-all hover:scale-[1.03] active:scale-95"
+                                                >
+                                                    {isConnecting ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            <Plug className="w-3.5 h-3.5" />
+                                                            Connect
+                                                        </>
+                                                    )}
+                                                </Button>
                                             )}
                                         </div>
                                     </div>
-                                </CardContent>
-                                {connected && (
-                                    <div className="px-8 py-3 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <RefreshCw className="w-3 h-3 text-zinc-400" />
-                                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Live Sync Enabled</span>
+
+                                    {/* Connected footer strip */}
+                                    {connected && (
+                                        <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center justify-between animate-in fade-in duration-500">
+                                            <div className="flex items-center gap-2">
+                                                <ShieldCheck className={cn("w-3.5 h-3.5", c.accent)} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                                    Live &amp; syncing in real time
+                                                </span>
                                             </div>
-                                            <div className="w-px h-3 bg-zinc-200" />
-                                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Last update: real-time</span>
+                                            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 transition-colors" />
                                         </div>
-                                        <ExternalLink className="w-3.5 h-3.5 text-zinc-300" />
-                                    </div>
-                                )}
-                            </Card>
-                        );
-                    })}
-                </div>
-
-                {/* Info Box */}
-                <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-zinc-900 to-black text-white relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/10 transition-all duration-1000" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-                        <div className="w-20 h-20 rounded-[2rem] bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10 shrink-0">
-                            <Zap className="w-10 h-10 text-white fill-white" />
-                        </div>
-                        <div className="space-y-4">
-                            <h3 className="text-2xl font-black uppercase tracking-tight">Unified Brand Intelligence</h3>
-                            <p className="text-sm text-zinc-400 leading-relaxed font-medium">
-                                Weez AI doesn't just store data—it cross-references your Instagram visuals, LinkedIn professional voice, and website core-identity to build an authoritative <strong>Brand Memory Object</strong>. This results in 99% accuracy in autonomous content generation.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {isLoading && (
-                    <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="w-10 h-10 text-black animate-spin" />
-                        <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Scanning Connectors...</p>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
+
+                {/* Reassurance footer */}
+                <div className="flex items-start gap-3 rounded-2xl bg-white border border-zinc-100 p-5">
+                    <div className="w-9 h-9 rounded-xl bg-zinc-900 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-zinc-900">Your accounts stay yours</p>
+                        <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                            Weez only uses the access you grant to publish, send outbound email, and book meetings. You can disconnect any account at any time.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );
