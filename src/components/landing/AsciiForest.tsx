@@ -112,31 +112,80 @@ const AsciiForest = ({
       return ctx.createPattern(tile, "repeat");
     };
 
-    // Procedural "forest" luminance field with a soft drifting focal subject.
-    const luminance = (nx: number, ny: number, t: number): number => {
-      let v = 0.5;
-      v += 0.30 * Math.sin(nx * 6.0 + t * 0.25) * Math.cos(ny * 5.0 - t * 0.2);
-      v += 0.20 * Math.sin((nx + ny) * 9.0 - t * 0.35);
-      v += 0.15 * Math.sin(nx * 15.0 + t * 0.5) * Math.sin(ny * 13.0 + t * 0.4);
-      v += 0.10 * Math.sin(nx * 26.0 - t * 0.6) * Math.cos(ny * 22.0 + t * 0.45);
+    // Procedural "forest at night" scene. A dark sky with a moon (upper right),
+    // several receding pine treelines along the bottom, a few tall foreground
+    // pines on the right, and a low ground mist. Trees read as BRIGHT so the
+    // glyphs draw the forest itself — the classic ASCII-subject look. The open,
+    // dark sky sits on the LEFT, which is where the hero text lives.
+    const PINE_LAYERS = [
+      { top: 0.56, amp: 0.05, freq: 30, phase: 0.6, bright: 0.30 },  // far, dim, small
+      { top: 0.66, amp: 0.085, freq: 19, phase: 2.3, bright: 0.52 }, // mid
+      { top: 0.75, amp: 0.13, freq: 12, phase: 4.1, bright: 0.9 },   // near, tall, bright
+    ];
+    const FG_TREES = [
+      { cx: 0.62, w: 0.05, peak: 0.42, bright: 0.95 },
+      { cx: 0.86, w: 0.06, peak: 0.34, bright: 1.0 },
+      { cx: 0.93, w: 0.045, peak: 0.48, bright: 0.9 },
+    ];
 
-      // Focal subject — a soft blob that slowly drifts, giving a "clear subject".
-      const dx = nx - 0.5 - 0.12 * Math.sin(t * 0.15);
-      const dy = ny - 0.5 - 0.08 * Math.cos(t * 0.12);
-      const subject = Math.exp(-(dx * dx + dy * dy) * 5.5);
-      v = v * 0.62 + subject * 0.7;
+    const luminance = (nx: number, ny: number, t: number): number => {
+      // Gentle wind sway of the canopy.
+      const x = nx + 0.012 * Math.sin(t * 0.3 + ny * 3.0);
+
+      // Sky: dark, a touch brighter toward the top.
+      let v = 0.05 + 0.06 * (1 - ny);
+
+      // Moon (upper right): bright core + soft halo.
+      const mdx = nx - 0.74;
+      const mdy = ny - 0.28;
+      const md2 = mdx * mdx + mdy * mdy * 1.35;
+      v += 0.95 * Math.exp(-md2 * 55);
+      v += 0.22 * Math.exp(-md2 * 7);
+
+      // Receding pine treelines (front layers overwrite back via max).
+      for (let i = 0; i < PINE_LAYERS.length; i++) {
+        const L = PINE_LAYERS[i];
+        const u = x * L.freq + L.phase + t * 0.04 * (i + 1);
+        const fr = u - Math.floor(u);
+        const tri = 1 - Math.abs(fr * 2 - 1);          // pointy pine tips
+        const jag = 0.3 * Math.sin(u * 0.5 + 1.3) + 0.2 * Math.sin(u * 1.7);
+        const tip = L.top - L.amp * tri - L.amp * 0.4 * jag;
+        if (ny > tip) {
+          const depth = (ny - tip) / (1 - tip + 1e-3);
+          const fol = 0.78 + 0.22 * Math.sin(nx * 90 + ny * 70 + t * 0.6) * Math.cos(nx * 61 - ny * 53);
+          const b = L.bright * (0.55 + 0.5 * depth) * fol;
+          if (b > v) v = b;
+        }
+      }
+
+      // Tall foreground pines — triangles widening toward the base.
+      for (let i = 0; i < FG_TREES.length; i++) {
+        const T = FG_TREES[i];
+        if (ny > T.peak) {
+          const prog = (ny - T.peak) / (0.99 - T.peak);
+          const halfW = T.w * prog;
+          if (Math.abs(x - T.cx) < halfW) {
+            const fol = 0.72 + 0.28 * Math.sin(ny * 120 + T.cx * 50 + t * 0.7);
+            const b = T.bright * (0.6 + 0.4 * prog) * fol;
+            if (b > v) v = b;
+          }
+        }
+      }
+
+      // Low ground mist.
+      if (ny > 0.9) {
+        const g = 0.42 * ((ny - 0.9) / 0.1);
+        if (g > v) v = g;
+      }
 
       // Contrast around mid-grey.
       v = (v - 0.5) * contrast + 0.5;
       return v < 0 ? 0 : v > 1 ? 1 : v;
     };
 
-    // Tilt-shift focus: brightest through the middle band, fading top/bottom.
-    const focus = (ny: number): number => {
-      const d = Math.abs(ny - 0.5) / 0.5;      // 0 centre → 1 edge
-      const f = 1 - Math.pow(d, 1.7) * 0.85;
-      return f < 0.12 ? 0.12 : f;
-    };
+    // Gentle focus: only calm the very top (behind the nav); keep the forest and
+    // the moon fully lit.
+    const focus = (ny: number): number => (ny < 0.12 ? 0.4 + (ny / 0.12) * 0.6 : 1);
 
     const colorize = (src: HTMLCanvasElement, css: string) => {
       tctx.globalCompositeOperation = "source-over";

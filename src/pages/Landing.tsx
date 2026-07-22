@@ -311,108 +311,109 @@ const Landing = () => {
         {/* Animated ASCII-art background */}
         <AsciiForest className="absolute inset-0 h-full w-full" />
 
-        {/* Legibility overlays — vignette + bottom fade into the marquee band */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,13,0.45)_55%,rgba(5,7,13,0.92)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#05070d] to-transparent" />
+        {/* Legibility overlays — a left scrim under the hero text (the sky is on
+            the left; the moon + forest sit on the right/bottom), plus top/bottom fades. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#05070d] via-[#05070d]/55 to-transparent lg:via-[#05070d]/35" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#05070d] to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent to-[#05070d]" />
 
-        {/* Content */}
+        {/* Content — anchored to the LEFT, over the open sky (the moon + forest
+            occupy the right/bottom of the art). */}
         <motion.div
           style={{ y: heroY }}
-          className="relative z-10 mx-auto flex min-h-[100svh] max-w-4xl flex-col items-center justify-center px-6 pb-24 pt-28 text-center"
+          className="relative z-10 mx-auto flex min-h-[100svh] max-w-7xl flex-col items-center justify-center px-6 pb-40 pt-28 lg:items-start"
         >
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
-          >
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
-            AI-Native Marketing Workforce · Built for B2B SaaS
-          </motion.div>
-
-          <motion.h1
-            variants={fadeUp}
-            custom={1}
-            initial="hidden"
-            animate="show"
-            className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[4.6rem]"
-          >
-            B2B SaaS growth without hiring a{" "}
-            <span className="bg-gradient-to-r from-sky-300 via-blue-400 to-sky-300 bg-clip-text text-transparent">
-              full marketing team
-            </span>
-          </motion.h1>
-
-          <motion.p
-            variants={fadeUp}
-            custom={2}
-            initial="hidden"
-            animate="show"
-            className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300/90 md:text-lg"
-          >
-            Weez is your AI-native marketing workforce — learning your founder voice, product, and
-            ICP to create content, track high-intent accounts, and run warm outbound that turns
-            into meetings.
-          </motion.p>
-
-          <motion.div
-            variants={fadeUp}
-            custom={3}
-            initial="hidden"
-            animate="show"
-            className="mt-9 flex flex-wrap items-center justify-center gap-3"
-          >
-            <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
-            <button
-              onClick={() => scrollTo("workflow")}
-              className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
+          <div className="max-w-2xl text-center lg:text-left">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              animate="show"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
             >
-              <Play className="h-4 w-4" /> See Weez in Action
-            </button>
-          </motion.div>
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
+              AI-Native Marketing Workforce · Built for B2B SaaS
+            </motion.div>
 
-          {/* mini team + proof */}
-          <motion.div
-            variants={fadeUp}
-            custom={4}
-            initial="hidden"
-            animate="show"
-            className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
-          >
-            <div className="flex -space-x-3">
-              {TEAM_MINI.map((m) => (
-                <div
-                  key={m.name}
-                  className={`h-10 w-10 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-[#05070d] ${m.ring}`}
-                >
-                  <img src={m.img} alt={m.name} className="h-full w-full object-cover" />
-                </div>
-              ))}
-            </div>
-            <div className="text-sm text-slate-400">
-              <span className="font-semibold text-slate-200">Ninna, Eva, Max &amp; Robert</span> — your
-              AI team, online now.
-            </div>
-          </motion.div>
+            <motion.h1
+              variants={fadeUp}
+              custom={1}
+              initial="hidden"
+              animate="show"
+              className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[4.6rem]"
+            >
+              B2B SaaS growth without hiring a full marketing team
+            </motion.h1>
 
-          <motion.a
-            variants={fadeUp}
-            custom={5}
-            initial="hidden"
-            animate="show"
-            href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8"
-          >
-            <img
-              alt="Weez AI on Product Hunt"
-              width="230"
-              height="50"
-              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=dark&t=1778051193830"
-            />
-          </motion.a>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              initial="hidden"
+              animate="show"
+              className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-lg lg:mx-0"
+            >
+              Weez is your AI-native marketing workforce — learning your founder voice, product, and
+              ICP to create content, track high-intent accounts, and run warm outbound that turns
+              into meetings.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              initial="hidden"
+              animate="show"
+              className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+            >
+              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+              <button
+                onClick={() => scrollTo("workflow")}
+                className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
+              >
+                <Play className="h-4 w-4" /> See Weez in Action
+              </button>
+            </motion.div>
+
+            {/* mini team + proof */}
+            <motion.div
+              variants={fadeUp}
+              custom={4}
+              initial="hidden"
+              animate="show"
+              className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
+            >
+              <div className="flex -space-x-3">
+                {TEAM_MINI.map((m) => (
+                  <div
+                    key={m.name}
+                    className={`h-10 w-10 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-[#05070d] ${m.ring}`}
+                  >
+                    <img src={m.img} alt={m.name} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <div className="text-sm text-slate-400">
+                <span className="font-semibold text-slate-200">Ninna, Eva, Max &amp; Robert</span> — your
+                AI team, online now.
+              </div>
+            </motion.div>
+
+            <motion.a
+              variants={fadeUp}
+              custom={5}
+              initial="hidden"
+              animate="show"
+              href="https://www.producthunt.com/products/weez-ai-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-weez-ai-2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 inline-block"
+            >
+              <img
+                alt="Weez AI on Product Hunt"
+                width="230"
+                height="50"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1139404&theme=dark&t=1778051193830"
+              />
+            </motion.a>
+          </div>
         </motion.div>
 
         {/* scroll cue */}
