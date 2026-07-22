@@ -73,7 +73,7 @@ const ConversationSidebar = ({
     },
   ];
 
-  const isConnectorsActive = location.pathname.includes("/autonomous-marketing");
+  const isConnectorsActive = location.pathname.includes("/connections");
 
   return (
     <div className="w-full md:w-64 lg:w-72 bg-background/20 backdrop-blur-3xl border-r border-border/30 flex flex-col h-screen flex-shrink-0 relative overflow-hidden transition-all duration-500">
@@ -148,36 +148,9 @@ const ConversationSidebar = ({
                         {item.role}
                       </span>
                     </span>
-                    <ChevronRight
-                      className={cn(
-                        "ml-auto w-3.5 h-3.5 shrink-0 transition-all duration-300",
-                        isActive
-                          ? "text-primary/60 opacity-100"
-                          : "text-muted-foreground/30 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5"
-                      )}
-                    />
                   </button>
                 );
               })}
-            </div>
-
-            {/* System Status */}
-            <div className="space-y-3 pt-5 border-t border-border/20">
-              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
-                Status
-              </p>
-              <div className="px-3">
-                <div className="flex items-center justify-between rounded-xl bg-secondary/30 px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                    </span>
-                    <span className="text-[10px] font-bold text-foreground/60">AI Core</span>
-                  </div>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500/70">Ready</span>
-                </div>
-              </div>
             </div>
 
             {/* Integrations */}
@@ -188,9 +161,9 @@ const ConversationSidebar = ({
 
               <div className="px-3">
                 {/* Connectors — the hub for connecting LinkedIn, Gmail, Outlook
-                    and Google Calendar (the connectors tab in Autonomous Marketing). */}
+                    and Google Calendar (the standalone Connections page). */}
                 <button
-                  onClick={() => navigate(`/autonomous-marketing/${spaceId}?tab=connectors`)}
+                  onClick={() => navigate(`/connections/${spaceId}`)}
                   className={cn(
                     "flex items-center justify-between w-full group rounded-2xl px-3 py-3 transition-all duration-300 border",
                     isConnectorsActive

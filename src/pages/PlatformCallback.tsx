@@ -1,10 +1,28 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, Instagram, Facebook, ArrowRight, ShieldCheck, Zap, Linkedin, Mail } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Instagram,
+  Facebook,
+  ArrowRight,
+  Mail,
+  CalendarCheck,
+  Send,
+  Megaphone,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { weezAPI } from "@/services/weezAPI";
 import { EducationalLoader } from "@/components/EducationalLoader";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  LinkedInLogo,
+  GmailLogo,
+  OutlookLogo,
+  GoogleCalendarLogo,
+} from "@/components/brand-logos";
 
 const PlatformCallback = () => {
   const navigate = useNavigate();
@@ -16,7 +34,6 @@ const PlatformCallback = () => {
   const [isFetchingPages, setIsFetchingPages] = useState(false);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [hasSelectedPage, setHasSelectedPage] = useState(false);
-  
 
   const isConnected = params.get("connected") === "true";
   const brandId = params.get("state") || "";
@@ -25,13 +42,12 @@ const PlatformCallback = () => {
   // Enriched Meta Data
   const username = params.get("username");
   const pageName = params.get("page_name");
-  const accountType = params.get("account_type");
-  const publishingEnabled = params.get("publishing_enabled") === "true";
   const provider = params.get("provider") || "instagram";
   // The real, human-readable failure reason forwarded by the backend callback
   // (e.g. a Microsoft "AADSTS…" message) so we can show WHAT went wrong.
   const errorDetail = params.get("detail") || "";
   const isMailbox = ["microsoft", "outlook", "google", "gmail"].includes(provider);
+  const isLinkedIn = provider === "linkedin";
   const providerLabel =
     (
       {
@@ -43,20 +59,43 @@ const PlatformCallback = () => {
         outlook: "Outlook",
         google: "Gmail",
         gmail: "Gmail",
+        google_calendar: "Google Calendar",
       } as Record<string, string>
     )[provider] || "your account";
+
+  // ── Provider visual identity (brand logo + capabilities shown on success) ──
+  const renderProviderLogo = (className = "h-9 w-9") => {
+    if (isLinkedIn) return <LinkedInLogo className={className} />;
+    if (provider === "google" || provider === "gmail") return <GmailLogo className={className} />;
+    if (provider === "microsoft" || provider === "outlook") return <OutlookLogo className={className} />;
+    if (provider === "google_calendar") return <GoogleCalendarLogo className={className} />;
+    if (provider === "instagram") return <Instagram className={`${className} text-pink-500`} />;
+    if (provider === "facebook") return <Facebook className={`${className} text-blue-600`} />;
+    return <Mail className={`${className} text-zinc-500`} />;
+  };
+
+  const capabilities: Array<{ icon: typeof Send; label: string }> = isMailbox
+    ? [
+        { icon: Send, label: "Outbound email enabled" },
+        { icon: CalendarCheck, label: "Meeting booking ready" },
+      ]
+    : isLinkedIn
+      ? [
+          { icon: Megaphone, label: "B2B publishing enabled" },
+          { icon: Sparkles, label: "Professional voice synced" },
+        ]
+      : [
+          { icon: Sparkles, label: "Brand identity synchronized" },
+          { icon: Send, label: "Publishing enabled" },
+        ];
 
   useEffect(() => {
     if (isConnected && brandId && !isSuccess) {
       if (provider === "linkedin") {
         fetchLinkedInPages(brandId);
       } else if (provider === "hubspot") {
-        // Skip full brand analysis — backend already stored the token
         setIsSuccess(true);
       } else {
-        // Instagram + mailbox providers (Outlook / Gmail): the backend callback
-        // already stored the token/connection, so just mark success. (Instagram
-        // brand voice is synthesized from the website, not the OAuth call.)
         setIsSuccess(true);
         toast.success(`${providerLabel} connected successfully!`);
       }
@@ -85,7 +124,7 @@ const PlatformCallback = () => {
       toast.error("Please select a page or profile.");
       return;
     }
-    const page = pages.find(p => p.urn === selectedPageUrn);
+    const page = pages.find((p) => p.urn === selectedPageUrn);
     if (!page) return;
 
     setIsSavingPage(true);
@@ -102,24 +141,30 @@ const PlatformCallback = () => {
     }
   };
 
-  const handleRunAnalysis = async (id: string) => {
-    setIsAnalyzing(true);
-    try {
-      await weezAPI.triggerAnalysis(id);
-      setIsAnalyzing(false);
-      setIsSuccess(true);
-      toast.success("Brand Identity Locked!");
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      toast.error("Cloud analysis encountered an error.");
-      setIsAnalyzing(false);
-    }
-  };
-
   const handleTryAgain = () => {
     navigate("/spaces");
-    // The user will need to re-open the modal from spaces
   };
+
+  // ── Skeleton shown while we finalize the connection / fetch LinkedIn pages ──
+  const renderSkeleton = (caption: string) => (
+    <div className="space-y-8">
+      <div className="flex justify-center">
+        <Skeleton className="h-24 w-24 rounded-[2rem]" />
+      </div>
+      <div className="space-y-3 text-center">
+        <Skeleton className="mx-auto h-8 w-64 rounded-xl" />
+        <Skeleton className="mx-auto h-4 w-80 rounded-lg" />
+      </div>
+      <div className="space-y-3 rounded-[2rem] border border-border/60 bg-white p-6">
+        <Skeleton className="h-12 w-full rounded-2xl" />
+        <Skeleton className="h-12 w-full rounded-2xl" />
+      </div>
+      <Skeleton className="h-16 w-full rounded-2xl" />
+      <p className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">
+        {caption}
+      </p>
+    </div>
+  );
 
   const renderFailure = () => {
     let title = "Connection Failed";
@@ -133,7 +178,7 @@ const PlatformCallback = () => {
         "Open Instagram app → Settings → Business → Connect Facebook Page",
         "Ensure you have 'Full Control' of the linked Facebook Page",
         "Log out of Facebook and log back in to refresh permissions",
-        "If the Page was created by another account, ask the owner to grant you Full Control"
+        "If the Page was created by another account, ask the owner to grant you Full Control",
       ];
     } else if (error === "no_pages_found") {
       title = "No Pages Found";
@@ -141,7 +186,7 @@ const PlatformCallback = () => {
       steps = [
         "Ensure you have a Facebook Page for your business",
         "Verify you are an Admin of that Facebook Page",
-        "Try creating a fresh Page if your legacy one is restricted"
+        "Try creating a fresh Page if your legacy one is restricted",
       ];
     } else if (isMailbox) {
       if (error === "store_failed") {
@@ -151,7 +196,6 @@ const PlatformCallback = () => {
         title = "Permission Needed";
         description = `Connecting ${providerLabel} needs you to grant the requested mail permissions. Please try again and accept the consent screen.`;
       } else {
-        // token_exchange_failed and other last-step failures
         title = `Couldn't Finish Connecting ${providerLabel}`;
         description = `Sign-in completed, but the final authorization step failed.${errorDetail ? ` ${providerLabel} reported the reason below.` : ""}`;
         steps = [
@@ -163,18 +207,16 @@ const PlatformCallback = () => {
     }
 
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+      <div className="space-y-8 text-left duration-500 animate-in fade-in slide-in-from-bottom-4">
         <div className="flex justify-center">
-          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-12 h-12 text-amber-500" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-amber-500/10">
+            <AlertCircle className="h-10 w-10 text-amber-500" />
           </div>
         </div>
 
-      
-
-        <div className="text-center space-y-2">
+        <div className="space-y-2 text-center">
           <h1 className="text-3xl font-black uppercase tracking-tighter">{title}</h1>
-          <p className="text-muted-foreground font-medium">{description}</p>
+          <p className="font-medium text-muted-foreground">{description}</p>
         </div>
 
         {errorDetail && (
@@ -187,25 +229,27 @@ const PlatformCallback = () => {
         )}
 
         {steps.length > 0 && (
-          <div className="bg-secondary/30 rounded-[2.5rem] p-10 space-y-6 border border-border/40">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-50">Guided Troubleshooting</h3>
+          <div className="space-y-5 rounded-[2rem] border border-border/50 bg-white p-8">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-50">
+              Guided Troubleshooting
+            </h3>
             <div className="space-y-4">
               {steps.map((step, i) => (
-                <div key={i} className="flex gap-4 items-start group">
-                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-[10px] font-black shrink-0 border border-border group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
+                <div key={i} className="group flex items-start gap-4">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[10px] font-black transition-all group-hover:border-primary group-hover:bg-primary group-hover:text-white">
                     {i + 1}
                   </div>
-                  <p className="text-sm font-bold text-foreground/80 leading-relaxed">{step}</p>
+                  <p className="text-sm font-bold leading-relaxed text-foreground/80">{step}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <Button
             onClick={handleTryAgain}
-            className="w-full h-16 rounded-2xl bg-foreground text-white font-black uppercase tracking-widest text-[11px]"
+            className="h-14 w-full rounded-2xl bg-foreground text-[11px] font-black uppercase tracking-widest text-white"
           >
             Try Again
           </Button>
@@ -222,245 +266,151 @@ const PlatformCallback = () => {
   };
 
   const renderSuccess = () => {
-    const isLinkedIn = provider === "linkedin";
-    // After a LinkedIn or mailbox connect, return to the Connectors tab so the
-    // user immediately sees the connected status — NOT the OneClickPost page,
-    // whose Instagram gate looked like a "disconnected" screen. Other providers
-    // (e.g. Instagram) keep going to their dashboard hub. Falls back to /spaces
-    // if we somehow don't have the brand/space id.
-    const connectorsHref = brandId
-      ? `/autonomous-marketing/${brandId}?tab=connectors`
-      : "/spaces";
+    // After a LinkedIn or mailbox connect, land on the standalone Connections
+    // page so the user immediately sees the connected status. Other providers
+    // (e.g. Instagram) still go to their dashboard hub. Falls back to /spaces.
+    const connectionsHref = brandId ? `/connections/${brandId}` : "/spaces";
     const successDestination =
-      isLinkedIn || isMailbox ? connectorsHref : `/one-click-post/${brandId}`;
+      isLinkedIn || isMailbox ? connectionsHref : `/one-click-post/${brandId}`;
+
+    const identifier = isMailbox
+      ? username || ""
+      : provider === "instagram"
+        ? username || pageName || ""
+        : "";
 
     return (
-      <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+      <div className="space-y-8 text-left duration-500 animate-in fade-in slide-in-from-bottom-4">
+        {/* Logo + success badge */}
         <div className="flex justify-center">
-          <div className="w-24 h-24 bg-emerald-500/10 rounded-[3rem] flex items-center justify-center shadow-inner">
-            <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+          <div className="relative">
+            <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] border border-zinc-100 bg-white shadow-xl shadow-black/[0.04]">
+              {renderProviderLogo("h-12 w-12")}
+            </div>
+            <span className="absolute -bottom-1.5 -right-1.5 flex items-center justify-center">
+              <span className="absolute inline-flex h-7 w-7 animate-ping rounded-full bg-emerald-400/30" />
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30 duration-500 animate-in zoom-in">
+                <CheckCircle2 className="h-4 w-4 text-white" />
+              </span>
+            </span>
           </div>
         </div>
 
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-black uppercase tracking-tighter">Connection Active 🎉</h1>
-          <p className="text-muted-foreground font-medium text-lg">
-            {provider === "linkedin"
-              ? "Your LinkedIn profile is now connected and ready for B2B publishing."
-              : provider === "hubspot"
-                ? "Your HubSpot CRM is now synced for real-time lead automation."
-                : isMailbox
-                  ? `Your ${providerLabel} mailbox is connected — Max can now send outbound email and book meetings from it.`
-                  : "Your brand identity is now synchronized and live."}
+        {/* Heading */}
+        <div className="space-y-2 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Connected</p>
+          <h1 className="text-3xl font-black uppercase tracking-tighter">{providerLabel} is linked</h1>
+          <p className="mx-auto max-w-md font-medium text-muted-foreground">
+            {isMailbox
+              ? `Your ${providerLabel} mailbox is connected — Max can now send outbound email and book meetings from it.`
+              : isLinkedIn
+                ? "Your LinkedIn is connected and ready for B2B publishing."
+                : "Your account is connected and synchronized."}
           </p>
         </div>
 
-        <div className="grid gap-4">
-          <div className="p-8 rounded-[2.5rem] bg-white border border-border/80 shadow-xl shadow-black/[0.02] space-y-6">
-            {isMailbox ? (
-              /* Mailbox (Outlook / Gmail) Success Details */
-              <>
-                <div className="flex items-center justify-between border-b border-border/40 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-sky-500/10 flex items-center justify-center">
-                      <Mail className="w-6 h-6 text-sky-600" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Mailbox</span>
-                      <span className="text-lg font-black uppercase tracking-tight">{providerLabel}</span>
-                    </div>
+        {/* Capability card */}
+        <div className="space-y-4 rounded-[2rem] border border-border/70 bg-white p-6 shadow-xl shadow-black/[0.02]">
+          {identifier && (
+            <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-50">
+                {renderProviderLogo("h-6 w-6")}
+              </div>
+              <div className="flex min-w-0 flex-col">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">
+                  Account
+                </span>
+                <span className="truncate text-sm font-bold text-foreground">{identifier}</span>
+              </div>
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {capabilities.map((cap) => {
+              const Icon = cap.icon;
+              return (
+                <div key={cap.label} className="flex items-center gap-3 rounded-2xl bg-zinc-50/80 px-4 py-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                    <Icon className="h-4 w-4 text-emerald-600" />
                   </div>
+                  <span className="text-xs font-bold text-foreground/80">{cap.label}</span>
                 </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Outbound Email</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Send Enabled</span>
-                      </span>
-                    </div>
-                    <div className="w-px h-8 bg-border/40" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Calendar</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Booking Ready</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : isLinkedIn ? (
-              /* LinkedIn Success Details */
-              <>
-                <div className="flex items-center justify-between border-b border-border/40 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center">
-                      <Linkedin className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Platform</span>
-                      <span className="text-lg font-black uppercase tracking-tight">LinkedIn</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Integration</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-bold uppercase tracking-widest">B2B Publishing</span>
-                      </span>
-                    </div>
-                    <div className="w-px h-8 bg-border/40" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Auto-Publish</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Enabled</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              /* Instagram Success Details (existing) */
-              <>
-                <div className="flex items-center justify-between border-b border-border/40 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center">
-                      <Instagram className="w-6 h-6 text-pink-500" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Username</span>
-                      <span className="text-lg font-black uppercase tracking-tight">{username || "Syncing..."}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-border/40 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                      <Facebook className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Linked Page</span>
-                      <span className="text-lg font-black uppercase tracking-tight">{pageName || "Syncing..."}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Account Type</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-bold uppercase tracking-widest">{accountType || "Business"}</span>
-                      </span>
-                    </div>
-                    <div className="w-px h-8 bg-border/40" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Publishing</span>
-                      <span className="flex items-center gap-2 mt-1">
-                        <Zap className="w-4 h-4 text-emerald-500 fill-emerald-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Enabled</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+              );
+            })}
           </div>
         </div>
 
         <Button
           onClick={() => navigate(successDestination)}
-          className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20"
+          className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[11px] font-black uppercase tracking-widest text-white shadow-2xl shadow-primary/20 transition-all hover:bg-accent"
         >
-          {isLinkedIn || isMailbox ? "View Connections" : "Enter Dashboard Hub"}
+          {isLinkedIn || isMailbox ? "View connections" : "Enter dashboard"}
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     );
   };
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBFF] p-6 font-sans">
-      <div className="max-w-xl w-full">
-        {isAnalyzing ? (
-          <EducationalLoader />
-        ) : isFetchingPages ? (
-          <div className="space-y-6 text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto opacity-20" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">Fetching available LinkedIn pages...</p>
-          </div>
-        ) : provider === "linkedin" && !hasSelectedPage && pages.length > 0 ? (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
-            <div className="flex justify-center">
-              <div className="w-24 h-24 bg-blue-600/10 rounded-[3rem] flex items-center justify-center shadow-inner">
-                <Linkedin className="w-12 h-12 text-blue-600 animate-pulse" />
-              </div>
-            </div>
-
-            <div className="text-center space-y-2">
-              <h1 className="text-4xl font-black uppercase tracking-tighter">Choose Your Page</h1>
-              <p className="text-muted-foreground font-medium text-lg">
-                We found multiple profiles or pages associated with your LinkedIn account. Select where you want to publish and run marketing.
-              </p>
-            </div>
-
-            <div className="p-8 rounded-[2.5rem] bg-white border border-border/80 shadow-xl shadow-black/[0.02] space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
-                  Select Destination Profile or Organization
-                </label>
-                <select
-                  value={selectedPageUrn}
-                  onChange={(e) => setSelectedPageUrn(e.target.value)}
-                  className="w-full h-14 px-4 rounded-xl border border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-900 font-semibold"
-                >
-                  {pages.map((p) => (
-                    <option key={p.urn} value={p.urn}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <p className="text-xs text-zinc-400 font-medium leading-relaxed">
-                * Note: Weez AI will generate content tailored specifically for this page. You can change this selection later in your connectors settings.
-              </p>
-            </div>
-
-            <Button
-              onClick={handleConfirmLinkedInPage}
-              disabled={isSavingPage}
-              className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-widest text-[11px] hover:bg-accent transition-all shadow-2xl shadow-primary/20 flex items-center justify-center gap-2"
-            >
-              {isSavingPage ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  Confirm & Launch Dashboard <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        ) : isSuccess ? (
-          renderSuccess()
-        ) : error ? (
-          renderFailure()
-        ) : (
-          <div className="space-y-6 text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto opacity-20" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-40">Orchestrating Connection</p>
-          </div>
-        )}
+  const renderLinkedInPagePicker = () => (
+    <div className="space-y-8 text-left duration-500 animate-in fade-in slide-in-from-bottom-4">
+      <div className="flex justify-center">
+        <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] border border-zinc-100 bg-white shadow-xl shadow-black/[0.04]">
+          <LinkedInLogo className="h-12 w-12" />
+        </div>
       </div>
+
+      <div className="space-y-2 text-center">
+        <h1 className="text-3xl font-black uppercase tracking-tighter">Choose your page</h1>
+        <p className="mx-auto max-w-md font-medium text-muted-foreground">
+          We found multiple profiles or pages on your LinkedIn account. Pick where you want to publish and run marketing.
+        </p>
+      </div>
+
+      <div className="space-y-4 rounded-[2rem] border border-border/70 bg-white p-6 shadow-xl shadow-black/[0.02]">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
+          Destination profile or organization
+        </label>
+        <select
+          value={selectedPageUrn}
+          onChange={(e) => setSelectedPageUrn(e.target.value)}
+          className="h-14 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 font-semibold text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+        >
+          {pages.map((p) => (
+            <option key={p.urn} value={p.urn}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs font-medium leading-relaxed text-zinc-400">
+          Weez AI will tailor content for this page. You can change this later in your connections settings.
+        </p>
+      </div>
+
+      <Button
+        onClick={handleConfirmLinkedInPage}
+        disabled={isSavingPage}
+        className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[11px] font-black uppercase tracking-widest text-white shadow-2xl shadow-primary/20 transition-all hover:bg-accent disabled:opacity-70"
+      >
+        {isSavingPage ? "Saving…" : (
+          <>
+            Confirm &amp; continue <ArrowRight className="h-4 w-4" />
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
+  const renderBody = () => {
+    if (isAnalyzing) return <EducationalLoader />;
+    if (isFetchingPages) return renderSkeleton("Fetching your LinkedIn pages");
+    if (provider === "linkedin" && !hasSelectedPage && pages.length > 0) return renderLinkedInPagePicker();
+    if (isSuccess) return renderSuccess();
+    if (error) return renderFailure();
+    return renderSkeleton("Finalizing your connection");
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#FDFBFF] p-6 font-sans">
+      <div className="w-full max-w-md">{renderBody()}</div>
     </div>
   );
 };

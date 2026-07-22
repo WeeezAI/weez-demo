@@ -113,9 +113,10 @@ const Spaces = () => {
       setNewSpaceName("");
       setIsCreateDialogOpen(false);
       toast({ title: "Space Created", description: `"${newSpaceName}" is ready.` });
-      // Select the space and navigate to setup flow
+      // Select the space and send them straight to the Connections page to
+      // link their channels first (no longer detours through Autonomous Marketing).
       selectSpace(result.data);
-      navigate(`/autonomous-marketing/${result.data.id}?setup=true`);
+      navigate(`/connections/${result.data.id}?setup=true`);
     }
   };
 

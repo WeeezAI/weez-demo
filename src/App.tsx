@@ -19,6 +19,7 @@ import Gallery from "./pages/Gallery";
 import Analytics from "./pages/Analytics";
 import OneClickPost from "./pages/OneClickPost";
 import AutonomousMarketing from "./pages/AutonomousMarketing";
+import Connections from "./pages/Connections";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
@@ -140,6 +141,8 @@ const AppContent = () => {
               <Route path="/analytics/:spaceId" element={<Analytics />} />
               <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
+              {/* Standalone Connections page (decoupled from Autonomous Marketing) */}
+              <Route path="/connections/:spaceId" element={<Connections />} />
               <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />
               {/* Max — AI Outbound & Relationship-Intelligence command center
                   (replaces the old Sales page). The legacy lead/CRM view is
