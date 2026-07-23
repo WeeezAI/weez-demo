@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import {
   LinkedInLogo,
   GmailLogo,
@@ -7,12 +6,8 @@ import {
 } from "@/components/brand-logos";
 
 /**
- * LogoMarquee — a seamless, hover-free infinite logo strip.
- *
- * Adapted from the 21st.dev "Logo Cloud" (InfiniteSlider) marquee pattern, but
- * reimplemented with a dependency-safe framer-motion loop (no react-use-measure):
- * the row is duplicated and translated by -50%, so the loop is seamless at any
- * width. Here it shows the tools Weez connects to — matching the connectors page.
+ * Integrations strip — a static, centered row of the tools Weez connects to
+ * (no marquee/scrolling animation).
  */
 
 interface Integration {
@@ -28,7 +23,7 @@ const INTEGRATIONS: Integration[] = [
 ];
 
 const Chip = ({ name, Logo }: Integration) => (
-  <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 backdrop-blur-sm">
+  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 backdrop-blur-sm">
     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/90">
       <Logo className="h-5 w-5" />
     </span>
@@ -38,31 +33,12 @@ const Chip = ({ name, Logo }: Integration) => (
   </div>
 );
 
-const LogoMarquee = ({ speed = 26 }: { speed?: number }) => {
-  // Two identical sets back-to-back; translating the track by -50% loops seamlessly.
-  const track = [...INTEGRATIONS, ...INTEGRATIONS, ...INTEGRATIONS, ...INTEGRATIONS];
-
-  return (
-    <div
-      className="relative w-full overflow-hidden"
-      style={{
-        maskImage:
-          "linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent)",
-        WebkitMaskImage:
-          "linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent)",
-      }}
-    >
-      <motion.div
-        className="flex w-max gap-4"
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: speed, ease: "linear", repeat: Infinity }}
-      >
-        {track.map((item, i) => (
-          <Chip key={`${item.name}-${i}`} {...item} />
-        ))}
-      </motion.div>
-    </div>
-  );
-};
+const LogoMarquee = () => (
+  <div className="flex flex-wrap items-center justify-center gap-4">
+    {INTEGRATIONS.map((item) => (
+      <Chip key={item.name} {...item} />
+    ))}
+  </div>
+);
 
 export default LogoMarquee;

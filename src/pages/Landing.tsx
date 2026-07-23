@@ -3,15 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Sparkles, ArrowRight, Instagram, Linkedin, BrainCircuit, BarChart3, PenSquare,
-  Check, X, Menu, Play, TrendingUp, Quote,
+  Check, X, Menu, Play, Quote,
   Radar, Send, CalendarRange, Layers, Signal, CheckCircle2,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/weez-logo.png";
 import AnimatedBackground from "@/components/landing/AnimatedBackground";
-import AsciiForest from "@/components/landing/AsciiForest";
+import HeroBackground from "@/components/landing/HeroBackground";
 import LogoMarquee from "@/components/landing/LogoMarquee";
+import DemoModal from "@/components/landing/DemoModal";
 import HeroAITeam from "@/components/HeroAITeam";
 import WeezWorkflow from "@/components/landing/WeezWorkflow";
 import PostToMeeting from "@/components/landing/PostToMeeting";
@@ -212,23 +213,7 @@ const Landing = () => {
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
 
-  // Nav is transparent over the dark ASCII hero, and solidifies once scrolled.
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
-  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
-  const priceTable = {
-    USD: { symbol: "$", monthly: 79, yearly: 59, yearlyTotal: 708, savings: 240 },
-    INR: { symbol: "₹", monthly: 2999, yearly: 1999, yearlyTotal: 23988, savings: 12000 },
-  } as const;
-  const fmt = (n: number) => n.toLocaleString(currency === "INR" ? "en-IN" : "en-US");
-
+  const [demoOpen, setDemoOpen] = useState(false);
   const goAuth = () => navigate("/auth");
 
   return (
@@ -236,37 +221,27 @@ const Landing = () => {
       <AnimatedBackground />
 
       {/* ============ NAV ============ */}
-      <header
-        className={`fixed top-0 z-50 w-full border-b transition-colors duration-300 ${
-          scrolled
-            ? "border-slate-900/5 bg-white/70 backdrop-blur-xl"
-            : "border-transparent bg-transparent"
-        }`}
-      >
+      <header className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#080b12]/40 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex cursor-pointer items-center gap-3" onClick={() => navigate("/")}>
-            <img
-              src={logo}
-              alt="Weez AI"
-              className={`h-7 w-auto transition ${scrolled ? "" : "brightness-0 invert"}`}
-            />
+            <span
+              style={{ fontFamily: "'Outfit', ui-sans-serif, system-ui, sans-serif", fontWeight: 559 }}
+              className="text-2xl leading-none tracking-tight text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]"
+            >
+              Dexraflow
+            </span>
           </div>
-          <nav
-            className={`hidden items-center gap-8 text-sm md:flex ${
-              scrolled ? "text-slate-700" : "text-slate-300"
-            }`}
-          >
+          <nav className="hidden items-center gap-8 text-sm font-medium text-white/90 md:flex [text-shadow:0_1px_10px_rgba(0,0,0,0.4)]">
             {[
               ["how", "How it works"],
               ["team", "The team"],
               ["capabilities", "Capabilities"],
               ["why", "Why Weez"],
-              ["pricing", "Pricing"],
             ].map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`transition ${scrolled ? "hover:text-slate-900" : "hover:text-white"}`}
+                className="transition hover:text-white"
               >
                 {label}
               </button>
@@ -276,19 +251,15 @@ const Landing = () => {
             <Button
               variant="ghost"
               onClick={goAuth}
-              className={`hidden rounded-full sm:inline-flex ${
-                scrolled
-                  ? "text-slate-800 hover:bg-slate-900/[0.04] hover:text-slate-900"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white"
-              }`}
+              className="hidden rounded-full text-white hover:bg-white/10 hover:text-white sm:inline-flex"
             >
               Log in
             </Button>
-            <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+            <PrimaryButton onClick={() => setDemoOpen(true)}>Book a Demo</PrimaryButton>
             <div className="md:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className={scrolled ? "text-slate-900" : "text-white"}><Menu /></Button>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10"><Menu /></Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="border-slate-900/10 bg-white pt-20 text-slate-900">
                   <nav className="flex flex-col gap-5 text-lg">
@@ -296,7 +267,6 @@ const Landing = () => {
                     <button className="text-left" onClick={() => scrollTo("team")}>The team</button>
                     <button className="text-left" onClick={() => scrollTo("capabilities")}>Capabilities</button>
                     <button className="text-left" onClick={() => scrollTo("why")}>Why Weez</button>
-                    <button className="text-left" onClick={() => scrollTo("pricing")}>Pricing</button>
                     <button onClick={goAuth} className="text-left">Log in</button>
                   </nav>
                 </SheetContent>
@@ -308,17 +278,19 @@ const Landing = () => {
 
       {/* ============ 1. HERO (cinematic ASCII) ============ */}
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-[#05070d]">
-        {/* Animated ASCII-art background */}
-        <AsciiForest className="absolute inset-0 h-full w-full" />
+        {/* Hero background — your exact image (public/hero-forest.jpg), with the
+            animated ASCII canvas as a fallback until the file is added. */}
+        <HeroBackground className="absolute inset-0" />
 
-        {/* Legibility overlays — a left scrim under the hero text (the sky is on
-            the left; the moon + forest sit on the right/bottom), plus top/bottom fades. */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#05070d] via-[#05070d]/55 to-transparent lg:via-[#05070d]/35" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#05070d] to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent to-[#05070d]" />
+        {/* Dark scrim over the image so the header + hero text are clearly
+            legible: a slight overall darken, a left gradient under the text, a
+            stronger top gradient under the header, and a bottom fade. */}
+        <div className="pointer-events-none absolute inset-0 bg-black/30" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#05070d]" />
 
-        {/* Content — anchored to the LEFT, over the open sky (the moon + forest
-            occupy the right/bottom of the art). */}
+        {/* Content — anchored to the LEFT. */}
         <motion.div
           style={{ y: heroY }}
           className="relative z-10 mx-auto flex min-h-[100svh] max-w-7xl flex-col items-center justify-center px-6 pb-40 pt-28 lg:items-start"
@@ -339,7 +311,7 @@ const Landing = () => {
               custom={1}
               initial="hidden"
               animate="show"
-              className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[4.6rem]"
+              className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-[4.6rem]"
             >
               B2B SaaS growth without hiring a full marketing team
             </motion.h1>
@@ -349,7 +321,7 @@ const Landing = () => {
               custom={2}
               initial="hidden"
               animate="show"
-              className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-lg lg:mx-0"
+              className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/90 [text-shadow:0_1px_16px_rgba(0,0,0,0.5)] md:text-lg lg:mx-0"
             >
               Weez is your AI-native marketing workforce — learning your founder voice, product, and
               ICP to create content, track high-intent accounts, and run warm outbound that turns
@@ -363,7 +335,7 @@ const Landing = () => {
               animate="show"
               className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
             >
-              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+              <PrimaryButton onClick={() => setDemoOpen(true)}>Book a Demo</PrimaryButton>
               <button
                 onClick={() => scrollTo("workflow")}
                 className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
@@ -706,142 +678,6 @@ const Landing = () => {
         <ReplaceStack />
       </Section>
 
-      {/* ============ 10. PRICING ============ */}
-      <Section id="pricing">
-        <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow>Pricing</Eyebrow>
-          <H2 className="mx-auto mt-5">One team. One simple plan.</H2>
-          <Sub className="mx-auto mt-5 text-center">
-            Replace a stack of tools and early hires — not just add another subscription.
-          </Sub>
-        </div>
-
-        {/* currency toggle */}
-        <div className="mt-10 flex justify-center">
-          <div className="inline-flex items-center rounded-full border border-slate-900/10 bg-white/80 p-1 shadow-sm backdrop-blur">
-            {(["USD", "INR"] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCurrency(c)}
-                className={`h-10 rounded-full px-5 text-sm font-medium transition ${
-                  currency === c ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* billing toggle */}
-        <div className="mt-4 flex justify-center">
-          <div className="inline-flex items-center rounded-full border border-slate-900/10 bg-white/80 p-1 shadow-sm backdrop-blur">
-            <button
-              onClick={() => setBilling("monthly")}
-              className={`h-10 rounded-full px-5 text-sm font-medium transition ${
-                billing === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBilling("yearly")}
-              className={`inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-medium transition ${
-                billing === "yearly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Yearly
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  billing === "yearly" ? "bg-emerald-400/20 text-emerald-200" : "bg-emerald-100 text-emerald-700"
-                }`}
-              >
-                Save 25%
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* card */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="relative mx-auto mt-12 max-w-3xl"
-        >
-          <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-blue-500/30 via-violet-500/20 to-sky-400/30 blur-2xl" />
-          <div className="relative overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/90 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.35)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-1">
-            <div className="absolute right-5 top-5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 px-3 py-1 text-xs font-semibold text-white shadow-md">
-                <Sparkles className="h-3 w-3" /> Recommended
-              </span>
-            </div>
-
-            <div className="p-8 md:p-12">
-              <div className="text-sm font-medium text-blue-600">Growth Plan</div>
-              <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-                Your full AI marketing workforce, in one plan
-              </div>
-
-              <div className="mt-8 flex flex-wrap items-end gap-3">
-                <div className="text-6xl font-bold leading-none tracking-tight text-slate-900 md:text-7xl">
-                  {priceTable[currency].symbol}
-                  {fmt(billing === "yearly" ? priceTable[currency].yearly : priceTable[currency].monthly)}
-                </div>
-                <div className="pb-2 text-slate-600">
-                  <div className="text-sm">/ month</div>
-                  <div className="text-xs text-slate-500">
-                    {billing === "yearly"
-                      ? `billed annually (${priceTable[currency].symbol}${fmt(priceTable[currency].yearlyTotal)}/year)`
-                      : "billed monthly"}
-                  </div>
-                </div>
-                {billing === "yearly" && (
-                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    <TrendingUp className="h-3 w-3" /> Save {priceTable[currency].symbol}
-                    {fmt(priceTable[currency].savings)}/year
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-8 flex flex-col items-start gap-2">
-                <PrimaryButton onClick={goAuth}>Start 14-Day Free Trial</PrimaryButton>
-                <div className="text-xs text-slate-500">No credit card required</div>
-              </div>
-
-              <div className="my-10 h-px bg-gradient-to-r from-transparent via-slate-900/10 to-transparent" />
-
-              <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
-                {[
-                  { title: "Content & Campaigns", icon: <PenSquare className="h-4 w-4" />, items: ["Founder-led content engine", "Campaign planning & execution", "Auto-publishing & scheduling"] },
-                  { title: "Signals & Discovery", icon: <Radar className="h-4 w-4" />, items: ["Event-driven account discovery", "Hiring / launch / growth signals", "ICP-fit account scoring"] },
-                  { title: "Outbound & Pipeline", icon: <Send className="h-4 w-4" />, items: ["Warm outbound workflow", "Contact enrichment", "Meeting booking & pipeline tracking"] },
-                  { title: "Intelligence", icon: <BarChart3 className="h-4 w-4" />, items: ["Marketing analytics", "Weekly performance reports", "Continuous optimization"] },
-                ].map((g) => (
-                  <div key={g.title}>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                        {g.icon}
-                      </span>
-                      {g.title}
-                    </div>
-                    <ul className="mt-3 space-y-2">
-                      {g.items.map((it) => (
-                        <li key={it} className="flex items-start gap-2 text-sm text-slate-700">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                          <span>{it}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </Section>
-
       {/* ============ 11. FINAL CTA ============ */}
       <Section>
         <motion.div
@@ -862,7 +698,7 @@ const Landing = () => {
               high-intent outbound that books meetings.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <PrimaryButton onClick={goAuth}>Book a Demo</PrimaryButton>
+              <PrimaryButton onClick={() => setDemoOpen(true)}>Book a Demo</PrimaryButton>
               <button
                 onClick={() => scrollTo("workflow")}
                 className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
@@ -890,7 +726,6 @@ const Landing = () => {
             <ul className="space-y-2 text-sm text-slate-700">
               <li><button onClick={() => scrollTo("capabilities")} className="hover:text-slate-900">Capabilities</button></li>
               <li><button onClick={() => scrollTo("team")} className="hover:text-slate-900">The team</button></li>
-              <li><button onClick={() => scrollTo("pricing")} className="hover:text-slate-900">Pricing</button></li>
             </ul>
           </div>
           <div>
@@ -922,6 +757,9 @@ const Landing = () => {
           <span>An AI-native marketing workforce for B2B SaaS.</span>
         </div>
       </footer>
+
+      {/* Book a Demo — lead form modal (emails the team via SES) */}
+      <DemoModal open={demoOpen} onOpenChange={setDemoOpen} />
     </div>
   );
 };
