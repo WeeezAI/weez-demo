@@ -1,7 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, ArrowRight, ArrowDown, Users, Wrench, Clock, Wallet } from "lucide-react";
 import ninna from "@/assets/team/ninna.jpg";
-import robert from "@/assets/team/robert.jpg";
 import eva from "@/assets/team/eva.jpg";
 import maxImg from "@/assets/team/max.jpg";
 
@@ -24,7 +23,6 @@ const OLD_STATS = [
 
 const TEAM = [
   { name: "Ninna", img: ninna, ring: "ring-violet-400" },
-  { name: "Robert", img: robert, ring: "ring-blue-400" },
   { name: "Eva", img: eva, ring: "ring-emerald-400" },
   { name: "Max", img: maxImg, ring: "ring-amber-400" },
 ];
@@ -123,7 +121,7 @@ export default function ReplaceStack() {
             With Weez
           </div>
 
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Your AI-native marketing team</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Your AI-native GTM team</div>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex -space-x-3">
               {TEAM.map((m) => (
@@ -133,7 +131,7 @@ export default function ReplaceStack() {
               ))}
             </div>
             <div className="text-sm">
-              <div className="font-semibold text-slate-900">Ninna · Robert · Eva · Max</div>
+              <div className="font-semibold text-slate-900">Ninna · Eva · Max</div>
               <div className="text-slate-500">One team. One operating system.</div>
             </div>
           </div>

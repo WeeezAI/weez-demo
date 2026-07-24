@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import { Sparkles, PenSquare, BarChart3, Rocket } from "lucide-react";
+import { Sparkles, BarChart3, Rocket } from "lucide-react";
 import ninna from "@/assets/team/ninna.jpg";
-import robert from "@/assets/team/robert.jpg";
 import eva from "@/assets/team/eva.jpg";
 import max from "@/assets/team/max.jpg";
 
@@ -20,9 +19,9 @@ type Member = {
 const team: Member[] = [
   {
     name: "Ninna",
-    role: "CMO",
-    desc: "Talks to the founder, makes decisions and drives the entire marketing strategy forward.",
-    tags: "Strategy. Decisions. Growth.",
+    role: "GTM Strategist",
+    desc: "Talks to the founder, makes decisions and drives the entire go-to-market strategy forward.",
+    tags: "Strategy. Decisions. Revenue.",
     img: ninna,
     Icon: Sparkles,
     roleClass: "bg-violet-600/90 text-white",
@@ -30,21 +29,10 @@ const team: Member[] = [
     accent: "text-violet-300",
   },
   {
-    name: "Robert",
-    role: "Content Head",
-    desc: "Creates high-impact Founder & Company content with deep contextual understanding.",
-    tags: "Content. Story. Influence.",
-    img: robert,
-    Icon: PenSquare,
-    roleClass: "bg-blue-600/90 text-white",
-    nameClass: "text-blue-300",
-    accent: "text-blue-300",
-  },
-  {
     name: "Eva",
-    role: "Head Analyst",
-    desc: "Tracks and analyzes inbound & outbound performance and shares actionable insights with Ninna.",
-    tags: "Data. Insights. Impact.",
+    role: "Market Intelligence",
+    desc: "Tracks live buying signals across the market and surfaces high-intent, high-fit accounts.",
+    tags: "Signals. Research. Intent.",
     img: eva,
     Icon: BarChart3,
     roleClass: "bg-emerald-600/90 text-white",
@@ -53,14 +41,14 @@ const team: Member[] = [
   },
   {
     name: "Max",
-    role: "Sales & Outreach Head",
-    desc: "Runs outbound campaigns, qualifies high-intent leads and books meaningful meetings.",
+    role: "Sales Execution",
+    desc: "Runs warm outreach, qualifies high-intent accounts and books meaningful meetings.",
     tags: "Outreach. Conversations. Pipeline.",
     img: max,
     Icon: Rocket,
-    roleClass: "bg-violet-600/90 text-white",
-    nameClass: "text-violet-300",
-    accent: "text-violet-300",
+    roleClass: "bg-amber-600/90 text-white",
+    nameClass: "text-amber-300",
+    accent: "text-amber-300",
   },
 ];
 
@@ -70,7 +58,7 @@ export default function HeroAITeam() {
       {/* soft glow */}
       <div className="absolute -inset-6 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl pointer-events-none" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 relative">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 relative">
         {team.map((m, i) => (
           <motion.div
             key={m.name}

@@ -77,7 +77,7 @@ import {
 import ConnectorsView from "@/components/ConnectorsView";
 import { usePosterWebSocket } from "@/hooks/usePosterWebSocket";
 import PosterEditorModal from "@/components/PosterEditorModal";
-import FounderVoiceOnboarding from "@/components/FounderVoiceOnboarding";
+import BusinessContext from "@/components/BusinessContext";
 import SageAssistant from "@/components/SageAssistant";
 import NinaGoalIntake from "@/components/NinaGoalIntake";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
@@ -288,7 +288,7 @@ function AiBubble({ msg, children }: { msg: Message, children?: React.ReactNode 
             <div className="flex flex-col gap-2 max-w-[85%]">
                 <div className="flex items-center gap-2 px-1">
                     <span className="text-xs font-bold text-zinc-900">Nina</span>
-                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI CMO</span>
+                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI GTM Strategist</span>
                 </div>
                 <div className="px-6 py-5 rounded-3xl rounded-tl-sm bg-white border border-gray-100 shadow-sm relative">
                     <div className="text-sm leading-[1.8] text-gray-800 whitespace-pre-wrap">
@@ -1822,17 +1822,17 @@ export default function AutonomousMarketing() {
 
     if (isSetupMode && !voiceCompleted && !voiceSkipped) {
         return (
-            <FounderVoiceOnboarding
+            <BusinessContext
                 spaceId={spaceId!}
-                onComplete={(profile) => {
+                onComplete={() => {
                     setVoiceCompleted(true);
-                    toast.success("Voice profile synthesized and applied!", {
-                        description: "Nina has captured your business and voice — your strategy is next."
+                    toast.success("Business Context saved!", {
+                        description: "Nina has your company, customers, sales motion and GTM goals — your strategy is next."
                     });
                 }}
                 onSkip={() => {
                     setVoiceSkipped(true);
-                    toast.info("Voice onboarding skipped.", {
+                    toast.info("Business Context skipped.", {
                         description: "You can proceed to space connectors directly."
                     });
                 }}
@@ -2226,7 +2226,7 @@ export default function AutonomousMarketing() {
                                             <div className="flex flex-col gap-2 max-w-[85%]">
                                                 <div className="flex items-center gap-2 px-1">
                                                     <span className="text-xs font-bold text-zinc-900">Nina</span>
-                                                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI CMO</span>
+                                                    <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">AI GTM Strategist</span>
                                                 </div>
                                                 <div className="px-6 py-5 rounded-3xl rounded-tl-sm bg-white border border-gray-100 shadow-sm">
                                                     <p className="text-sm leading-[1.8] text-gray-800">

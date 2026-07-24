@@ -1,9 +1,9 @@
 // pages/Ninna.tsx
 //
-// Ninna — the AI CMO Marketing Command Center.
+// Ninna — the AI GTM Strategist Command Center.
 //
 // This is the default homepage of every workspace and the single interface
-// between the founder and the AI marketing workforce (Robert, Eva, Max). It is
+// between the founder and the AI GTM workforce (EVA + MAX). It is
 // NOT a chatbot: it opens by proactively answering "what happened while you were
 // away?", surfaces a prioritized decision queue, a live campaign-health read and
 // a timeline, and pairs every chat reply with embedded, actionable UI cards.
@@ -13,23 +13,29 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   ArrowUp,
   ArrowUpRight,
   Activity,
   BrainCircuit,
+  Building2,
   Calendar,
   CalendarClock,
   Check,
   CheckCircle2,
   ChevronRight,
   Clock,
+  DollarSign,
   FileText,
   Gauge,
   Lightbulb,
   Loader2,
   Mail,
   RefreshCw,
+  Reply,
+  Send,
+  Signal,
   Sparkles,
   Target,
   TrendingUp,
@@ -39,7 +45,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import ConversationSidebar from "@/components/ConversationSidebar";
+import NinaGoalIntake from "@/components/NinaGoalIntake";
 import SageAssistant from "@/components/SageAssistant";
+import { weezAPI } from "@/services/weezAPI";
 import {
   ninnaAPI,
   getCachedBrief,
@@ -57,6 +65,7 @@ import {
   type NinnaChatMessage,
   type Priority,
   type RecommendationData,
+  type RevenueMetric,
   type TimelineEntry,
 } from "@/services/ninnaAPI";
 
@@ -75,10 +84,22 @@ const TONE: Record<
   indigo: { bg: "bg-indigo-500", softBg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", dot: "bg-indigo-500", solid: "bg-indigo-600" },
 };
 
-const AGENT_TONE: Record<AgentKey, string> = { robert: "violet", eva: "sky", max: "emerald" };
-const AGENT_ICON: Record<AgentKey, typeof FileText> = { robert: FileText, eva: Target, max: Mail };
+const AGENT_TONE: Record<AgentKey, string> = { eva: "sky", max: "emerald" };
+const AGENT_ICON: Record<AgentKey, typeof FileText> = { eva: Target, max: Mail };
 const PRIORITY_TONE: Record<Priority, string> = { critical: "rose", important: "amber", informational: "zinc" };
 const PRIORITY_LABEL: Record<Priority, string> = { critical: "Critical", important: "Important", informational: "FYI" };
+
+// Revenue dashboard tile icons, keyed by RevenueMetric.key from ninnaAPI.
+const METRIC_ICON: Record<string, typeof FileText> = {
+  companies: Building2,
+  signals: Signal,
+  qualified: Target,
+  outreach: Send,
+  replies: Reply,
+  meetings: CalendarClock,
+  pipeline: TrendingUp,
+  revenue: DollarSign,
+};
 
 const nowTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -473,11 +494,11 @@ function BriefLoading({ spaceName }: { spaceName: string }) {
           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Gathering your workforce</span>
         </div>
         <p className="text-sm font-medium text-gray-500 max-w-xs leading-relaxed">
-          Nina is checking in with Robert, Eva and Max to build your brief for <span className="font-bold text-gray-800">{spaceName}</span>.
+          Nina is checking in with EVA and MAX to build your brief for <span className="font-bold text-gray-800">{spaceName}</span>.
         </p>
       </div>
       <div className="flex items-center gap-6">
-        {(["Robert", "Eva", "Max"] as const).map((n, i) => (
+        {(["EVA", "MAX"] as const).map((n, i) => (
           <div key={n} className="flex flex-col items-center gap-2 opacity-60" style={{ animationDelay: `${i * 200}ms` }}>
             <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
             <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{n}</span>
@@ -495,6 +516,7 @@ export default function Ninna() {
   const navigate = useNavigate();
   const { currentSpace, user, selectSpace, spaces } = useAuth();
 
+  const [campaignGate, setCampaignGate] = useState<"checking" | "intake" | "preparing" | "active">("checking");
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -506,6 +528,7 @@ export default function Ninna() {
   const seededRef = useRef(false);
   const userInteractedRef = useRef(false);
   const loadTokenRef = useRef(0);
+  const campaignCheckRef = useRef(0);
   const spaceName = currentSpace?.name || spaces.find((s) => s.id === spaceId)?.name || "your workspace";
   const firstName = (user?.name || "").trim().split(" ")[0] || "";
 
@@ -582,8 +605,108 @@ export default function Ninna() {
     }
   };
 
+  const waitForPlanner = async (campaignId: string, checkToken: number) => {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (campaignCheckRef.current === checkToken && Date.now() < deadline) {
+      const status = await weezAPI.getActiveCampaignStatus(spaceId!);
+      if (status.active) return "active" as const;
+      if (status.campaign_id === campaignId && status.status === "planning") {
+        return "planning" as const;
+      }
+      if (status.campaign_id === campaignId && status.status === "briefing") {
+        throw new Error("Nina couldn't finish the content plan. Please try again.");
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 4000));
+    }
+    if (campaignCheckRef.current !== checkToken) return "cancelled" as const;
+    throw new Error("The content plan is taking longer than expected. You can safely try again.");
+  };
+
+  const handleProceedToPlanner = async (
+    target: string,
+    strategy?: { goal?: { requested?: string } }
+  ) => {
+    if (!spaceId) return;
+    const checkToken = ++campaignCheckRef.current;
+    try {
+      const goalPrompt = target.trim() || strategy?.goal?.requested || "Grow qualified pipeline on LinkedIn";
+      toast.info("Nina is turning your strategy into a campaign plan…");
+      const campaign = await weezAPI.getCampaignBrief(spaceId, goalPrompt);
+      await weezAPI.generateCampaignPlanner(campaign.campaign_id, new Date().toISOString());
+      const outcome = await waitForPlanner(campaign.campaign_id, checkToken);
+      if (outcome === "active") {
+        setCampaignGate("active");
+        await loadBrief(false);
+      } else if (outcome === "planning") {
+        navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
+      }
+    } catch (error: unknown) {
+      console.error("[ninna] campaign setup failed", error);
+      const message = error instanceof Error ? error.message : "Nina couldn't build the campaign plan. Please try again.";
+      toast.error(message);
+    }
+  };
+
   useEffect(() => {
-    loadBrief(false);
+    if (!spaceId) {
+      setCampaignGate("intake");
+      setLoading(false);
+      return;
+    }
+
+    const checkToken = ++campaignCheckRef.current;
+    setCampaignGate("checking");
+    setBrief(null);
+    setMessages([]);
+    seededRef.current = false;
+    userInteractedRef.current = false;
+
+    const routeByCampaignStatus = async () => {
+      try {
+        const status = await weezAPI.getActiveCampaignStatus(spaceId);
+        if (campaignCheckRef.current !== checkToken) return;
+
+        if (status.active) {
+          setCampaignGate("active");
+          await loadBrief(false);
+          return;
+        }
+
+        if (status.status === "briefing" || status.status === "planning") {
+          navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
+          return;
+        }
+
+        if (status.status === "generating" && status.campaign_id) {
+          setCampaignGate("preparing");
+          const outcome = await waitForPlanner(status.campaign_id, checkToken);
+          if (outcome === "active") {
+            setCampaignGate("active");
+            await loadBrief(false);
+          } else if (outcome === "planning") {
+            navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
+          }
+          return;
+        }
+
+        setCampaignGate("intake");
+        setLoading(false);
+      } catch (error: unknown) {
+        if (campaignCheckRef.current !== checkToken) return;
+        console.error("[ninna] campaign status check failed", error);
+        const message = error instanceof Error ? error.message : "Nina couldn't check the campaign status.";
+        toast.error(message);
+        setCampaignGate("intake");
+        setLoading(false);
+      }
+    };
+
+    routeByCampaignStatus();
+    return () => {
+      campaignCheckRef.current += 1;
+    };
+    // Campaign status intentionally owns the initial brief load. Loading the brief
+    // before activation would eagerly start EVA and MAX.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spaceId]);
 
@@ -627,7 +750,42 @@ export default function Ninna() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {loading || !brief ? (
+        {campaignGate === "checking" ? (
+          <BriefLoading spaceName={spaceName} />
+        ) : campaignGate === "intake" ? (
+          <>
+            <header className="shrink-0 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl px-6 lg:px-8 h-16 flex items-center gap-3">
+              <NinnaAvatar className="w-9 h-9" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-gray-900 leading-none">{NINNA.name}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Campaign setup</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 truncate block">{spaceName}</span>
+              </div>
+            </header>
+            <main className="flex-1 overflow-y-auto bg-gradient-to-b from-indigo-50/40 via-white to-white px-5 py-10">
+              <div className="max-w-3xl mx-auto mb-7 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-3">Build your first campaign</p>
+                <h1 className="text-3xl font-black tracking-tight text-gray-900">Let Nina turn your context into a plan</h1>
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  Nina will review your product, customers, and industry context, ask only for what is missing, then prepare the campaign for your approval.
+                </p>
+              </div>
+              <NinaGoalIntake spaceId={spaceId!} onProceed={handleProceedToPlanner} />
+            </main>
+          </>
+        ) : campaignGate === "preparing" ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center bg-gradient-to-b from-indigo-50/50 to-white">
+            <NinnaAvatar className="w-16 h-16" />
+            <div className="mt-6 inline-flex items-center gap-2 text-indigo-600 font-semibold">
+              <Loader2 className="w-5 h-5 animate-spin" /> Nina is finishing your campaign plan…
+            </div>
+            <p className="mt-2 max-w-md text-sm text-gray-500">
+              Your strategy is safe. Nina will open the planner as soon as the campaign calendar is ready.
+            </p>
+          </div>
+        ) : loading || !brief ? (
           <BriefLoading spaceName={spaceName} />
         ) : (
           <>
@@ -682,6 +840,63 @@ export default function Ninna() {
               </div>
             </div>
 
+            {/* GTM Summary — Nina's continuously-updated read on the workforce */}
+            {brief.gtmSummary.length > 0 && (
+              <div className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-white p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="w-4 h-4 text-indigo-500" />
+                  <h2 className="text-[11px] font-black uppercase tracking-[0.22em] text-indigo-600/80">
+                    Today's GTM Summary
+                  </h2>
+                  <span className="ml-auto flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                  </span>
+                </div>
+                <ul className="space-y-2.5">
+                  {brief.gtmSummary.map((line, i) => {
+                    const isRec = line.startsWith("Recommendation:");
+                    return (
+                      <li key={i} className="flex items-start gap-2.5 text-sm">
+                        <span
+                          className={cn(
+                            "mt-1.5 h-1.5 w-1.5 rounded-full shrink-0",
+                            isRec ? "bg-amber-500" : "bg-indigo-400"
+                          )}
+                        />
+                        <span className={cn("leading-relaxed", isRec ? "font-semibold text-gray-900" : "text-gray-700")}>
+                          {line}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Revenue Dashboard — the GTM headline numbers */}
+            {brief.revenueMetrics.length > 0 && (
+              <Section icon={TrendingUp} title="Revenue Dashboard">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {brief.revenueMetrics.map((mt: RevenueMetric) => {
+                    const Icon = METRIC_ICON[mt.key] || Activity;
+                    return (
+                      <div key={mt.key} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center mb-3">
+                          <Icon className="w-4 h-4 text-indigo-500" />
+                        </div>
+                        <p className="text-2xl font-black tracking-tight text-gray-900 tabular-nums leading-none">
+                          {mt.value}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1.5">
+                          {mt.label}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
             {/* Decision queue */}
             {brief.decisions.length > 0 && (
               <Section
@@ -701,9 +916,9 @@ export default function Ninna() {
               </Section>
             )}
 
-            {/* Agent summaries */}
+            {/* Agent summaries — the AI workforce running behind the scenes */}
             <Section icon={Users} title="The Workforce">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {brief.agentSummaries.map((s) => (
                   <AgentSummaryCard key={s.agent} summary={s} onOpen={openLink} />
                 ))}
@@ -834,7 +1049,7 @@ export default function Ninna() {
                     send();
                   }
                 }}
-                placeholder="Ask Nina about your marketing…"
+                placeholder="Ask Nina about your pipeline…"
                 disabled={thinking}
                 className="flex-1 bg-transparent px-1 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60"
               />
@@ -855,7 +1070,7 @@ export default function Ninna() {
 
       {/* Nina's weekly founder check-in (voice). Sits left of the chat dock on
           large screens so it never covers the composer; bottom-right otherwise. */}
-      {spaceId && (
+      {campaignGate === "active" && spaceId && (
         <SageAssistant spaceId={spaceId} fabClassName="bottom-6 right-6 lg:right-[420px] xl:right-[468px]" />
       )}
     </div>

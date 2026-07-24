@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Sparkles, ArrowRight, Instagram, Linkedin, BrainCircuit, BarChart3, PenSquare,
-  Check, X, Menu, Play, Quote,
-  Radar, Send, CalendarRange, Layers, Signal, CheckCircle2,
+  ArrowRight, Instagram, Linkedin, BrainCircuit, BarChart3, PenSquare,
+  Check, X, Menu, Play,
+  Radar, Send, CalendarRange, Signal, CheckCircle2,
+  Globe, Building2, Clock, Users, TrendingUp, Zap, Reply, DollarSign, Bot, Rocket,
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -18,7 +19,6 @@ import WeezWorkflow from "@/components/landing/WeezWorkflow";
 import PostToMeeting from "@/components/landing/PostToMeeting";
 import ReplaceStack from "@/components/landing/ReplaceStack";
 import ninna from "@/assets/team/ninna.jpg";
-import robert from "@/assets/team/robert.jpg";
 import eva from "@/assets/team/eva.jpg";
 import maxImg from "@/assets/team/max.jpg";
 
@@ -98,71 +98,91 @@ const PrimaryButton = ({ children, onClick }: any) => (
 /* =============== Data =============== */
 
 const TEAM_MINI = [
-  { name: "Ninna", role: "CMO", img: ninna, ring: "ring-violet-400" },
-  { name: "Eva", role: "Analyst", img: eva, ring: "ring-emerald-400" },
-  { name: "Max", role: "Outreach", img: maxImg, ring: "ring-amber-400" },
-  { name: "Robert", role: "Content", img: robert, ring: "ring-blue-400" },
+  { name: "Ninna", role: "GTM Strategist", img: ninna, ring: "ring-violet-400" },
+  { name: "Eva", role: "Market Intelligence", img: eva, ring: "ring-emerald-400" },
+  { name: "Max", role: "Sales Execution", img: maxImg, ring: "ring-amber-400" },
 ];
 
 const STEPS = [
   {
     n: "01",
-    icon: <BrainCircuit className="h-5 w-5" />,
-    title: "Learn your company",
-    desc: "Weez learns your founder voice, product, positioning, and ICP — the context a marketing hire would take weeks to absorb.",
+    icon: <Globe className="h-5 w-5" />,
+    title: "Start with your website",
+    desc: "Weez ingests your website to learn what you sell, who you sell to, and the outcomes you drive — no lengthy setup.",
   },
   {
     n: "02",
-    icon: <PenSquare className="h-5 w-5" />,
-    title: "Create campaigns & content",
-    desc: "Your AI team turns founder knowledge into founder-led content, messaging, and campaign angles built for your ICP.",
+    icon: <BrainCircuit className="h-5 w-5" />,
+    title: "Build your business context",
+    desc: "It absorbs your product, positioning, and ICP — the context a GTM hire would take weeks to fully learn.",
   },
   {
     n: "03",
-    icon: <Radar className="h-5 w-5" />,
-    title: "Find high-intent accounts",
-    desc: "It tracks hiring, product, and growth signals to surface companies already showing intent — not scraped random lists.",
+    icon: <Signal className="h-5 w-5" />,
+    title: "Detect live buying signals",
+    desc: "Weez continuously monitors hiring, funding, product, and growth signals to surface accounts already in-market.",
   },
   {
     n: "04",
+    icon: <Send className="h-5 w-5" />,
+    title: "Run autonomous outreach",
+    desc: "It finds the right buyer, enriches the contact, and sends contextual outreach grounded in real signals.",
+  },
+  {
+    n: "05",
     icon: <CalendarRange className="h-5 w-5" />,
-    title: "Run warm outbound & book meetings",
-    desc: "Weez finds the right buyer, enriches the contact, drafts contextual outreach, and moves conversations toward booked meetings.",
+    title: "Book qualified meetings",
+    desc: "Positive replies turn into calendar-ready meetings — pipeline generated without hiring a single SDR.",
   },
 ];
 
 const CAPABILITIES = [
   {
-    icon: <PenSquare className="h-5 w-5" />,
-    title: "Founder-Led Content Engine",
-    desc: "Posts, campaigns, and narratives generated from founder context and product positioning.",
-    accent: "from-blue-600 to-sky-500",
-    large: true,
-  },
-  {
-    icon: <CalendarRange className="h-5 w-5" />,
-    title: "Campaign Planning & Execution",
-    desc: "Plan content arcs and campaigns around launches, growth priorities, and product motion.",
-    accent: "from-violet-500 to-fuchsia-500",
+    icon: <BarChart3 className="h-5 w-5" />,
+    title: "Revenue Intelligence",
+    desc: "Pipeline, qualified accounts, replies, and revenue impact in one live view — always know what's working.",
+    accent: "from-sky-500 to-blue-600",
     large: true,
   },
   {
     icon: <Radar className="h-5 w-5" />,
-    title: "Event-Driven Account Discovery",
-    desc: "Track hiring, product launches, and growth signals across companies that match your ICP.",
+    title: "Market Intelligence",
+    desc: "Continuously track hiring, funding, product, and growth signals across companies that match your ICP.",
     accent: "from-emerald-500 to-teal-500",
+    large: true,
   },
   {
     icon: <Send className="h-5 w-5" />,
-    title: "Warm Outbound Workflow",
-    desc: "Select the right contact, enrich them, and generate contextual outreach from real company motion.",
+    title: "Sales Execution",
+    desc: "Enrich the right contact and run warm, contextual outreach that turns live intent into booked meetings.",
     accent: "from-amber-500 to-orange-500",
   },
   {
-    icon: <BarChart3 className="h-5 w-5" />,
-    title: "Marketing Intelligence & Analytics",
-    desc: "Understand what's converting and which accounts and campaigns deserve attention next.",
-    accent: "from-sky-500 to-blue-600",
+    icon: <Signal className="h-5 w-5" />,
+    title: "Buying Signal Monitoring",
+    desc: "Always-on detection of live in-market intent, so you reach accounts at exactly the right moment.",
+    accent: "from-violet-500 to-fuchsia-500",
+  },
+  {
+    icon: <CalendarRange className="h-5 w-5" />,
+    title: "Autonomous Meetings",
+    desc: "From first touch to booked meeting — executed autonomously, with you approving what matters.",
+    accent: "from-blue-600 to-sky-500",
+  },
+];
+
+const ADDITIONAL_CAPABILITIES = [
+  {
+    icon: <PenSquare className="h-5 w-5" />,
+    title: "Founder-Led Content Engine",
+    desc: "Founder-led posts and campaigns that attract the right buyers and feed the top of your pipeline.",
+    accent: "from-blue-600 to-sky-500",
+  },
+  {
+    icon: <CalendarRange className="h-5 w-5" />,
+    title: "Campaign Planning & Execution",
+    desc: "Plan content and campaigns around launches, growth priorities, and product motion.",
+    accent: "from-violet-500 to-fuchsia-500",
   },
 ];
 
@@ -170,40 +190,132 @@ const DIFFERENTIATORS = [
   {
     icon: <BrainCircuit className="h-6 w-6" />,
     title: "It understands your business first",
-    desc: "Weez doesn't start with prompts or random sequences. It learns your founder context, product, and customer profile before it writes or sends anything.",
+    desc: "Weez doesn't start with prompts or random sequences. It learns your business, product, and customer profile before it detects a signal or sends anything.",
   },
   {
     icon: <Signal className="h-6 w-6" />,
-    title: "It works from buying signals",
-    desc: "Instead of blasting generic outbound, Weez monitors companies showing relevant hiring, product, and growth signals — then acts on live intent.",
+    title: "It works from live buying signals",
+    desc: "Instead of blasting generic outbound, Weez monitors companies showing real hiring, funding, and growth signals — then acts on live intent.",
   },
   {
-    icon: <Layers className="h-6 w-6" />,
-    title: "Content + outbound in one system",
-    desc: "Most tools either create content or automate sales. Weez connects founder-led marketing, campaign execution, and warm outbound into a single workflow.",
+    icon: <BarChart3 className="h-6 w-6" />,
+    title: "Revenue intelligence, not vanity metrics",
+    desc: "Most tools stop at opens and clicks. Weez ties every action to qualified accounts, booked meetings, and pipeline you can actually see.",
+  },
+];
+
+const SIGNAL_SOURCES = [
+  {
+    icon: <Users className="h-5 w-5" />,
+    title: "Hiring signals",
+    desc: "New roles and team expansion that reveal budget, priorities, and growth motion.",
+  },
+  {
+    icon: <TrendingUp className="h-5 w-5" />,
+    title: "Funding & growth",
+    desc: "Fresh funding, revenue milestones, and expansion that signal readiness to buy.",
+  },
+  {
+    icon: <Rocket className="h-5 w-5" />,
+    title: "Product & launches",
+    desc: "New products, features, and launches that map directly to the problem you solve.",
+  },
+  {
+    icon: <Zap className="h-5 w-5" />,
+    title: "Tech & intent",
+    desc: "Tooling changes and category research that point to active, in-market intent.",
+  },
+  {
+    icon: <Building2 className="h-5 w-5" />,
+    title: "Leadership changes",
+    desc: "New executives and decision-makers who reset priorities and open buying windows.",
+  },
+  {
+    icon: <Signal className="h-5 w-5" />,
+    title: "Engagement signals",
+    desc: "Interactions with your content and category that surface warm, high-fit accounts.",
+  },
+];
+
+const EXPLAINERS = [
+  {
+    icon: <Building2 className="h-6 w-6" />,
+    q: "Why this company?",
+    desc: "Weez shows the ICP fit and the exact signals that make this account worth pursuing right now.",
+  },
+  {
+    icon: <Clock className="h-6 w-6" />,
+    q: "Why now?",
+    desc: "It surfaces the live trigger — a key hire, launch, or funding event — that makes the timing right.",
+  },
+  {
+    icon: <Users className="h-6 w-6" />,
+    q: "Why this contact?",
+    desc: "It explains why this is the right buyer and how their role connects to the opportunity.",
+  },
+];
+
+const METRICS = [
+  { v: "1,240", l: "Buying Signals", icon: <Signal className="h-4 w-4" /> },
+  { v: "318", l: "Qualified Accounts", icon: <Building2 className="h-4 w-4" /> },
+  { v: "2,470", l: "Emails Sent", icon: <Send className="h-4 w-4" /> },
+  { v: "412", l: "Replies", icon: <Reply className="h-4 w-4" /> },
+  { v: "63", l: "Meetings Booked", icon: <CalendarRange className="h-4 w-4" /> },
+  { v: "$1.8M", l: "Revenue Pipeline", icon: <DollarSign className="h-4 w-4" /> },
+];
+
+const SDR_TRADITIONAL = [
+  "Weeks of hiring, onboarding, and ramp",
+  "Manual list building and research",
+  "Reps only work business hours",
+  "Ramp costs, quota churn, and turnover",
+  "Generic sequences blasted at scale",
+];
+
+const SDR_WEEZ = [
+  "Live in days — no hiring required",
+  "Autonomous research from live signals",
+  "Monitors buying signals 24/7",
+  "One simple plan — no ramp or churn",
+  "Contextual outreach tailored per account",
+];
+
+const AI_SDR_EDGE = [
+  {
+    icon: <Zap className="h-6 w-6" />,
+    title: "Plug-and-play setup",
+    desc: "Point Weez at your website and it's ready — no long onboarding, prompt engineering, or CSV imports.",
+  },
+  {
+    icon: <BarChart3 className="h-6 w-6" />,
+    title: "Revenue intelligence",
+    desc: "Not just send-and-track. Weez ties outreach to qualified accounts, meetings, and pipeline revenue.",
+  },
+  {
+    icon: <Signal className="h-6 w-6" />,
+    title: "Continuous signal monitoring",
+    desc: "Always-on detection of live buying signals — not static lists that go stale the day you upload them.",
+  },
+  {
+    icon: <Bot className="h-6 w-6" />,
+    title: "Autonomous execution",
+    desc: "Weez researches, decides, and runs outreach end-to-end — escalating only what needs your call.",
   },
 ];
 
 const BEST_FIT = [
   "Founder-led B2B SaaS startups",
   "Post-validation / PMF-ish teams",
-  "Lean GTM teams without a full marketing org",
-  "Teams scaling content + outbound without 4 separate hires",
-  "Startups that need pipeline before building an in-house team",
+  "Lean GTM teams without a full sales org",
+  "Teams generating pipeline without 4 separate hires",
+  "Startups that need meetings before building an in-house team",
 ];
 
 const NOT_FOR = [
-  "Enterprise teams with a 20-person marketing org",
+  "Enterprise teams with a 20-person GTM org",
   "Ecommerce and D2C brands",
   "Agencies wanting white-labeled lead scraping",
   "Pure B2C consumer apps",
-];
-
-const METRICS = [
-  { v: "5x", l: "Faster campaign creation" },
-  { v: "+62%", l: "Engagement uplift" },
-  { v: "-41%", l: "Lower marketing cost" },
-  { v: "1.2k+", l: "Pilot users & waitlist" },
 ];
 
 /* =============== Page =============== */
@@ -303,7 +415,7 @@ const Landing = () => {
               className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
             >
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
-              AI-Native Marketing Workforce · Built for B2B SaaS
+              AI-Native GTM Workforce · Built for B2B SaaS
             </motion.div>
 
             <motion.h1
@@ -313,7 +425,7 @@ const Landing = () => {
               animate="show"
               className="mt-7 text-4xl font-semibold leading-[1.03] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-[4.6rem]"
             >
-              B2B SaaS growth without hiring a full marketing team
+              B2B SaaS pipeline without hiring a full GTM team
             </motion.h1>
 
             <motion.p
@@ -323,9 +435,8 @@ const Landing = () => {
               animate="show"
               className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/90 [text-shadow:0_1px_16px_rgba(0,0,0,0.5)] md:text-lg lg:mx-0"
             >
-              Weez is your AI-native marketing workforce — learning your founder voice, product, and
-              ICP to create content, track high-intent accounts, and run warm outbound that turns
-              into meetings.
+              Weez is your AI-native GTM workforce — it learns your business, detects live buying
+              signals, and runs autonomous outreach to generate pipeline and book qualified meetings.
             </motion.p>
 
             <motion.div
@@ -335,7 +446,7 @@ const Landing = () => {
               animate="show"
               className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
             >
-              <PrimaryButton onClick={() => setDemoOpen(true)}>Book a Demo</PrimaryButton>
+              <PrimaryButton onClick={() => setDemoOpen(true)}>Deploy Your AI GTM Workforce</PrimaryButton>
               <button
                 onClick={() => scrollTo("workflow")}
                 className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
@@ -363,8 +474,8 @@ const Landing = () => {
                 ))}
               </div>
               <div className="text-sm text-slate-400">
-                <span className="font-semibold text-slate-200">Ninna, Eva, Max &amp; Robert</span> — your
-                AI team, online now.
+                <span className="font-semibold text-slate-200">Ninna, Eva &amp; Max</span> — your
+                AI GTM team, online now.
               </div>
             </motion.div>
 
@@ -411,13 +522,13 @@ const Landing = () => {
       <Section id="how">
         <div className="mb-16 text-center">
           <Eyebrow>How Weez Works</Eyebrow>
-          <H2 className="mx-auto mt-5">From founder context to booked meetings.</H2>
+          <H2 className="mx-auto mt-5">From your website to booked meetings.</H2>
           <Sub className="mx-auto mt-5 text-center">
-            One connected workflow — not four disconnected tools stitched together.
+            One connected workflow — website to business context to signal detection to outreach to meetings.
           </Sub>
         </div>
 
-        <div className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-5">
           <div className="absolute left-[12%] right-[12%] top-16 hidden h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent lg:block" />
           {STEPS.map((s, i) => (
             <motion.div
@@ -445,11 +556,11 @@ const Landing = () => {
       {/* ============ 3. MEET THE TEAM ============ */}
       <Section id="team">
         <div className="mb-4 text-center">
-          <Eyebrow>Meet Your AI Marketing Team</Eyebrow>
+          <Eyebrow>Meet Your AI GTM Team</Eyebrow>
           <H2 className="mx-auto mt-5">Four specialists. One operating system.</H2>
           <Sub className="mx-auto mt-5 text-center">
             Not a set of features — a team with clear responsibilities, working together from
-            strategy to booked pipeline.
+            live signals to booked pipeline.
           </Sub>
         </div>
         <HeroAITeam />
@@ -458,13 +569,80 @@ const Landing = () => {
       {/* ============ 4. THE WEEZ WORKFLOW (motion-graphics loop) ============ */}
       <WeezWorkflow />
 
-      {/* ============ 5. CAPABILITIES ============ */}
+      {/* ============ 5. HOW WEEZ FINDS BUYING SIGNALS ============ */}
+      <Section id="signals">
+        <div className="mb-14 text-center">
+          <Eyebrow>Buying Signals</Eyebrow>
+          <H2 className="mx-auto mt-5">How Weez finds accounts already in-market.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Weez continuously reads the signals that reveal real intent — so you reach buyers when
+            they're most likely to move, not when a list happened to get uploaded.
+          </Sub>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {SIGNAL_SOURCES.map((s, i) => (
+            <motion.div
+              key={s.title}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="group relative overflow-hidden rounded-3xl border border-slate-900/10 bg-white/80 p-7 backdrop-blur-xl transition hover:border-slate-900/20"
+            >
+              <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl transition group-hover:bg-emerald-500/20" />
+              <div className="relative">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg">
+                  {s.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ============ 6. EXPLAINABLE AI ============ */}
+      <Section id="explainable">
+        <div className="mb-14 text-center">
+          <Eyebrow>Explainable AI</Eyebrow>
+          <H2 className="mx-auto mt-5">Every account comes with a reason.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            No black box. For every account Weez surfaces, it shows its work — so you always know
+            why it's worth your time.
+          </Sub>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-3">
+          {EXPLAINERS.map((e, i) => (
+            <motion.div
+              key={e.q}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-b from-white to-slate-50/60 p-8"
+            >
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                {e.icon}
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900">{e.q}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{e.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ============ 7. CAPABILITIES ============ */}
       <Section id="capabilities">
         <div className="mb-14 text-center">
           <Eyebrow>What Weez Handles</Eyebrow>
-          <H2 className="mx-auto mt-5">Everything a lean marketing team would own.</H2>
+          <H2 className="mx-auto mt-5">Everything a lean GTM team would own.</H2>
           <Sub className="mx-auto mt-5 text-center">
-            Organized by outcome, not by dashboard. Here's what your AI workforce takes off your plate.
+            Organized by revenue outcome, not by dashboard. Here's what your AI workforce takes off your plate.
           </Sub>
         </div>
 
@@ -492,15 +670,48 @@ const Landing = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Additional (content) capabilities — secondary */}
+        <div className="mt-14">
+          <div className="mb-6 flex items-center gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Additional Capabilities
+            </span>
+            <span className="h-px flex-1 bg-slate-900/10" />
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            {ADDITIONAL_CAPABILITIES.map((c, i) => (
+              <motion.div
+                key={c.title}
+                variants={fadeUp}
+                custom={i}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="group relative overflow-hidden rounded-3xl border border-slate-900/10 bg-white/60 p-7 backdrop-blur-xl transition hover:border-slate-900/20"
+              >
+                <div className="relative flex items-start gap-4">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${c.accent} text-white shadow-lg`}>
+                    {c.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">{c.title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{c.desc}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </Section>
 
-      {/* ============ 6. WHY DIFFERENT ============ */}
+      {/* ============ 8. WHY DIFFERENT ============ */}
       <Section id="why">
         <div className="mb-14 text-center">
           <Eyebrow>Why Weez Is Different</Eyebrow>
           <H2 className="mx-auto mt-5">Not an SDR bot. Not a content tool.</H2>
           <Sub className="mx-auto mt-5 text-center">
-            The difference isn't more automation — it's understanding, intent, and one connected system.
+            The difference isn't more automation — it's understanding, live intent, and revenue you can measure.
           </Sub>
         </div>
 
@@ -525,15 +736,15 @@ const Landing = () => {
         </div>
       </Section>
 
-      {/* ============ 7. POST TO MEETING (animated walkthrough) ============ */}
+      {/* ============ 9. SIGNAL → RESEARCH → OUTREACH → MEETING (animated walkthrough) ============ */}
       <Section id="workflow" className="overflow-hidden">
         <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow>From post to meeting</Eyebrow>
-          <H2 className="mx-auto mt-5">One post in. Booked meetings out.</H2>
+          <Eyebrow>Signal → Research → Outreach → Meeting</Eyebrow>
+          <H2 className="mx-auto mt-5">A live signal in. A booked meeting out.</H2>
           <Sub className="mx-auto mt-5 text-center">
-            Follow a single founder post as it becomes qualified pipeline — Robert publishes,
-            Eva reads intent signals and enriches the account, Max runs warm outbound, and a
-            meeting lands on the calendar. Fully autonomous.
+            Follow a single buying signal as it becomes qualified pipeline — Eva reads the intent
+            and enriches the account, Max runs warm outreach, and a meeting lands on the calendar.
+            Fully autonomous.
           </Sub>
         </div>
         <div className="mt-16">
@@ -541,12 +752,153 @@ const Landing = () => {
         </div>
       </Section>
 
-      {/* ============ 8. BUILT FOR / ICP ============ */}
+      {/* ============ 10. REVENUE INTELLIGENCE DASHBOARD ============ */}
+      <Section id="dashboard" className="overflow-hidden">
+        <div className="mb-12 text-center">
+          <Eyebrow>Revenue Intelligence</Eyebrow>
+          <H2 className="mx-auto mt-5">Your pipeline, in one live view.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Not a content calendar — a revenue dashboard. Every signal, account, and reply ties
+            back to meetings booked and pipeline generated.
+          </Sub>
+        </div>
+
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/85 p-6 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)] backdrop-blur-xl md:p-8"
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 text-white">
+                <BarChart3 className="h-4 w-4" />
+              </span>
+              <span className="text-sm font-semibold text-slate-900">Revenue Intelligence Dashboard</span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {METRICS.map((s, i) => (
+              <motion.div
+                key={s.l}
+                variants={fadeUp}
+                custom={i}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="rounded-2xl border border-slate-900/10 bg-white p-6 text-left"
+              >
+                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                  {s.icon}
+                </div>
+                <div className="bg-gradient-to-br from-blue-600 to-sky-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
+                  {s.v}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">{s.l}</div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </Section>
+
+      {/* ============ 11. WEEZ vs TRADITIONAL SDR TEAM ============ */}
+      <Section id="vs-sdr">
+        <div className="mx-auto mb-14 max-w-3xl text-center">
+          <Eyebrow>Weez vs a traditional SDR team</Eyebrow>
+          <H2 className="mx-auto mt-5">Pipeline without the payroll.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            A traditional SDR team takes months to build and costs a fortune to run. Weez delivers
+            the same outcome — qualified meetings — without the overhead.
+          </Sub>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <motion.div
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="rounded-3xl border border-slate-900/10 bg-white/80 p-8 backdrop-blur"
+          >
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <X className="h-3.5 w-3.5" /> Traditional SDR team
+            </div>
+            <ul className="space-y-3">
+              {SDR_TRADITIONAL.map((t) => (
+                <li key={t} className="flex items-start gap-3 text-slate-500">
+                  <X className="mt-0.5 h-5 w-5 shrink-0 text-slate-300" />
+                  <span className="text-[15px]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/50 p-8"
+          >
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 shadow-sm">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Weez GTM workforce
+            </div>
+            <ul className="space-y-3">
+              {SDR_WEEZ.map((t) => (
+                <li key={t} className="flex items-start gap-3 text-slate-800">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                  <span className="text-[15px]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      </Section>
+
+      {/* ============ 12. WEEZ vs AI SDR PLATFORMS ============ */}
+      <Section id="vs-ai-sdr">
+        <div className="mx-auto mb-14 max-w-3xl text-center">
+          <Eyebrow>Weez vs AI SDR platforms</Eyebrow>
+          <H2 className="mx-auto mt-5">More than send-and-track automation.</H2>
+          <Sub className="mx-auto mt-5 text-center">
+            Most AI SDR tools automate sending against a list you upload. Weez runs the whole motion —
+            and ties it to revenue.
+          </Sub>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          {AI_SDR_EDGE.map((d, i) => (
+            <motion.div
+              key={d.title}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="relative overflow-hidden rounded-3xl border border-slate-900/10 bg-white/80 p-7 backdrop-blur-xl"
+            >
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                {d.icon}
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">{d.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{d.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ============ 13. BUILT FOR / ICP ============ */}
       <Section id="fit">
         <div className="mx-auto mb-14 max-w-3xl text-center">
           <Eyebrow>Who It's For</Eyebrow>
           <H2 className="mx-auto mt-5">
-            Built for B2B SaaS teams that need growth before they can hire a full marketing org.
+            Built for B2B SaaS teams that need pipeline before they can hire a full GTM org.
           </H2>
         </div>
 
@@ -594,78 +946,7 @@ const Landing = () => {
         </div>
       </Section>
 
-      {/* ============ 9. SOCIAL PROOF ============ */}
-      <Section id="proof" className="overflow-hidden">
-        <div className="mb-12 text-center">
-          <Eyebrow>Early Proof</Eyebrow>
-          <H2 className="mx-auto mt-5">Real output, not just a promise.</H2>
-        </div>
-
-        {/* metrics */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {METRICS.map((s, i) => (
-            <motion.div
-              key={s.l}
-              variants={fadeUp}
-              custom={i}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              className="rounded-3xl border border-slate-900/10 bg-white/80 p-7 text-center backdrop-blur"
-            >
-              <div className="bg-gradient-to-br from-blue-600 to-sky-500 bg-clip-text text-5xl font-bold tracking-tight text-transparent">
-                {s.v}
-              </div>
-              <div className="mt-2 text-sm text-slate-600">{s.l}</div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* testimonial */}
-        <motion.figure
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="relative mx-auto mt-8 max-w-4xl overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/85 p-8 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)] backdrop-blur-xl md:p-12"
-        >
-          <div className="absolute -right-6 -top-10 text-blue-500/10">
-            <Quote className="h-40 w-40" />
-          </div>
-          <div className="relative">
-            <div className="mb-6 flex gap-1">
-              {Array.from({ length: 5 }).map((_, s) => (
-                <Sparkles key={s} className="h-4 w-4 fill-blue-500 text-blue-500" />
-              ))}
-            </div>
-            <blockquote className="text-2xl font-semibold leading-snug tracking-tight text-slate-900 md:text-3xl">
-              "Weez doesn't just generate content — it understands our brand and creates
-              relevant posts, ideas, and content plans that actually align with our positioning.
-              It saved us serious time while keeping our content consistent and authentic."
-            </blockquote>
-            <figcaption className="mt-8 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 text-lg font-semibold text-white shadow-lg shadow-blue-600/30">
-                S
-              </div>
-              <div>
-                <div className="font-semibold text-slate-900">Shivang</div>
-                <div className="text-sm text-slate-600">Founder &amp; CEO, Niverro Technologies</div>
-                <a
-                  href="https://www.niverro.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 transition hover:text-blue-700"
-                >
-                  www.niverro.com
-                </a>
-              </div>
-            </figcaption>
-          </div>
-        </motion.figure>
-
-      </Section>
-
-      {/* ============ 9b. REPLACE THE STACK ============ */}
+      {/* ============ 14. REPLACE THE STACK ============ */}
       <Section id="replace">
         <div className="mx-auto mb-14 max-w-3xl text-center">
           <Eyebrow>Replace, don't add</Eyebrow>
@@ -678,7 +959,7 @@ const Landing = () => {
         <ReplaceStack />
       </Section>
 
-      {/* ============ 11. FINAL CTA ============ */}
+      {/* ============ 15. FINAL CTA ============ */}
       <Section>
         <motion.div
           variants={fadeUp}
@@ -691,14 +972,14 @@ const Landing = () => {
           <div className="pointer-events-none absolute -bottom-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-500/30 blur-[120px]" />
           <div className="relative">
             <h2 className="mx-auto max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-white md:text-5xl">
-              Stop stitching together content tools, lead lists, and SDR workflows.
+              Stop stitching together lead lists, enrichment tools, and SDR workflows.
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
-              Let Weez act as your AI-native marketing team — from campaign creation to
-              high-intent outbound that books meetings.
+              Let Weez act as your AI-native GTM workforce — from live buying signals to
+              high-intent outreach that books qualified meetings.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <PrimaryButton onClick={() => setDemoOpen(true)}>Book a Demo</PrimaryButton>
+              <PrimaryButton onClick={() => setDemoOpen(true)}>Book More Qualified Meetings</PrimaryButton>
               <button
                 onClick={() => scrollTo("workflow")}
                 className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10"
@@ -718,7 +999,7 @@ const Landing = () => {
               <img src={logo} alt="Weez AI" className="h-7 w-auto" />
             </div>
             <p className="text-sm text-slate-500">
-              Your AI-native marketing workforce for B2B SaaS. Built by Dexraflow.
+              Your AI-native GTM workforce for B2B SaaS. Built by Dexraflow.
             </p>
           </div>
           <div>
@@ -754,7 +1035,7 @@ const Landing = () => {
         </div>
         <div className="mx-auto mt-10 flex max-w-7xl items-center justify-between border-t border-slate-900/5 pt-6 text-xs text-slate-500">
           <span>© {new Date().getFullYear()} Weez AI · Dexraflow Inc.</span>
-          <span>An AI-native marketing workforce for B2B SaaS.</span>
+          <span>An AI-native GTM workforce for B2B SaaS.</span>
         </div>
       </footer>
 

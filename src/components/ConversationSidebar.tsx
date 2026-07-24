@@ -2,11 +2,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   LayoutDashboard,
-  PenLine,
-  Radar,
   Signal as SignalIcon,
-  Link2,
-  ChevronRight,
+  Building2,
+  Users,
+  Send,
+  CalendarCheck,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,45 +37,75 @@ const ConversationSidebar = ({
     navigate("/spaces");
   };
 
-  // The AI marketing workforce. Nina (the CMO) is the home/command center; the
-  // three specialists report up to her. Planner / LinkedIn / Growth are
-  // intentionally not surfaced here — the founder runs everything through Nina.
+  // Capability-based GTM navigation. The AI workforce (Nina, EVA, MAX) runs
+  // behind the scenes — the founder navigates by outcome, not by agent. Nina
+  // orchestrates strategy, EVA drives revenue intelligence, MAX executes sales.
   const navItems = [
     {
-      label: "Nina",
-      role: "CMO",
+      label: "Dashboard",
+      role: "GTM command center",
       path: `/ninna/${spaceId}`,
       icon: LayoutDashboard,
       color: "text-indigo-500",
       tint: "bg-indigo-500/10",
     },
     {
-      label: "Robert",
-      role: "Content",
-      path: `/robert/${spaceId}`,
-      icon: PenLine,
-      color: "text-violet-500",
-      tint: "bg-violet-500/10",
-    },
-    {
-      label: "Eva",
-      role: "Signals",
+      label: "Revenue Intelligence",
+      role: "Signals & scoring",
       path: `/eva/${spaceId}`,
       icon: SignalIcon,
       color: "text-emerald-500",
       tint: "bg-emerald-500/10",
     },
     {
-      label: "Max",
-      role: "Outreach",
+      label: "Accounts",
+      role: "Qualified companies",
+      path: `/leads/${spaceId}`,
+      icon: Building2,
+      color: "text-sky-500",
+      tint: "bg-sky-500/10",
+    },
+    {
+      label: "Prospects",
+      role: "Decision makers",
+      path: `/sales-intelligence/${spaceId}`,
+      icon: Users,
+      color: "text-violet-500",
+      tint: "bg-violet-500/10",
+    },
+    {
+      label: "Outreach",
+      role: "Sales execution",
       path: `/sales/${spaceId}`,
-      icon: Radar,
+      icon: Send,
       color: "text-orange-500",
       tint: "bg-orange-500/10",
     },
+    {
+      label: "Meetings",
+      role: "Booked pipeline",
+      path: `/sales-workspace/${spaceId}`,
+      icon: CalendarCheck,
+      color: "text-amber-500",
+      tint: "bg-amber-500/10",
+    },
+    {
+      label: "Analytics",
+      role: "GTM performance",
+      path: `/analytics/${spaceId}`,
+      icon: BarChart3,
+      color: "text-blue-500",
+      tint: "bg-blue-500/10",
+    },
+    {
+      label: "Settings",
+      role: "Connections & config",
+      path: `/connections/${spaceId}`,
+      icon: Settings,
+      color: "text-slate-500",
+      tint: "bg-slate-500/10",
+    },
   ];
-
-  const isConnectorsActive = location.pathname.includes("/connections");
 
   return (
     <div className="w-full md:w-64 lg:w-72 bg-background/20 backdrop-blur-3xl border-r border-border/30 flex flex-col h-screen flex-shrink-0 relative overflow-hidden transition-all duration-500">
@@ -94,10 +126,10 @@ const ConversationSidebar = ({
         <ScrollArea className="h-full px-3">
           <div className="space-y-7">
 
-            {/* Workforce */}
+            {/* Go-to-Market navigation */}
             <div className="space-y-1.5">
               <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
-                Workforce
+                Go-to-Market
               </p>
               {navItems.map((item) => {
                 const isActive = location.pathname.includes(item.path);
@@ -151,40 +183,6 @@ const ConversationSidebar = ({
                   </button>
                 );
               })}
-            </div>
-
-            {/* Integrations */}
-            <div className="space-y-3 pt-4 border-t border-border/20">
-              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
-                Integrations
-              </p>
-
-              <div className="px-3">
-                {/* Connectors — the hub for connecting LinkedIn, Gmail, Outlook
-                    and Google Calendar (the standalone Connections page). */}
-                <button
-                  onClick={() => navigate(`/connections/${spaceId}`)}
-                  className={cn(
-                    "flex items-center justify-between w-full group rounded-2xl px-3 py-3 transition-all duration-300 border",
-                    isConnectorsActive
-                      ? "bg-primary/5 border-primary/10 shadow-sm"
-                      : "border-transparent hover:bg-secondary/40 hover:border-border/30"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 group-hover:scale-105 transition-all shadow-sm">
-                      <Link2 className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-[12px] font-black text-foreground/80 tracking-tight">Connectors</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground/60 transition-colors">
-                        Manage accounts
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all" />
-                </button>
-              </div>
             </div>
 
           </div>

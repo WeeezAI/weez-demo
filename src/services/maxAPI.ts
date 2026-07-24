@@ -1367,8 +1367,8 @@ export function maxReply(question: string, ws: MaxWorkspace): string {
       : "I don't have enough outcome data yet to call anything established. I'm building the baseline and grading everything as a hypothesis until the sample supports more.";
   }
 
-  if (has("robert", "nina", "content", "warm")) {
-    return `Recommendation: some of these accounts aren't ready for a direct CTA. If a segment keeps engaging but not converting, that's a **Robert** signal — warm them with trust content first — and a **Nina** signal if it implies a positioning shift. I'd flag ${top ? top.company : "the top engaged accounts"} for content warming before we push outreach.`;
+  if (has("nina", "warm", "nurture", "not ready", "timing", "hold")) {
+    return `Recommendation: some of these accounts aren't ready for a direct CTA. If a segment keeps showing interest but not converting, I'd hold outreach and let **EVA** keep monitoring their buying signals — then I'll re-engage the moment intent picks up. If it implies a positioning shift, that's a **Nina** call. I'd flag ${top ? top.company : "the top engaged accounts"} to nurture before we push a meeting ask.`;
   }
 
   return `I'm Max, your outbound head. In **${cfg.label}** mode (${cfg.mode.replace("-", " ")}), I'm monitoring ${ws.metrics.accountsMonitored} accounts with ${ws.metrics.activeSignalsThisWeek} fresh signals this week. Ask me things like: "why is this account ahead?", "is this signal noise?", "should I ask for the meeting now?", "who do I contact first?", or "what's working in our outbound?".`;

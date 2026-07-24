@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Sparkles, PenSquare, Radar, Send, ArrowRight, RefreshCw } from "lucide-react";
+import { Sparkles, Radar, Send, ArrowRight, RefreshCw } from "lucide-react";
 
 /**
  * WeezWorkflow
  * ------------
  * A clean, motion-graphics style "operating loop" that shows how the AI
- * marketing workforce turns founder context into booked meetings — and keeps
+ * GTM workforce turns business context into booked meetings — and keeps
  * looping. A synced legend (left) + an orbital animation (right) advance
  * together in a continuous cycle.
  */
@@ -31,8 +31,8 @@ type Stage = {
 const STAGES: Stage[] = [
   {
     fn: "Context & Strategy",
-    agent: "Ninna · CMO",
-    caption: "Learns your founder voice, product, and ICP — then sets the campaign strategy.",
+    agent: "Ninna · GTM Strategist",
+    caption: "Learns your business, product, and ICP — then sets the go-to-market strategy.",
     Icon: Sparkles,
     text: "text-violet-600",
     grad: "from-violet-500 to-fuchsia-500",
@@ -45,24 +45,9 @@ const STAGES: Stage[] = [
     y: 9,
   },
   {
-    fn: "Content & Campaigns",
-    agent: "Robert · Content",
-    caption: "Turns that context into founder-led posts, campaigns, and messaging.",
-    Icon: PenSquare,
-    text: "text-blue-600",
-    grad: "from-blue-600 to-sky-500",
-    soft: "bg-blue-50",
-    border: "border-blue-200",
-    ring: "ring-blue-300",
-    stroke: "#2563eb",
-    glow: "rgba(37,99,235,0.5)",
-    x: 91,
-    y: 50,
-  },
-  {
     fn: "Signals & Accounts",
-    agent: "Eva · Analyst",
-    caption: "Tracks hiring, launch, and growth signals to surface high-intent accounts.",
+    agent: "Eva · Market Intelligence",
+    caption: "Tracks hiring, funding, launch, and growth signals to surface high-intent accounts.",
     Icon: Radar,
     text: "text-emerald-600",
     grad: "from-emerald-500 to-teal-500",
@@ -71,12 +56,12 @@ const STAGES: Stage[] = [
     ring: "ring-emerald-300",
     stroke: "#10b981",
     glow: "rgba(16,185,129,0.5)",
-    x: 50,
-    y: 91,
+    x: 85,
+    y: 71,
   },
   {
     fn: "Warm Outbound",
-    agent: "Max · Outreach",
+    agent: "Max · Sales Execution",
     caption: "Enriches contacts, drafts contextual outreach, and books qualified meetings.",
     Icon: Send,
     text: "text-amber-600",
@@ -86,8 +71,8 @@ const STAGES: Stage[] = [
     ring: "ring-amber-300",
     stroke: "#f59e0b",
     glow: "rgba(245,158,11,0.5)",
-    x: 9,
-    y: 50,
+    x: 15,
+    y: 71,
   },
 ];
 
@@ -256,7 +241,7 @@ export default function WeezWorkflow() {
             transition={{ delay: 0.05 }}
             className="mx-auto mt-5 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-slate-900 md:text-5xl"
           >
-            One continuous engine — not four disconnected tools.
+            One continuous engine — not three disconnected tools.
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -265,8 +250,8 @@ export default function WeezWorkflow() {
             transition={{ delay: 0.1 }}
             className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg"
           >
-            Context flows into content, content surfaces signals, signals become
-            warm conversations, and conversations turn into meetings — then the
+            Context surfaces live buying signals, signals become warm
+            conversations, and conversations turn into booked meetings — then the
             loop learns and repeats.
           </motion.p>
         </div>

@@ -339,7 +339,7 @@ export default function NinaGoalIntake({
                         <NinaFace className="w-full h-full text-lg" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-zinc-900">Hi, I'm {NINA_NAME} — your marketing lead.</p>
+                        <p className="text-sm font-semibold text-zinc-900">Hi, I'm {NINA_NAME} — your GTM strategist.</p>
                         <p className="text-sm text-zinc-500">What do you want to focus on first? Pick a goal and I'll take it from there.</p>
                     </div>
                 </div>
@@ -696,13 +696,13 @@ export default function NinaGoalIntake({
                         className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base gap-2 shadow-lg shadow-indigo-500/20"
                     >
                         {proceeding ? (
-                            <><Loader2 className="w-5 h-5 animate-spin" /> Building your content plan…</>
+                            <><Loader2 className="w-5 h-5 animate-spin" /> Building your GTM plan…</>
                         ) : (
-                            <>Proceed — build my content plan <ArrowRight className="w-5 h-5" /></>
+                            <>Proceed — build my GTM plan <ArrowRight className="w-5 h-5" /></>
                         )}
                     </Button>
                     <p className="text-[11px] text-zinc-400 text-center">
-                        I'll generate this week's LinkedIn content plan from this strategy. New plan every week.
+                        I'll turn this strategy into EVA's account targeting and MAX's outreach plan. Continuously optimized.
                     </p>
                 </div>
             )}

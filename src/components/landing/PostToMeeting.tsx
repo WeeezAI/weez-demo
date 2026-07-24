@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  PenSquare, Radar, Database, Send, CalendarCheck, Linkedin, Heart,
+  Signal, Radar, Database, Send, CalendarCheck, Linkedin, Heart,
   MessageCircle, Repeat2, Check, Sparkles, TrendingUp, Flame,
 } from "lucide-react";
 
@@ -27,17 +27,17 @@ type Step = {
 
 const STEPS: Step[] = [
   {
-    label: "Post",
-    agent: "Robert",
-    title: "A founder-led post goes live",
-    desc: "Robert publishes founder content built from your context — engineered to attract the right buyers, not vanity likes.",
-    Icon: PenSquare,
-    text: "text-blue-600",
-    grad: "from-blue-600 to-sky-500",
-    soft: "bg-blue-50",
+    label: "Signal",
+    agent: "Eva",
+    title: "A live buying signal appears",
+    desc: "A prospect engages with founder-led content — Weez captures it as a live buying signal from a real, in-market buyer.",
+    Icon: Signal,
+    text: "text-emerald-600",
+    grad: "from-emerald-500 to-teal-500",
+    soft: "bg-emerald-50",
   },
   {
-    label: "Signals",
+    label: "Qualify",
     agent: "Eva",
     title: "Intent signals + ICP filtering",
     desc: "Eva reads who engaged, cross-checks live hiring and growth signals, and keeps only high-fit, high-intent accounts.",

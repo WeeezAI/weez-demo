@@ -25,7 +25,6 @@ import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
 import SalesWorkspace from "./pages/SalesWorkspace";
 import GrowthStrategist from "./pages/GrowthStrategist";
-import Robert from "./pages/Robert";
 import Max from "./pages/Max";
 import Eva from "./pages/Eva";
 import Ninna from "./pages/Ninna";
@@ -152,11 +151,10 @@ const AppContent = () => {
               <Route path="/sales-intelligence/:spaceId" element={<SalesIntelligence />} />
               <Route path="/sales-workspace/:spaceId" element={<SalesWorkspace />} />
               <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
-              {/* Ninna — the AI CMO Command Center. Default homepage of every
-                  workspace; the single interface that orchestrates Robert, Eva
-                  and Max and reports up to the founder. */}
+              {/* Ninna — the AI GTM Strategist Command Center. Default homepage
+                  of every workspace; the single interface that orchestrates EVA
+                  and MAX and reports up to the founder. */}
               <Route path="/ninna/:spaceId" element={<Ninna />} />
-              <Route path="/robert/:spaceId" element={<Robert />} />
               <Route path="/eva/:spaceId" element={<Eva />} />
               <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
