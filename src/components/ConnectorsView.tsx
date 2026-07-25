@@ -52,16 +52,6 @@ interface ConnectorMeta {
 
 const CONNECTORS: ConnectorMeta[] = [
     {
-        id: "linkedin",
-        name: "LinkedIn",
-        tagline: "B2B publishing & signals",
-        description:
-            "Publish directly to your LinkedIn profile or page and let Weez read your professional voice for sharper outbound.",
-        Logo: LinkedInLogo,
-        accent: "text-[#0A66C2]",
-        glow: "shadow-[0_0_0_4px_rgba(10,102,194,0.12)]",
-    },
-    {
         id: "gmail",
         name: "Gmail",
         tagline: "Outbound email",

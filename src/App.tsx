@@ -16,7 +16,6 @@ import Auth from "./pages/Auth";
 import Spaces from "./pages/Spaces";
 import Chat from "./pages/Chat";
 import Gallery from "./pages/Gallery";
-import Analytics from "./pages/Analytics";
 import OneClickPost from "./pages/OneClickPost";
 import AutonomousMarketing from "./pages/AutonomousMarketing";
 import Connections from "./pages/Connections";
@@ -30,6 +29,7 @@ import Eva from "./pages/Eva";
 import Ninna from "./pages/Ninna";
 import MarketDiscovery from "./pages/MarketDiscovery";
 import RevenueIntelligence from "./pages/RevenueIntelligence";
+import ProspectIntelligence from "./pages/ProspectIntelligence";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -137,7 +137,6 @@ const AppContent = () => {
               {/* Chat interface per space */}
               <Route path="/chat/:spaceId" element={<Chat />} />
               <Route path="/gallery/:spaceId" element={<Gallery />} />
-              <Route path="/analytics/:spaceId" element={<Analytics />} />
               <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
               {/* Standalone Connections page (decoupled from Autonomous Marketing) */}
@@ -156,6 +155,8 @@ const AppContent = () => {
                   and MAX and reports up to the founder. */}
               <Route path="/ninna/:spaceId" element={<Ninna />} />
               <Route path="/eva/:spaceId" element={<Eva />} />
+              {/* Prospect Intelligence — the AI reasoning layer between EVA and MAX. */}
+              <Route path="/prospect-intelligence/:spaceId" element={<ProspectIntelligence />} />
               <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />

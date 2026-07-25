@@ -46,7 +46,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import ConversationSidebar from "@/components/ConversationSidebar";
 import NinaGoalIntake from "@/components/NinaGoalIntake";
-import SageAssistant from "@/components/SageAssistant";
 import { weezAPI } from "@/services/weezAPI";
 import {
   ninnaAPI,
@@ -516,7 +515,8 @@ export default function Ninna() {
   const navigate = useNavigate();
   const { currentSpace, user, selectSpace, spaces } = useAuth();
 
-  const [campaignGate, setCampaignGate] = useState<"checking" | "intake" | "preparing" | "active">("checking");
+  const [campaignGate, setCampaignGate] = useState<"checking" | "error" | "intake" | "preparing" | "active">("checking");
+  const [statusRetryKey, setStatusRetryKey] = useState(0);
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -529,6 +529,7 @@ export default function Ninna() {
   const userInteractedRef = useRef(false);
   const loadTokenRef = useRef(0);
   const campaignCheckRef = useRef(0);
+  const pendingCampaignRef = useRef<{ id: string; target: string } | null>(null);
   const spaceName = currentSpace?.name || spaces.find((s) => s.id === spaceId)?.name || "your workspace";
   const firstName = (user?.name || "").trim().split(" ")[0] || "";
 
@@ -614,12 +615,12 @@ export default function Ninna() {
         return "planning" as const;
       }
       if (status.campaign_id === campaignId && status.status === "briefing") {
-        throw new Error("Nina couldn't finish the content plan. Please try again.");
+        return "briefing" as const;
       }
       await new Promise((resolve) => window.setTimeout(resolve, 4000));
     }
     if (campaignCheckRef.current !== checkToken) return "cancelled" as const;
-    throw new Error("The content plan is taking longer than expected. You can safely try again.");
+    throw new Error("The content plan is taking longer than expected. Retry will resume this same campaign.");
   };
 
   const handleProceedToPlanner = async (
@@ -631,13 +632,23 @@ export default function Ninna() {
     try {
       const goalPrompt = target.trim() || strategy?.goal?.requested || "Grow qualified pipeline on LinkedIn";
       toast.info("Nina is turning your strategy into a campaign plan…");
-      const campaign = await weezAPI.getCampaignBrief(spaceId, goalPrompt);
-      await weezAPI.generateCampaignPlanner(campaign.campaign_id, new Date().toISOString());
-      const outcome = await waitForPlanner(campaign.campaign_id, checkToken);
+
+      let campaignId = pendingCampaignRef.current?.target === goalPrompt
+        ? pendingCampaignRef.current.id
+        : null;
+      if (!campaignId) {
+        const campaign = await weezAPI.getCampaignBrief(spaceId, goalPrompt);
+        campaignId = campaign.campaign_id;
+        pendingCampaignRef.current = { id: campaignId, target: goalPrompt };
+      }
+
+      await weezAPI.generateCampaignPlanner(campaignId, new Date().toISOString());
+      const outcome = await waitForPlanner(campaignId, checkToken);
       if (outcome === "active") {
+        pendingCampaignRef.current = null;
         setCampaignGate("active");
         await loadBrief(false);
-      } else if (outcome === "planning") {
+      } else if (outcome === "planning" || outcome === "briefing") {
         navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
       }
     } catch (error: unknown) {
@@ -683,7 +694,7 @@ export default function Ninna() {
           if (outcome === "active") {
             setCampaignGate("active");
             await loadBrief(false);
-          } else if (outcome === "planning") {
+          } else if (outcome === "planning" || outcome === "briefing") {
             navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
           }
           return;
@@ -696,7 +707,7 @@ export default function Ninna() {
         console.error("[ninna] campaign status check failed", error);
         const message = error instanceof Error ? error.message : "Nina couldn't check the campaign status.";
         toast.error(message);
-        setCampaignGate("intake");
+        setCampaignGate("error");
         setLoading(false);
       }
     };
@@ -708,7 +719,7 @@ export default function Ninna() {
     // Campaign status intentionally owns the initial brief load. Loading the brief
     // before activation would eagerly start EVA and MAX.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId]);
+  }, [spaceId, statusRetryKey]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -752,6 +763,20 @@ export default function Ninna() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {campaignGate === "checking" ? (
           <BriefLoading spaceName={spaceName} />
+        ) : campaignGate === "error" ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center bg-gradient-to-b from-rose-50/40 to-white">
+            <NinnaAvatar className="w-16 h-16" />
+            <h1 className="mt-6 text-2xl font-black tracking-tight text-gray-900">Nina couldn't verify this campaign</h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+              I won't start another campaign until I can safely confirm the current one. Check your connection and try again.
+            </p>
+            <Button
+              onClick={() => setStatusRetryKey((key) => key + 1)}
+              className="mt-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry campaign check
+            </Button>
+          </div>
         ) : campaignGate === "intake" ? (
           <>
             <header className="shrink-0 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl px-6 lg:px-8 h-16 flex items-center gap-3">
@@ -1068,11 +1093,6 @@ export default function Ninna() {
         )}
       </div>
 
-      {/* Nina's weekly founder check-in (voice). Sits left of the chat dock on
-          large screens so it never covers the composer; bottom-right otherwise. */}
-      {campaignGate === "active" && spaceId && (
-        <SageAssistant spaceId={spaceId} fabClassName="bottom-6 right-6 lg:right-[420px] xl:right-[468px]" />
-      )}
     </div>
   );
 }

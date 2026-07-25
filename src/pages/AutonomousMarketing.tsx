@@ -78,7 +78,6 @@ import ConnectorsView from "@/components/ConnectorsView";
 import { usePosterWebSocket } from "@/hooks/usePosterWebSocket";
 import PosterEditorModal from "@/components/PosterEditorModal";
 import BusinessContext from "@/components/BusinessContext";
-import SageAssistant from "@/components/SageAssistant";
 import NinaGoalIntake from "@/components/NinaGoalIntake";
 import { StrategicHub } from "@/components/StrategicHub"; // This can be removed later if not used elsewhere, keeping for now to avoid breaking other things
 import { DexraflowCampaignChat } from "@/components/ui/DexraflowCampaignChat";
@@ -1243,9 +1242,12 @@ export default function AutonomousMarketing() {
     const [isBrandVoiceGenerating, setIsBrandVoiceGenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Founder Voice Onboarding state
-    const [voiceCompleted, setVoiceCompleted] = useState(false);
-    const [voiceSkipped, setVoiceSkipped] = useState(false);
+    // Business Context onboarding state. Completion is read from the same
+    // localStorage key BusinessContext persists to — no founder-voice call.
+    const [contextCompleted, setContextCompleted] = useState(() =>
+        Boolean(spaceId && localStorage.getItem(`weez_business_context_${spaceId}`))
+    );
+    const [contextSkipped, setContextSkipped] = useState(false);
     // Initial chat: goal picker (Nina) is primary; free-text prompt is opt-in.
     const [showFreeText, setShowFreeText] = useState(false);
 
@@ -1316,19 +1318,9 @@ export default function AutonomousMarketing() {
     }, [isSetupMode]);
 
     useEffect(() => {
-        const checkVoiceStatus = async () => {
-            if (!spaceId || !isSetupMode) return;
-            try {
-                const res = await weezAPI.getFounderVoiceStatus(spaceId);
-                if (res.completed) {
-                    setVoiceCompleted(true);
-                }
-            } catch (err) {
-                console.error("Failed to check voice onboarding status:", err);
-            }
-        };
-        checkVoiceStatus();
-    }, [spaceId, isSetupMode]);
+        if (!spaceId) return;
+        setContextCompleted(Boolean(localStorage.getItem(`weez_business_context_${spaceId}`)));
+    }, [spaceId]);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -1347,6 +1339,18 @@ export default function AutonomousMarketing() {
                     setCampaignId(status.campaign_id);
                     setWorkspaceMode(status.status === 'planning' ? "planning" : "briefing");
                     await fetchConversation(status.campaign_id);
+
+                    // The planner is persisted before the campaign transitions to
+                    // "planning". Hydrate it directly so a conversation-write race
+                    // can never open an empty approval screen.
+                    if (status.status === 'planning') {
+                        try {
+                            const details = await weezAPI.getCampaignPlannerDetails(status.campaign_id, spaceId);
+                            setPlannerData(details.planner || []);
+                        } catch (plannerError) {
+                            console.error("Failed to restore planner details", plannerError);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error("Status check failed", err);
@@ -1820,18 +1824,18 @@ export default function AutonomousMarketing() {
         return <VisionLoadingScreen />;
     }
 
-    if (isSetupMode && !voiceCompleted && !voiceSkipped) {
+    if (isSetupMode && !contextCompleted && !contextSkipped) {
         return (
             <BusinessContext
                 spaceId={spaceId!}
                 onComplete={() => {
-                    setVoiceCompleted(true);
+                    setContextCompleted(true);
                     toast.success("Business Context saved!", {
                         description: "Nina has your company, customers, sales motion and GTM goals — your strategy is next."
                     });
                 }}
                 onSkip={() => {
-                    setVoiceSkipped(true);
+                    setContextSkipped(true);
                     toast.info("Business Context skipped.", {
                         description: "You can proceed to space connectors directly."
                     });
@@ -2666,8 +2670,6 @@ export default function AutonomousMarketing() {
                 }}
             />
 
-            {/* Sage — floating founder check-in assistant (bottom-right) */}
-            {spaceId && <SageAssistant spaceId={spaceId} />}
         </div>
     );
 }

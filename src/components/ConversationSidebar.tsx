@@ -3,11 +3,9 @@ import {
   ArrowLeft,
   LayoutDashboard,
   Signal as SignalIcon,
-  Building2,
   Users,
   Send,
   CalendarCheck,
-  BarChart3,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,17 +56,9 @@ const ConversationSidebar = ({
       tint: "bg-emerald-500/10",
     },
     {
-      label: "Accounts",
-      role: "Qualified companies",
-      path: `/leads/${spaceId}`,
-      icon: Building2,
-      color: "text-sky-500",
-      tint: "bg-sky-500/10",
-    },
-    {
-      label: "Prospects",
-      role: "Decision makers",
-      path: `/sales-intelligence/${spaceId}`,
+      label: "Prospect Intelligence",
+      role: "ICP decision makers",
+      path: `/prospect-intelligence/${spaceId}`,
       icon: Users,
       color: "text-violet-500",
       tint: "bg-violet-500/10",
@@ -88,14 +78,6 @@ const ConversationSidebar = ({
       icon: CalendarCheck,
       color: "text-amber-500",
       tint: "bg-amber-500/10",
-    },
-    {
-      label: "Analytics",
-      role: "GTM performance",
-      path: `/analytics/${spaceId}`,
-      icon: BarChart3,
-      color: "text-blue-500",
-      tint: "bg-blue-500/10",
     },
     {
       label: "Settings",

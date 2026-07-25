@@ -410,7 +410,10 @@ export const weezAPI = {
    */
   getActiveCampaignStatus: async (brandId: string): Promise<any> => {
     const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/${brandId}/active-status`);
-    if (!response.ok) return { active: false };
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Campaign status unavailable" }));
+      throw new Error(error.detail || "Failed to check campaign status");
+    }
     return await response.json();
   },
 
@@ -702,59 +705,6 @@ export const weezAPI = {
     if (!response.ok) throw new Error("Failed to save poster HTML");
   },
 
-  // ── Founder Voice Onboarding API ──────────────────────────────────────────
-
-  /**
-   * Creates a WebRTC session for the GPT-4o voice interview
-   */
-  createRealtimeSession: async (brandId: string): Promise<{
-    token: string;
-    url: string;
-    ice_servers: any[];
-    session_id: string;
-    expires_at: number;
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/session?brand_id=${brandId}`, {
-      method: "POST"
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Failed to create voice session" }));
-      throw new Error(err.detail || "Failed to create voice session");
-    }
-    return await response.json();
-  },
-
-  /**
-   * Submits the voice interview transcript for analysis & synthesis
-   */
-  processFounderVoice: async (brandId: string, transcript: string): Promise<{
-    status: string;
-    founder_voice: any;
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brand_id: brandId, transcript }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Failed to process voice" }));
-      throw new Error(err.detail || "Failed to process voice");
-    }
-    return await response.json();
-  },
-
-  /**
-   * Gets the completion status and voice profile for a brand
-   */
-  getFounderVoiceStatus: async (brandId: string): Promise<{
-    completed: boolean;
-    founder_voice: any;
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/founder-voice/status?brand_id=${brandId}`);
-    if (!response.ok) throw new Error("Failed to get voice status");
-    return await response.json();
-  },
-
   // ── Nina — AI CMO goal picker + strategy API ──────────────────────────────
 
   /**
@@ -851,93 +801,6 @@ export const weezAPI = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Nina couldn't answer that" }));
       throw new Error(err.detail || "Nina couldn't answer that");
-    }
-    return await response.json();
-  },
-
-  // ── Sage — Founder Memory & Context Capture API ───────────────────────────
-
-  /**
-   * Creates a WebRTC session for a Sage voice check-in.
-   * Returns the ephemeral token plus the rotated question set + composite
-   * question_id to pass back to processSageSession.
-   */
-  createSageSession: async (brandId: string): Promise<{
-    token: string;
-    url: string;
-    ice_servers: any[];
-    session_id: string;
-    expires_at: number;
-    question_id: string;
-    questions: { id: string; category: string; text: string }[];
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/sage/session?brand_id=${brandId}`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Failed to create Sage session" }));
-      throw new Error(err.detail || "Failed to create Sage session");
-    }
-    return await response.json();
-  },
-
-  /**
-   * Submits a completed Sage check-in transcript for structured memory extraction.
-   */
-  processSageSession: async (
-    brandId: string,
-    transcript: string,
-    questionId?: string
-  ): Promise<{
-    status: string;
-    session: any;
-    next_checkin_date: string | null;
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/sage/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brand_id: brandId, transcript, question_id: questionId }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Failed to process Sage session" }));
-      throw new Error(err.detail || "Failed to process Sage session");
-    }
-    return await response.json();
-  },
-
-  /**
-   * Gets Sage's check-in state: whether a check-in is due, cadence, next date,
-   * and a personalized reminder message.
-   */
-  getSageStatus: async (brandId: string): Promise<{
-    due: boolean;
-    has_sessions: boolean;
-    session_count: number;
-    frequency: "weekly" | "biweekly";
-    next_checkin_date: string | null;
-    last_session_date: string | null;
-    reminder_message: string;
-  }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/sage/status?brand_id=${brandId}`);
-    if (!response.ok) throw new Error("Failed to get Sage status");
-    return await response.json();
-  },
-
-  /**
-   * Sets the founder's check-in cadence ('weekly' | 'biweekly').
-   */
-  setSageFrequency: async (
-    brandId: string,
-    frequency: "weekly" | "biweekly"
-  ): Promise<{ status: string; frequency: string; next_checkin_date: string | null }> => {
-    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/sage/frequency`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brand_id: brandId, frequency }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Failed to update frequency" }));
-      throw new Error(err.detail || "Failed to update frequency");
     }
     return await response.json();
   },
