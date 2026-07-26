@@ -1687,31 +1687,17 @@ export default function AutonomousMarketing() {
     // Called from Nina's strategy view: turn the reviewed strategy into a campaign
     // and immediately generate this week's content plan.
     const handleProceedToPlanner = async (target: string, strategy?: any) => {
+        // OUTBOUND product: Nina's strategy (Eva discovery + Max outreach) IS the
+        // plan. Proceeding hands off to the outbound workforce directly — we do
+        // NOT build a weekly LinkedIn content calendar (that inbound step only
+        // wastes computation for an outbound campaign).
         try {
-            const goalPrompt = (target && target.trim())
-                || strategy?.goal?.requested
-                || "Grow qualified pipeline on LinkedIn";
-
-            toast.info("Turning your strategy into this week's content plan…");
-
-            // Create the campaign from the goal (this also sets business type + platform readiness).
-            const res = await weezAPI.getCampaignBrief(
-                spaceId!,
-                goalPrompt,
-                campaignDuration,
-                campaignType,
-                marketingMode
-            );
-            const newCampaignId = res.campaign_id;
-            setCampaignId(newCampaignId);
-            setBriefingData(res.briefing);
-            setActiveStatus({ campaign_id: newCampaignId, status: "briefing", brand_id: spaceId });
-
-            // Kick straight into planner generation — Nina's strategy is the review step.
-            await handleGeneratePlanner(newCampaignId);
-            setActiveTab("planner");
+            toast.info("Handing off to your outbound workforce — Eva and Max take it from here.");
+            await weezAPI.activateOutboundWorkforce(spaceId!);
+            toast.success("Eva is discovering good-fit accounts and Max is preparing personalized outreach.");
+            navigate(`/prospect-intelligence/${spaceId}`);
         } catch (err: any) {
-            toast.error(err.message || "Couldn't start the content plan");
+            toast.error(err.message || "Couldn't start the outbound workforce");
         }
     };
 

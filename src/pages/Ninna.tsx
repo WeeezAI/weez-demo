@@ -624,36 +624,22 @@ export default function Ninna() {
   };
 
   const handleProceedToPlanner = async (
-    target: string,
-    strategy?: { goal?: { requested?: string } }
+    _target: string,
+    _strategy?: { goal?: { requested?: string } }
   ) => {
     if (!spaceId) return;
-    const checkToken = ++campaignCheckRef.current;
+    // OUTBOUND product: Nina's strategy (Eva discovery + Max outreach) IS the
+    // plan. Proceeding starts the outbound workforce directly — we no longer
+    // build a weekly LinkedIn content planner (that inbound step just wasted
+    // computation for an outbound campaign).
     try {
-      const goalPrompt = target.trim() || strategy?.goal?.requested || "Grow qualified pipeline on LinkedIn";
-      toast.info("Nina is turning your strategy into a campaign plan…");
-
-      let campaignId = pendingCampaignRef.current?.target === goalPrompt
-        ? pendingCampaignRef.current.id
-        : null;
-      if (!campaignId) {
-        const campaign = await weezAPI.getCampaignBrief(spaceId, goalPrompt);
-        campaignId = campaign.campaign_id;
-        pendingCampaignRef.current = { id: campaignId, target: goalPrompt };
-      }
-
-      await weezAPI.generateCampaignPlanner(campaignId, new Date().toISOString());
-      const outcome = await waitForPlanner(campaignId, checkToken);
-      if (outcome === "active") {
-        pendingCampaignRef.current = null;
-        setCampaignGate("active");
-        await loadBrief(false);
-      } else if (outcome === "planning" || outcome === "briefing") {
-        navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
-      }
+      toast.info("Nina is handing off to your outbound workforce…");
+      await weezAPI.activateOutboundWorkforce(spaceId);
+      toast.success("Eva is discovering good-fit accounts and Max is preparing personalized outreach.");
+      navigate(`/prospect-intelligence/${spaceId}`);
     } catch (error: unknown) {
-      console.error("[ninna] campaign setup failed", error);
-      const message = error instanceof Error ? error.message : "Nina couldn't build the campaign plan. Please try again.";
+      console.error("[ninna] outbound activation failed", error);
+      const message = error instanceof Error ? error.message : "Couldn't start the outbound workforce. Please try again.";
       toast.error(message);
     }
   };

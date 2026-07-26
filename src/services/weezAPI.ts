@@ -806,6 +806,28 @@ export const weezAPI = {
   },
 
   /**
+   * Proceed step for an OUTBOUND campaign: after the founder reviews Nina's
+   * strategy (Eva + Max), start the outbound workforce directly. This does NOT
+   * build a LinkedIn content calendar / weekly planner — Eva handles account
+   * discovery and Max handles personalized outreach.
+   */
+  activateOutboundWorkforce: async (brandId: string): Promise<{
+    status: string;
+    brand_id: string;
+    workforce_started: boolean;
+    workforce: Record<string, string>;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/autopilot/campaign/outbound/activate?brand_id=${brandId}`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed to activate outbound workforce" }));
+      throw new Error(err.detail || "Failed to activate outbound workforce");
+    }
+    return await response.json();
+  },
+
+  /**
    * Ask Nina a question about the strategy, the weekly planner, or the workflow.
    * Returns a short conversational answer grounded in the stored strategy +
    * the optional planner context passed from the UI.
