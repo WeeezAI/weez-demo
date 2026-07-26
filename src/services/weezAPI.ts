@@ -717,16 +717,15 @@ export const weezAPI = {
   },
 
   /**
-   * Connection gate: before a founder can pick a goal, both the website and
-   * LinkedIn must be connected. Returns readiness + a warm Nina message and the
-   * list of things still to connect. Goals are returned too so the UI can
-   * preview them behind the gate.
+   * Connection gate: before a founder can pick a goal, the website must be
+   * connected (LinkedIn is not required). Returns readiness + a warm Nina
+   * message and the list of things still to connect. Goals are returned too so
+   * the UI can preview them behind the gate.
    */
   getNinaReadiness: async (brandId: string): Promise<{
     ready: boolean;
     connections: {
       website_connected: boolean;
-      linkedin_connected: boolean;
       ready: boolean;
       missing: string[];
       nina_message: string;
@@ -740,9 +739,10 @@ export const weezAPI = {
   },
 
   /**
-   * After a goal card is clicked, returns the 2-3 smart questions Nina asks
-   * (only the dimensions we don't already know for this brand). If the brand
-   * isn't fully connected, returns status "needs_connection" + connections.
+   * After a goal card is clicked, returns the five campaign questions Nina asks
+   * to build the customer context (firmographic gate, ICP pattern, buying
+   * committee, trigger event → Eva, differentiator → Max). If the website
+   * isn't connected, returns status "needs_connection" + connections.
    */
   getNinaGoalIntake: async (brandId: string, goalId: string, answers?: Record<string, any>): Promise<{
     goal_id: string;

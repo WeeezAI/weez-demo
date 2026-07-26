@@ -13,11 +13,13 @@ import {
     ShieldAlert,
     Check,
     Globe,
-    Linkedin,
     Link2,
     RefreshCw,
     Lightbulb,
     Crosshair,
+    Radar,
+    Send,
+    ShieldCheck,
 } from "lucide-react";
 import { weezAPI } from "@/services/weezAPI";
 import { toast } from "sonner";
@@ -67,7 +69,6 @@ type Phase = "checking" | "connect" | "goals" | "questions" | "generating" | "st
 
 interface Connections {
     website_connected: boolean;
-    linkedin_connected: boolean;
     ready: boolean;
     missing: string[];
     nina_message: string;
@@ -93,7 +94,7 @@ export default function NinaGoalIntake({
     const [busy, setBusy] = useState(false);
     const [strategy, setStrategy] = useState<any>(null);
 
-    // Connection gate (website + LinkedIn must be connected before goals).
+    // Connection gate (website must be connected before goals).
     const [connections, setConnections] = useState<Connections | null>(null);
     const [websiteInput, setWebsiteInput] = useState("");
     const [connectingWebsite, setConnectingWebsite] = useState(false);
@@ -146,10 +147,6 @@ export default function NinaGoalIntake({
         } finally {
             setConnectingWebsite(false);
         }
-    };
-
-    const connectLinkedIn = () => {
-        window.location.href = weezAPI.getLinkedInAuthUrl(spaceId);
     };
 
     const recheck = async () => {
@@ -239,10 +236,9 @@ export default function NinaGoalIntake({
         );
     }
 
-    // ── Connection gate (website + LinkedIn) ────────────────────────────────────
+    // ── Connection gate (website only) ──────────────────────────────────────────
     if (phase === "connect") {
         const websiteMissing = connections?.missing?.includes("website");
-        const linkedinMissing = connections?.missing?.includes("linkedin");
         return (
             <div className="w-full max-w-xl mx-auto p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-start gap-3 mb-6">
@@ -251,7 +247,7 @@ export default function NinaGoalIntake({
                     </div>
                     <div className="bg-zinc-50 border border-zinc-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-zinc-800 font-medium leading-relaxed">
                         {connections?.nina_message ||
-                            "Before we pick a goal, let's connect your website and LinkedIn so I can build something grounded in your real brand and live numbers."}
+                            "Before we pick a goal, let's connect your website so I can build something grounded in your real brand, product, and ICP."}
                     </div>
                 </div>
 
@@ -291,30 +287,6 @@ export default function NinaGoalIntake({
                                 </Button>
                             </div>
                         )}
-                    </div>
-
-                    {/* LinkedIn */}
-                    <div className={`rounded-2xl border p-5 transition-all ${
-                        connections?.linkedin_connected ? "border-emerald-200 bg-emerald-50/40" : "border-zinc-200 bg-white"
-                    }`}>
-                        <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                connections?.linkedin_connected ? "bg-emerald-100 text-emerald-600" : "bg-[#0A66C2]/10 text-[#0A66C2]"
-                            }`}>
-                                <Linkedin className="w-4.5 h-4.5" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-zinc-900">LinkedIn</p>
-                                <p className="text-xs text-zinc-500">The channel we run on — and how I read what's landing.</p>
-                            </div>
-                            {connections?.linkedin_connected ? (
-                                <Check className="w-5 h-5 text-emerald-600" />
-                            ) : linkedinMissing ? (
-                                <Button onClick={connectLinkedIn} className="rounded-xl bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white font-bold px-4 gap-1.5">
-                                    <Linkedin className="w-4 h-4" /> Connect
-                                </Button>
-                            ) : null}
-                        </div>
                     </div>
                 </div>
 
@@ -457,7 +429,7 @@ export default function NinaGoalIntake({
                 <div className="inline-flex items-center gap-2 text-indigo-600 font-semibold">
                     <Loader2 className="w-4 h-4 animate-spin" /> {NINA_NAME} is building your strategy…
                 </div>
-                <p className="text-sm text-zinc-400 mt-2">Weighing your buying motion, pricing, and best-fit customers.</p>
+                <p className="text-sm text-zinc-400 mt-2">Mapping who Eva targets and the angle Max will reach them with.</p>
             </div>
         );
     }
@@ -465,17 +437,13 @@ export default function NinaGoalIntake({
     // ── Strategy ──────────────────────────────────────────────────────────────
     const s = strategy || {};
     const adj = s.adjusted_target || {};
-    const split = s.contribution_split || {};
-    const inbound = s.inbound || {};
-    const outbound = s.outbound || {};
-    const fmtPct = (p: any) => (Array.isArray(p) ? `${p[0]}–${p[1]}%` : p ? `${p}%` : "—");
+    const evaPlan = s.eva_plan || {};
+    const maxPlan = s.max_plan || {};
 
-    // ACV tier + LinkedIn grounding
+    // ACV tier grounding (outbound operating model)
     const tier: string | null = s.acv_tier || null;
     const tierStrat = s.acv_tier_strategy || {};
-    const contentMix = tierStrat.content_mix || {};
-    const targeting = outbound.targeting_approach || {};
-    const li = s.linkedin_metrics || {};
+    const targeting = maxPlan.targeting_approach || {};
     // Full class strings (Tailwind JIT can't see interpolated class names).
     const tierBadgeClass =
         tier === "high" ? "bg-violet-50 text-violet-700"
@@ -521,23 +489,7 @@ export default function NinaGoalIntake({
                 {adj.reasoning && <p className="text-xs text-zinc-500 mt-3 leading-relaxed">{adj.reasoning}</p>}
             </div>
 
-            {/* Inbound / outbound split */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-                <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Inbound vs outbound</span>
-                <div className="flex gap-3 mt-3">
-                    <div className="flex-1 rounded-xl bg-cyan-50 p-4">
-                        <div className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Inbound {inbound.should_lead ? "· lead" : ""}</div>
-                        <div className="text-2xl font-black text-cyan-900">{fmtPct(split.inbound_pct)}</div>
-                    </div>
-                    <div className="flex-1 rounded-xl bg-indigo-50 p-4">
-                        <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Outbound {outbound.should_lead ? "· lead" : ""}</div>
-                        <div className="text-2xl font-black text-indigo-900">{fmtPct(split.outbound_pct)}</div>
-                    </div>
-                </div>
-                {split.why && <p className="text-xs text-zinc-500 mt-3 leading-relaxed">{split.why}</p>}
-            </div>
-
-            {/* ACV tier + content mix */}
+            {/* ACV playbook (outbound operating model) */}
             {tier && (
                 <div className="rounded-2xl border border-zinc-200 bg-white p-5">
                     <div className="flex items-center justify-between mb-3">
@@ -550,117 +502,135 @@ export default function NinaGoalIntake({
                     <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
                         {tierStrat.buyer && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Buyer</span>{tierStrat.buyer}</div>}
                         {tierStrat.sales_cycle && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Sales cycle</span>{tierStrat.sales_cycle}</div>}
-                        {tierStrat.founder_job && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Founder posts</span>{tierStrat.founder_job}</div>}
-                        {tierStrat.org_job && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Org posts</span>{tierStrat.org_job}</div>}
+                        {tierStrat.primary_metric && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Primary metric</span>{tierStrat.primary_metric}</div>}
+                        {targeting.personalization_depth && <div className="rounded-xl bg-zinc-50 px-3 py-2"><span className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] block">Personalization</span>{targeting.personalization_depth}</div>}
                     </div>
-                    {/* Content mix Growth : Leads : Trust */}
-                    {(contentMix.growth != null) && (
-                        <div className="mt-4">
-                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                                <span>Content mix</span><span>Growth · Leads · Trust</span>
-                            </div>
-                            <div className="flex h-3 rounded-full overflow-hidden">
-                                <div className="bg-sky-400" style={{ width: `${(contentMix.growth || 0) * 100}%` }} title={`Growth ${Math.round((contentMix.growth || 0) * 100)}%`} />
-                                <div className="bg-indigo-500" style={{ width: `${(contentMix.leads || 0) * 100}%` }} title={`Leads ${Math.round((contentMix.leads || 0) * 100)}%`} />
-                                <div className="bg-violet-600" style={{ width: `${(contentMix.trust || 0) * 100}%` }} title={`Trust ${Math.round((contentMix.trust || 0) * 100)}%`} />
-                            </div>
-                            <div className="flex justify-between text-[10px] font-bold text-zinc-500 mt-1">
-                                <span>{Math.round((contentMix.growth || 0) * 100)}% growth</span>
-                                <span>{Math.round((contentMix.leads || 0) * 100)}% leads</span>
-                                <span>{Math.round((contentMix.trust || 0) * 100)}% trust</span>
-                            </div>
-                        </div>
-                    )}
-                    {tierStrat.posting_note && <p className="text-xs text-zinc-500 mt-3 leading-relaxed italic">{tierStrat.posting_note}</p>}
+                    {tierStrat.outbound_summary && <p className="text-xs text-zinc-500 mt-3 leading-relaxed italic">{tierStrat.outbound_summary}</p>}
                 </div>
             )}
 
-            {/* Inbound / outbound takeaways */}
-            {(Array.isArray(inbound.takeaways) && inbound.takeaways.length > 0) ||
-             (Array.isArray(outbound.takeaways) && outbound.takeaways.length > 0) ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.isArray(inbound.takeaways) && inbound.takeaways.length > 0 && (
-                        <div className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Lightbulb className="w-4 h-4 text-cyan-600" />
-                                <span className="text-[11px] font-black uppercase tracking-widest text-cyan-700">Inbound — takeaways</span>
+            {/* Eva — account discovery (which channels she monitors) */}
+            {(evaPlan.role || (Array.isArray(evaPlan.channels_monitored) && evaPlan.channels_monitored.length > 0) || evaPlan.monitoring_focus) && (
+                <div className="rounded-2xl border border-teal-200 bg-teal-50/40 p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Radar className="w-4 h-4 text-teal-600" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-teal-700">Eva — account discovery</span>
+                    </div>
+                    {evaPlan.role && <p className="text-xs text-teal-900 leading-relaxed">{evaPlan.role}</p>}
+                    {evaPlan.monitoring_focus && (
+                        <p className="text-xs text-teal-900 mt-2 leading-relaxed"><span className="font-bold">Watching for:</span> {evaPlan.monitoring_focus}</p>
+                    )}
+                    {Array.isArray(evaPlan.trigger_signals) && evaPlan.trigger_signals.length > 0 && (
+                        <div className="mt-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600/70">Trigger signals</span>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {evaPlan.trigger_signals.slice(0, 6).map((sig: string, i: number) => (
+                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-teal-700 border border-teal-100">{sig}</span>
+                                ))}
                             </div>
-                            <ul className="space-y-1.5">
-                                {inbound.takeaways.slice(0, 4).map((t: string, i: number) => (
-                                    <li key={i} className="text-xs text-cyan-900 leading-relaxed">• {t}</li>
+                        </div>
+                    )}
+                    {Array.isArray(evaPlan.channels_monitored) && evaPlan.channels_monitored.length > 0 && (
+                        <div className="mt-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600/70">Channels monitored</span>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {evaPlan.channels_monitored.slice(0, 8).map((ch: string, i: number) => (
+                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-teal-700 border border-teal-100">{ch}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {Array.isArray(evaPlan.priority_icp_slices) && evaPlan.priority_icp_slices.length > 0 && (
+                        <div className="mt-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600/70">Targets first</span>
+                            <ul className="space-y-1 mt-1">
+                                {evaPlan.priority_icp_slices.slice(0, 4).map((slice: string, i: number) => (
+                                    <li key={i} className="text-xs text-teal-900 leading-relaxed">• {slice}</li>
                                 ))}
                             </ul>
                         </div>
                     )}
-                    {Array.isArray(outbound.takeaways) && outbound.takeaways.length > 0 && (
-                        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Lightbulb className="w-4 h-4 text-indigo-600" />
-                                <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Outbound — takeaways</span>
-                            </div>
-                            <ul className="space-y-1.5">
-                                {outbound.takeaways.slice(0, 4).map((t: string, i: number) => (
-                                    <li key={i} className="text-xs text-indigo-900 leading-relaxed">• {t}</li>
-                                ))}
-                            </ul>
+                    {Array.isArray(evaPlan.takeaways) && evaPlan.takeaways.length > 0 && (
+                        <div className="mt-3 flex flex-col gap-1">
+                            {evaPlan.takeaways.slice(0, 4).map((t: string, i: number) => (
+                                <div key={i} className="flex items-start gap-1.5 text-xs text-teal-800">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0 text-teal-500" /> {t}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
-            ) : null}
+            )}
 
-            {/* Outbound targeting approach (how it reaches people, by ACV) */}
-            {(targeting.approach || targeting.how_it_targets) && (
-                <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            {/* Max — personalized outreach (the angle he'll use) */}
+            {(maxPlan.role || targeting.how_it_targets || (Array.isArray(maxPlan.personalized_angles) && maxPlan.personalized_angles.length > 0)) && (
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <Crosshair className="w-4 h-4 text-zinc-500" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Outbound targeting</span>
+                            <Send className="w-4 h-4 text-indigo-600" />
+                            <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Max — personalized outreach</span>
                         </div>
                         {targeting.approach && (
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-indigo-100">
                                 {approachLabel[targeting.approach] || targeting.approach}
                             </span>
                         )}
                     </div>
-                    {targeting.how_it_targets && <p className="text-xs text-zinc-600 leading-relaxed">{targeting.how_it_targets}</p>}
-                    {targeting.monitoring && (
-                        <p className="text-xs text-zinc-500 mt-2 leading-relaxed"><span className="font-bold text-zinc-700">Monitoring:</span> {targeting.monitoring}</p>
+                    {maxPlan.role && <p className="text-xs text-indigo-900 leading-relaxed">{maxPlan.role}</p>}
+                    {targeting.how_it_targets && (
+                        <p className="text-xs text-indigo-900 mt-2 leading-relaxed"><span className="font-bold">How he reaches them:</span> {targeting.how_it_targets}</p>
                     )}
-                    {Array.isArray(targeting.trigger_signals) && targeting.trigger_signals.length > 0 && (
+                    {Array.isArray(maxPlan.personalized_angles) && maxPlan.personalized_angles.length > 0 && (
                         <div className="mt-3">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Trigger signals</span>
-                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                {targeting.trigger_signals.slice(0, 6).map((sig: string, i: number) => (
-                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-zinc-50 text-zinc-600 border border-zinc-100">{sig}</span>
-                                ))}
+                            <div className="flex items-center gap-1.5">
+                                <Crosshair className="w-3.5 h-3.5 text-indigo-500" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600/70">Personalized angles</span>
                             </div>
+                            <ul className="space-y-1 mt-1.5">
+                                {maxPlan.personalized_angles.slice(0, 4).map((angle: string, i: number) => (
+                                    <li key={i} className="text-xs text-indigo-900 leading-relaxed">• {angle}</li>
+                                ))}
+                            </ul>
                         </div>
+                    )}
+                    {maxPlan.buying_committee_plan && (
+                        <p className="text-xs text-indigo-900 mt-3 leading-relaxed"><span className="font-bold">Buying committee:</span> {maxPlan.buying_committee_plan}</p>
                     )}
                     {Array.isArray(targeting.channels) && targeting.channels.length > 0 && (
                         <div className="mt-3">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Channels monitored</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600/70">Outreach channels</span>
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
                                 {targeting.channels.slice(0, 6).map((ch: string, i: number) => (
-                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{ch}</span>
+                                    <span key={i} className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-100">{ch}</span>
                                 ))}
                             </div>
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* Grounded in your live LinkedIn */}
-            {li.connected && (li.followers > 0 || li.avg_engagement_rate > 0) && (
-                <div className="rounded-2xl border border-[#0A66C2]/20 bg-[#0A66C2]/5 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-[#0A66C2]">Grounded in your LinkedIn</span>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-xs text-zinc-700">
-                        {li.followers > 0 && <span><b className="text-zinc-900">{li.followers.toLocaleString()}</b> followers</span>}
-                        {li.avg_engagement_rate > 0 && <span><b className="text-zinc-900">{li.avg_engagement_rate}%</b> avg engagement</span>}
-                        {li.audience?.decision_maker_pct > 0 && <span><b className="text-zinc-900">{li.audience.decision_maker_pct}%</b> decision-makers</span>}
-                    </div>
+                    {Array.isArray(maxPlan.messaging_guardrails) && maxPlan.messaging_guardrails.length > 0 && (
+                        <div className="mt-3 rounded-xl bg-white/70 border border-indigo-100 p-3">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                                <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600/70">Messaging guardrails</span>
+                            </div>
+                            <ul className="space-y-1">
+                                {maxPlan.messaging_guardrails.slice(0, 4).map((g: string, i: number) => (
+                                    <li key={i} className="text-xs text-indigo-900 leading-relaxed">• {g}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {maxPlan.expected_contribution && (
+                        <p className="text-xs text-indigo-800 mt-3"><span className="font-bold">Expected contribution:</span> {maxPlan.expected_contribution}</p>
+                    )}
+                    {Array.isArray(maxPlan.takeaways) && maxPlan.takeaways.length > 0 && (
+                        <div className="mt-3 flex flex-col gap-1">
+                            {maxPlan.takeaways.slice(0, 4).map((t: string, i: number) => (
+                                <div key={i} className="flex items-start gap-1.5 text-xs text-indigo-800">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0 text-indigo-500" /> {t}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
