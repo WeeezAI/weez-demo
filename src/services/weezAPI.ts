@@ -766,6 +766,24 @@ export const weezAPI = {
   },
 
   /**
+   * AI-generated, brand-voiced suggestions for each campaign question. Returns
+   * up to three ready-to-use suggestions per question field. Degrades to empty
+   * suggestions if the model is unavailable — the questions still work.
+   */
+  getNinaIntakeSuggestions: async (brandId: string, goalId: string, answers?: Record<string, any>): Promise<{
+    status: string;
+    suggestions: Record<string, string[]>;
+  }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/intake-suggestions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand_id: brandId, goal_id: goalId, answers }),
+    });
+    if (!response.ok) throw new Error("Failed to load suggestions");
+    return await response.json();
+  },
+
+  /**
    * Generates Nina's full go-to-market strategy for a chosen goal + answers.
    */
   generateNinaStrategy: async (brandId: string, target: string, answers?: Record<string, any>): Promise<{

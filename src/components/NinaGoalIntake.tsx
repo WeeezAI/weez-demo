@@ -94,6 +94,11 @@ export default function NinaGoalIntake({
     const [busy, setBusy] = useState(false);
     const [strategy, setStrategy] = useState<any>(null);
 
+    // AI, brand-voiced suggestion bubbles per question (optional — the free-text
+    // input always stays; founders can tap a suggestion or type their own).
+    const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
     // Connection gate (website must be connected before goals).
     const [connections, setConnections] = useState<Connections | null>(null);
     const [websiteInput, setWebsiteInput] = useState("");
@@ -155,6 +160,19 @@ export default function NinaGoalIntake({
         setRechecking(false);
     };
 
+    const fetchSuggestions = async (goalId: string) => {
+        setSuggestions({});
+        setLoadingSuggestions(true);
+        try {
+            const res = await weezAPI.getNinaIntakeSuggestions(spaceId, goalId);
+            setSuggestions(res.suggestions || {});
+        } catch {
+            // Suggestions are a bonus — never block the questions on them.
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    };
+
     const pickGoal = async (goal: Goal) => {
         setSelectedGoal(goal);
         setBusy(true);
@@ -170,10 +188,13 @@ export default function NinaGoalIntake({
             setNinaMessage(res.nina_message || "");
             setQuestions(res.questions || []);
             setAnswers({});
+            setSuggestions({});
             if (res.ready || (res.questions || []).length === 0) {
                 await buildStrategy(goal, {});
             } else {
                 setPhase("questions");
+                // Fire-and-forget: show questions instantly, let bubbles pop in.
+                void fetchSuggestions(goal.id);
             }
         } catch (e: any) {
             toast.error(e.message || "Couldn't start that goal");
@@ -219,6 +240,7 @@ export default function NinaGoalIntake({
         setSelectedGoal(null);
         setQuestions([]);
         setAnswers({});
+        setSuggestions({});
         setStrategy(null);
     };
 
@@ -360,7 +382,7 @@ export default function NinaGoalIntake({
                     <ArrowLeft className="w-3.5 h-3.5" /> Pick a different goal
                 </button>
 
-                <div className="flex items-start gap-3 mb-6">
+                <div className="flex items-start gap-3 mb-2">
                     <div className="w-11 h-11 rounded-2xl overflow-hidden ring-2 ring-indigo-200 shrink-0">
                         <NinaFace className="w-full h-full" />
                     </div>
@@ -368,9 +390,14 @@ export default function NinaGoalIntake({
                         {ninaMessage || `Quick questions so I can tailor "${selectedGoal?.label}".`}
                     </div>
                 </div>
+                <p className="text-[11px] text-zinc-400 mb-6 ml-14 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-indigo-400" /> Tap a suggestion to use it, or type your own.
+                </p>
 
                 <div className="space-y-5">
-                    {questions.map((q) => (
+                    {questions.map((q) => {
+                        const qsug = suggestions[q.field] || [];
+                        return (
                         <div key={q.field} className="space-y-2">
                             <label className="text-sm font-semibold text-zinc-800">{q.question}</label>
                             {q.type === "choice" && q.options ? (
@@ -404,8 +431,39 @@ export default function NinaGoalIntake({
                                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all"
                                 />
                             )}
+
+                            {/* AI, brand-voiced suggestion bubbles (input stays above) */}
+                            {loadingSuggestions && qsug.length === 0 ? (
+                                <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 pt-0.5">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Nina's drafting a few ideas…
+                                </div>
+                            ) : qsug.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                    {qsug.map((sug, i) => {
+                                        const active = (answers[q.field] || "").trim() === sug.trim();
+                                        return (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => setAnswers((a) => ({ ...a, [q.field]: sug }))}
+                                                className={`text-left text-xs rounded-full border px-3 py-1.5 transition-all ${
+                                                    active
+                                                        ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                                                        : "border-zinc-200 bg-white text-zinc-600 hover:border-indigo-300 hover:text-indigo-700"
+                                                }`}
+                                            >
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    <Sparkles className={`w-3 h-3 ${active ? "text-indigo-500" : "text-indigo-400"}`} />
+                                                    {sug}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <Button
