@@ -23,11 +23,11 @@ const INTEGRATIONS: Integration[] = [
 ];
 
 const Chip = ({ name, Logo }: Integration) => (
-  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 backdrop-blur-sm">
-    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/90">
+  <div className="flex items-center gap-3 rounded-2xl border border-indigo-100 bg-white/70 px-5 py-3 backdrop-blur-sm transition hover:border-violet-200 hover:shadow-[0_14px_36px_-22px_rgba(99,102,241,0.7)]">
+    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white ring-1 ring-indigo-100">
       <Logo className="h-5 w-5" />
     </span>
-    <span className="whitespace-nowrap text-sm font-semibold tracking-tight text-slate-200">
+    <span className="whitespace-nowrap text-sm font-semibold tracking-tight text-indigo-950/80">
       {name}
     </span>
   </div>

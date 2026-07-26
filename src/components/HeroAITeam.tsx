@@ -35,9 +35,9 @@ const team: Member[] = [
     tags: "Signals. Research. Intent.",
     img: eva,
     Icon: BarChart3,
-    roleClass: "bg-emerald-600/90 text-white",
-    nameClass: "text-emerald-300",
-    accent: "text-emerald-300",
+    roleClass: "bg-cyan-600/90 text-white",
+    nameClass: "text-cyan-300",
+    accent: "text-cyan-300",
   },
   {
     name: "Max",
@@ -56,7 +56,7 @@ export default function HeroAITeam() {
   return (
     <div className="mt-14 relative">
       {/* soft glow */}
-      <div className="absolute -inset-6 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl pointer-events-none" />
+      <div className="absolute -inset-6 bg-gradient-to-b from-indigo-500/10 via-transparent to-transparent blur-2xl pointer-events-none" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 relative">
         {team.map((m, i) => (
@@ -96,7 +96,7 @@ export default function HeroAITeam() {
                   duration: 1.4,
                   ease: "easeInOut",
                 }}
-                className="absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-blue-400/40 to-transparent pointer-events-none"
+                className="absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-indigo-400/40 to-transparent pointer-events-none"
               />
 
               {/* Live badge */}
@@ -107,8 +107,8 @@ export default function HeroAITeam() {
                 className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/45 backdrop-blur-sm text-[10px] font-medium text-white"
               >
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-400" />
                 </span>
                 AI Agent · Online
               </motion.div>
@@ -158,7 +158,7 @@ export default function HeroAITeam() {
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
         transition={{ delay: 1.6, duration: 1, ease: "easeOut" }}
-        className="hidden md:block mt-8 h-px origin-left bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"
+        className="hidden md:block mt-8 h-px origin-left bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"
       />
     </div>
   );

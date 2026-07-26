@@ -49,11 +49,11 @@ const STAGES: Stage[] = [
     agent: "Eva · Market Intelligence",
     caption: "Tracks hiring, funding, launch, and growth signals to surface high-intent accounts.",
     Icon: Radar,
-    text: "text-emerald-600",
-    grad: "from-emerald-500 to-teal-500",
-    soft: "bg-emerald-50",
-    border: "border-emerald-200",
-    ring: "ring-emerald-300",
+    text: "text-cyan-600",
+    grad: "from-cyan-500 to-teal-500",
+    soft: "bg-cyan-50",
+    border: "border-cyan-200",
+    ring: "ring-cyan-300",
     stroke: "#10b981",
     glow: "rgba(16,185,129,0.5)",
     x: 85,
@@ -135,7 +135,7 @@ function Orbit({ active, booked }: { active: number; booked: number }) {
             animate={{ rotate: [offset, offset + 360] }}
             transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
           >
-            <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.8)]" />
+            <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(37,99,235,0.8)]" />
           </motion.div>
         ))}
 
@@ -154,7 +154,7 @@ function Orbit({ active, booked }: { active: number; booked: number }) {
               className={`relative flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors duration-500 ${
                 isActive
                   ? `bg-gradient-to-br ${s.grad} border-transparent text-white shadow-lg`
-                  : "border-slate-200 bg-white text-slate-400 shadow-sm"
+                  : "border-indigo-100 bg-white text-indigo-950/45 shadow-sm"
               }`}
             >
               <s.Icon className="h-6 w-6" />
@@ -172,7 +172,7 @@ function Orbit({ active, booked }: { active: number; booked: number }) {
       })}
 
       {/* center core */}
-      <div className="absolute inset-[28%] flex items-center justify-center rounded-full border border-slate-900/10 bg-white/85 shadow-[0_20px_60px_-30px_rgba(30,64,175,0.5)] backdrop-blur-xl">
+      <div className="absolute inset-[28%] flex items-center justify-center rounded-full border border-indigo-100 bg-white/85 shadow-[0_20px_60px_-30px_rgba(30,64,175,0.5)] backdrop-blur-xl">
         <div className="px-3 text-center">
           <AnimatePresence mode="wait">
             <motion.div
@@ -182,20 +182,20 @@ function Orbit({ active, booked }: { active: number; booked: number }) {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-indigo-950/45">
                 Now running
               </div>
               <div className={`mt-1 flex items-center justify-center gap-1.5 ${stage.text}`}>
                 <stage.Icon className="h-3.5 w-3.5" />
-                <span className="text-[13px] font-semibold leading-tight text-slate-900">{stage.fn}</span>
+                <span className="text-[13px] font-semibold leading-tight text-indigo-950">{stage.fn}</span>
               </div>
             </motion.div>
           </AnimatePresence>
           <div className="mx-auto mt-3 h-px w-10 bg-slate-200" />
-          <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-2 text-2xl font-bold tracking-tight text-indigo-950">
             {booked.toLocaleString("en-US")}
           </div>
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-indigo-950/45">
             meetings booked
           </div>
         </div>
@@ -229,9 +229,9 @@ export default function WeezWorkflow() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur"
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/70 px-3 py-1 text-xs font-medium text-indigo-950/75 backdrop-blur"
           >
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
             The Weez Workflow
           </motion.div>
           <motion.h2
@@ -239,7 +239,7 @@ export default function WeezWorkflow() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.05 }}
-            className="mx-auto mt-5 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-slate-900 md:text-5xl"
+            className="mx-auto mt-5 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-indigo-950 md:text-5xl"
           >
             One continuous engine — not three disconnected tools.
           </motion.h2>
@@ -248,7 +248,7 @@ export default function WeezWorkflow() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg"
+            className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-indigo-950/65 md:text-lg"
           >
             Context surfaces live buying signals, signals become warm
             conversations, and conversations turn into booked meetings — then the
@@ -269,30 +269,30 @@ export default function WeezWorkflow() {
                   className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all duration-500 ${
                     isActive
                       ? `${s.soft} ${s.border} scale-[1.01] shadow-sm`
-                      : "border-slate-900/[0.06] bg-white/70 hover:border-slate-900/10"
+                      : "border-slate-900/[0.06] bg-white/70 hover:border-indigo-100"
                   }`}
                 >
                   <div
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-500 ${
                       isActive
                         ? `bg-gradient-to-br ${s.grad} text-white shadow-md`
-                        : "bg-slate-100 text-slate-400"
+                        : "bg-slate-100 text-indigo-950/45"
                     }`}
                   >
                     <s.Icon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-semibold text-slate-900">{s.fn}</span>
+                      <span className="text-[15px] font-semibold text-indigo-950">{s.fn}</span>
                       <span
                         className={`text-[10px] font-medium uppercase tracking-wide ${
-                          isActive ? s.text : "text-slate-400"
+                          isActive ? s.text : "text-indigo-950/45"
                         }`}
                       >
                         {s.agent}
                       </span>
                     </div>
-                    <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{s.caption}</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-indigo-950/65">{s.caption}</p>
                   </div>
                   <ArrowRight
                     className={`mt-1 h-4 w-4 shrink-0 transition-all duration-500 ${
@@ -303,8 +303,8 @@ export default function WeezWorkflow() {
               );
             })}
 
-            <div className="flex items-center gap-2 pl-1 pt-2 text-xs text-slate-500">
-              <RefreshCw className={`h-3.5 w-3.5 text-blue-500 ${reduce ? "" : "animate-spin"}`} style={{ animationDuration: "6s" }} />
+            <div className="flex items-center gap-2 pl-1 pt-2 text-xs text-indigo-950/55">
+              <RefreshCw className={`h-3.5 w-3.5 text-indigo-500 ${reduce ? "" : "animate-spin"}`} style={{ animationDuration: "6s" }} />
               Continuously learns and improves with every cycle.
             </div>
           </div>

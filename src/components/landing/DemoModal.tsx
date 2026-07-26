@@ -81,16 +81,16 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl border-slate-200 p-0 overflow-hidden">
+      <DialogContent className="max-w-md rounded-3xl border-indigo-100 p-0 overflow-hidden">
         {submitted ? (
           <div className="flex flex-col items-center px-8 py-12 text-center">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50">
-              <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-50">
+              <CheckCircle2 className="h-8 w-8 text-cyan-500" />
             </div>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-900">
+            <h3 className="text-2xl font-semibold tracking-tight text-indigo-950">
               Request received
             </h3>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-500">
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-indigo-950/55">
               Thanks for your interest in Weez. Our team will contact you soon to schedule your demo.
             </p>
             <Button
@@ -103,10 +103,10 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
         ) : (
           <>
             <DialogHeader className="px-8 pt-8 text-left">
-              <DialogTitle className="text-2xl font-semibold tracking-tight text-slate-900">
+              <DialogTitle className="text-2xl font-semibold tracking-tight text-indigo-950">
                 Book a demo
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-500">
+              <DialogDescription className="text-sm text-indigo-950/55">
                 Tell us a bit about you and our team will reach out to set up your demo.
               </DialogDescription>
             </DialogHeader>
@@ -114,7 +114,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
             <form onSubmit={handleSubmit} className="space-y-4 px-8 pb-8 pt-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="demo-name" className="text-xs font-semibold text-slate-700">
+                  <Label htmlFor="demo-name" className="text-xs font-semibold text-indigo-950/75">
                     Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -127,7 +127,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="demo-position" className="text-xs font-semibold text-slate-700">
+                  <Label htmlFor="demo-position" className="text-xs font-semibold text-indigo-950/75">
                     Position
                   </Label>
                   <Input
@@ -142,7 +142,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="demo-company" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="demo-company" className="text-xs font-semibold text-indigo-950/75">
                   Company <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -156,7 +156,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="demo-email" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="demo-email" className="text-xs font-semibold text-indigo-950/75">
                   Business email <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -171,7 +171,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="demo-phone" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="demo-phone" className="text-xs font-semibold text-indigo-950/75">
                   Phone number
                 </Label>
                 <Input
@@ -188,7 +188,7 @@ const DemoModal = ({ open, onOpenChange }: DemoModalProps) => {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-70"
+                className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-400 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-70"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
