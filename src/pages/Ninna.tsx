@@ -669,23 +669,10 @@ export default function Ninna() {
           return;
         }
 
-        if (status.status === "briefing" || status.status === "planning") {
-          navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
-          return;
-        }
-
-        if (status.status === "generating" && status.campaign_id) {
-          setCampaignGate("preparing");
-          const outcome = await waitForPlanner(status.campaign_id, checkToken);
-          if (outcome === "active") {
-            setCampaignGate("active");
-            await loadBrief(false);
-          } else if (outcome === "planning" || outcome === "briefing") {
-            navigate(`/autonomous-marketing/${spaceId}`, { replace: true });
-          }
-          return;
-        }
-
+        // The old inbound content-campaign states (briefing / planning /
+        // generating a weekly LinkedIn content calendar) are retired. Never route
+        // the founder into that deprecated content workspace — show the outbound
+        // goal picker so they build a GTM strategy that hands off to Eva + Max.
         setCampaignGate("intake");
         setLoading(false);
       } catch (error: unknown) {

@@ -1335,23 +1335,12 @@ export default function AutonomousMarketing() {
                     setCampaignId(status.campaign_id);
                     setWorkspaceMode("results");
                     await fetchConversation(status.campaign_id);
-                } else if (status.status === 'briefing' || status.status === 'planning') {
-                    setCampaignId(status.campaign_id);
-                    setWorkspaceMode(status.status === 'planning' ? "planning" : "briefing");
-                    await fetchConversation(status.campaign_id);
-
-                    // The planner is persisted before the campaign transitions to
-                    // "planning". Hydrate it directly so a conversation-write race
-                    // can never open an empty approval screen.
-                    if (status.status === 'planning') {
-                        try {
-                            const details = await weezAPI.getCampaignPlannerDetails(status.campaign_id, spaceId);
-                            setPlannerData(details.planner || []);
-                        } catch (plannerError) {
-                            console.error("Failed to restore planner details", plannerError);
-                        }
-                    }
                 }
+                // The inbound content-campaign states ("briefing" / "planning") open
+                // the retired "Weekly LinkedIn Strategy" content workspace + approval
+                // calendar. That flow is removed for the outbound product, so we
+                // intentionally ignore a leftover content campaign here and leave the
+                // page on the outbound goal picker (NinaGoalIntake) instead.
             } catch (err) {
                 console.error("Status check failed", err);
             } finally {
