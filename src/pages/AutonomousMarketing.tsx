@@ -1695,7 +1695,7 @@ export default function AutonomousMarketing() {
             toast.info("Handing off to your outbound workforce — Eva and Max take it from here.");
             await weezAPI.activateOutboundWorkforce(spaceId!);
             toast.success("Eva is discovering good-fit accounts and Max is preparing personalized outreach.");
-            navigate(`/prospect-intelligence/${spaceId}`);
+            navigate(`/eva/${spaceId}`);
         } catch (err: any) {
             toast.error(err.message || "Couldn't start the outbound workforce");
         }

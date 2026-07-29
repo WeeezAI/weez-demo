@@ -1076,29 +1076,33 @@ export default function ProspectIntelligence() {
   const reqRef = useRef(0);
 
   const load = useCallback(
-    async (force: boolean) => {
+    async (force: boolean, silent = false) => {
       const my = ++reqRef.current;
-      setError(null);
-      setStage("starting");
-      if (force) setRefreshing(true);
-      else setLoading(true);
+      if (!silent) {
+        setError(null);
+        setStage("starting");
+        if (force) setRefreshing(true);
+        else setLoading(true);
+      }
       try {
         const data = await evaAPI.getWorkspace(
           spaceId || "demo",
           force,
-          (s) => my === reqRef.current && setStage(s)
+          (s) => !silent && my === reqRef.current && setStage(s)
         );
         if (my !== reqRef.current) return;
         setWs(data);
-        if (force) toast.success("Prospect dossiers refreshed");
+        if (force && !silent) toast.success("Prospect dossiers refreshed");
       } catch (e) {
-        if (my !== reqRef.current) return;
+        // A silent (auto) refresh must never blank the page or nag — keep the
+        // current workspace and try again later.
+        if (my !== reqRef.current || silent) return;
         const message = e instanceof Error ? e.message : "Couldn't load your qualified accounts";
         setError(message);
         if (force) toast.error("Couldn't refresh prospects");
         else setWs(null);
       } finally {
-        if (my === reqRef.current) {
+        if (my === reqRef.current && !silent) {
           setStage(null);
           if (force) setRefreshing(false);
           else setLoading(false);
@@ -1113,6 +1117,24 @@ export default function ProspectIntelligence() {
   }, [load]);
 
   const activeLeads = useMemo(() => (ws ? ws.leads.filter((l) => l.status !== "rejected") : []), [ws]);
+
+  // Cold start: Eva publishes a fast-ready (often empty) workspace while it
+  // finishes discovery in the background. Silently re-fetch a few times so
+  // freshly-found accounts appear without the founder having to hit Refresh.
+  const autoRefreshRef = useRef(0);
+  useEffect(() => {
+    if (!ws || loading || refreshing) return;
+    if (activeLeads.length > 0) {
+      autoRefreshRef.current = 0; // discovery landed — stop auto-refreshing
+      return;
+    }
+    if (autoRefreshRef.current >= 5) return; // cap: ~5 tries (~2.5 min)
+    const t = setTimeout(() => {
+      autoRefreshRef.current += 1;
+      load(false, true); // silent re-read (no new scan, no loader/toast)
+    }, 30000);
+    return () => clearTimeout(t);
+  }, [ws, loading, refreshing, activeLeads.length, load]);
 
   // Which recommendations actually exist in this workspace — never show empty filters.
   const actionOptions = useMemo(() => {
@@ -1363,8 +1385,8 @@ export default function ProspectIntelligence() {
                 {activeLeads.length === 0 ? (
                   <EmptyPanel
                     icon={Target}
-                    title="No qualified accounts yet"
-                    subtitle="Eva hands accounts over once a channel signal clears your ICP bar. Refresh to check for new ones."
+                    title="Eva is discovering your accounts"
+                    subtitle="Eva is scanning channels for companies that match your ICP and hitting your trigger events. Good-fit accounts appear here automatically as she finds them — this can take a few minutes on a fresh campaign."
                   >
                     <Button
                       variant="outline"
@@ -1372,7 +1394,7 @@ export default function ProspectIntelligence() {
                       className="mt-1 h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
                       onClick={() => load(true)}
                     >
-                      <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                      <RefreshCw className="h-3.5 w-3.5" /> Refresh now
                     </Button>
                   </EmptyPanel>
                 ) : companies.length === 0 ? (

@@ -636,7 +636,7 @@ export default function Ninna() {
       toast.info("Nina is handing off to your outbound workforce…");
       await weezAPI.activateOutboundWorkforce(spaceId);
       toast.success("Eva is discovering good-fit accounts and Max is preparing personalized outreach.");
-      navigate(`/prospect-intelligence/${spaceId}`);
+      navigate(`/eva/${spaceId}`);
     } catch (error: unknown) {
       console.error("[ninna] outbound activation failed", error);
       const message = error instanceof Error ? error.message : "Couldn't start the outbound workforce. Please try again.";

@@ -185,6 +185,113 @@ function ScanProgress({ stage }: { stage: ScanStage | null }) {
   );
 }
 
+// ─── Live discovery (empty state) ───────────────────────────────────────────────
+// Shown while Eva has no qualified leads yet. Communicates that this is a LIVE,
+// event-driven discovery engine actively hunting the web for buying signals —
+// so the founder understands leads surface over time, not instantly.
+
+const DISCOVERY_WATCH: { Icon: typeof Radar; label: string }[] = [
+  { Icon: TrendingUp, label: "Funding rounds & financing" },
+  { Icon: Building2, label: "Key hires & leadership moves" },
+  { Icon: Sparkles, label: "Product launches" },
+  { Icon: Layers, label: "Tech-stack changes" },
+  { Icon: Activity, label: "Web & event research" },
+  { Icon: SignalIcon, label: "LinkedIn engagement intent" },
+];
+
+const DISCOVERY_STATUS: string[] = [
+  "Scanning funding announcements across the web…",
+  "Watching job boards for ICP-relevant hires…",
+  "Tracking product launches and momentum…",
+  "Detecting tech-stack and tooling changes…",
+  "Cross-referencing every signal against your ICP…",
+  "Qualifying good-fit accounts by ACV tier…",
+];
+
+function LiveDiscovery({ icp }: { icp?: EvaWorkspace["icp"] }) {
+  const [statusIdx, setStatusIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const s = setInterval(() => setStatusIdx((i) => (i + 1) % DISCOVERY_STATUS.length), 2200);
+    const e = setInterval(() => setElapsed((x) => x + 1), 1000);
+    return () => { clearInterval(s); clearInterval(e); };
+  }, []);
+  return (
+    <div className="flex min-h-[64vh] flex-col items-center justify-center gap-7 py-12 text-center">
+      {/* Animated radar sweep */}
+      <div className="relative flex h-32 w-32 items-center justify-center">
+        {[0, 0.8, 1.6].map((delay, i) => (
+          <span
+            key={i}
+            className="absolute rounded-full bg-emerald-400/15"
+            style={{
+              inset: 0,
+              animation: "ping 2.4s cubic-bezier(0,0,0.2,1) infinite",
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+        <span className="absolute inset-6 rounded-full border border-emerald-200" />
+        <span className="absolute inset-10 rounded-full border border-emerald-100" />
+        <EvaAvatar className="relative h-16 w-16 ring-2 ring-emerald-100 shadow-sm" />
+      </div>
+
+      <div className="max-w-xl space-y-2.5">
+        <div className="flex justify-center">
+          <Chip tone="emerald" icon={Radar}>Live · event-driven discovery</Chip>
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-900">Eva is hunting for your next customers</h2>
+        <p className="text-[13px] leading-relaxed text-zinc-500">
+          This is a live, event-driven engine. Eva watches the web in real time for buying
+          signals — funding, hiring, launches, tech changes — and the moment a company matching{" "}
+          {icp?.industry ? <span className="font-semibold text-zinc-700">your {icp.industry} ICP</span> : "your ICP"}{" "}
+          triggers one, it lands here — qualified, enriched on demand, and ready for Max.
+        </p>
+      </div>
+
+      {/* Cycling status line */}
+      <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/70 px-4 py-2 text-[12px] font-medium text-emerald-700">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <motion.span
+          key={statusIdx}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+        >
+          {DISCOVERY_STATUS[statusIdx]}
+        </motion.span>
+      </div>
+
+      {/* Channels being watched — pulsing "live" dots */}
+      <div className="grid w-full max-w-xl grid-cols-2 gap-2.5 sm:grid-cols-3">
+        {DISCOVERY_WATCH.map((c, i) => {
+          const Icon = c.Icon;
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="flex items-center gap-2 rounded-xl border border-zinc-200/70 bg-white px-3 py-2.5 text-left"
+            >
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+              <span className="truncate text-[11.5px] font-medium text-zinc-600">{c.label}</span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <p className="text-[11px] text-zinc-400">
+        Good-fit accounts appear here automatically · scanning for {elapsed}s
+      </p>
+    </div>
+  );
+}
+
 // ─── Summary header ────────────────────────────────────────────────────────────
 
 function StatTile({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: string; tone?: string }) {
@@ -610,30 +717,53 @@ export default function Eva() {
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
   const reqRef = useRef(0);
 
-  const load = useCallback(async (force: boolean, isScan: boolean) => {
+  const load = useCallback(async (force: boolean, isScan: boolean, silent = false) => {
     const my = ++reqRef.current;
-    setError(null);
-    setStage("starting");
-    if (isScan) setScanning(true); else setLoading(true);
+    if (!silent) {
+      setError(null);
+      setStage("starting");
+      if (isScan) setScanning(true); else setLoading(true);
+    }
     try {
       const data = isScan
-        ? await evaAPI.scan(spaceId || "demo", (s) => my === reqRef.current && setStage(s))
-        : await evaAPI.getWorkspace(spaceId || "demo", force, (s) => my === reqRef.current && setStage(s));
+        ? await evaAPI.scan(spaceId || "demo", (s) => !silent && my === reqRef.current && setStage(s))
+        : await evaAPI.getWorkspace(spaceId || "demo", force, (s) => !silent && my === reqRef.current && setStage(s));
       if (my !== reqRef.current) return;
       setWs(data);
-      if (isScan) toast.success("Eva refreshed the lead list");
+      if (isScan && !silent) toast.success("Eva refreshed the lead list");
     } catch (e) {
-      if (my !== reqRef.current) return;
+      // A silent (auto) refresh must never blank the page or nag.
+      if (my !== reqRef.current || silent) return;
       setError(e instanceof Error ? e.message : "Couldn't load Eva's workspace");
       if (isScan) toast.error("Couldn't scan channels"); else setWs(null);
     } finally {
-      if (my !== reqRef.current) return;
+      if (my !== reqRef.current || silent) return;
       setStage(null);
       if (isScan) setScanning(false); else setLoading(false);
     }
   }, [spaceId]);
 
   useEffect(() => { load(false, false); }, [load]);
+
+  const totalActiveLeads = useMemo(
+    () => (ws ? ws.leads.filter((l) => l.status !== "rejected").length : 0),
+    [ws]
+  );
+
+  // Live discovery: while Eva has no leads yet, silently re-read every 15s so
+  // freshly-discovered accounts appear on their own (no manual refresh) — this is
+  // what makes the "event-driven, live" experience real. Stops once leads land.
+  const autoRefreshRef = useRef(0);
+  useEffect(() => {
+    if (!ws || ws.isDemo || loading || scanning) return;
+    if (totalActiveLeads > 0) { autoRefreshRef.current = 0; return; }
+    if (autoRefreshRef.current >= 40) return; // ~10 min safety cap
+    const t = setTimeout(() => {
+      autoRefreshRef.current += 1;
+      load(false, false, true); // silent re-read
+    }, 15000);
+    return () => clearTimeout(t);
+  }, [ws, loading, scanning, totalActiveLeads, load]);
 
   const leads = useMemo(() => {
     if (!ws) return [];
@@ -717,6 +847,20 @@ export default function Eva() {
                   </div>
                 )}
 
+                {totalActiveLeads === 0 && !ws.isDemo ? (
+                  // Cold start: no leads yet → live-discovery experience instead of
+                  // a wall of zeros. Any signals already captured stream in below.
+                  <>
+                    <LiveDiscovery icp={ws.icp} />
+                    {ws.signals.length > 0 && (
+                      <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/60 p-4">
+                        <ChannelsStrip ws={ws} />
+                        <LiveSignalStrip signals={ws.signals} />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                <>
                 <SummaryHeader ws={ws} metrics={ws.metrics} />
 
                 {/* Market activity — channels + live signal feed, horizontal, above the table */}
@@ -752,10 +896,12 @@ export default function Eva() {
                 {leads.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 py-16 text-zinc-400">
                     <Target className="h-5 w-5" />
-                    <p className="text-sm font-medium">No qualified leads in this view yet.</p>
+                    <p className="text-sm font-medium">No leads match these filters.</p>
                   </div>
                 ) : (
                   <LeadsTable leads={leads} onAction={onLeadAction} />
+                )}
+                </>
                 )}
               </>
             ) : null}

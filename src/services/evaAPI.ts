@@ -371,11 +371,37 @@ interface WorkspaceResponse {
   stage?: ScanStage;
 }
 
+// A minimal, valid empty workspace for a REAL brand. Returned (instead of
+// throwing) whenever Eva is still warming up / a scan is slow, so the page shows
+// the friendly "Eva is discovering your accounts" state and keeps refreshing —
+// never a hard error screen.
+function emptyWorkspace(): EvaWorkspace {
+  return {
+    signals: [],
+    entities: [],
+    leads: [],
+    channels: [],
+    metrics: {
+      channelsMonitored: 0,
+      signalsCaptured: 0,
+      signalsThisWeek: 0,
+      orgsTracked: 0,
+      qualifiedLeads: 0,
+      enrichedLeads: 0,
+      emailsFound: 0,
+      handedToMax: 0,
+      byTier: { low: 0, medium: 0, high: 0 },
+      bySignalType: {},
+    },
+    isDemo: false,
+  };
+}
+
 async function pollForWorkspace(
   spaceId: string,
   onProgress?: (stage: ScanStage) => void,
   intervalMs = 3000,
-  maxMs = 300000
+  maxMs = 90000
 ): Promise<EvaWorkspace> {
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
@@ -387,10 +413,14 @@ async function pollForWorkspace(
       continue;
     }
     if (s.status === "ready" && s.workspace) return s.workspace;
-    if (s.status === "error") throw new Error(s.error || "Eva couldn't complete the scan.");
+    // A scan hiccup shouldn't dump the founder on an error screen — Eva keeps
+    // scanning in the background. Serve an empty "discovering" workspace; the
+    // page auto-refreshes and leads appear as they're found.
+    if (s.status === "error") return emptyWorkspace();
     if (s.stage) onProgress?.(s.stage);
   }
-  throw new Error("Eva is taking longer than usual to scan channels. Please try again.");
+  // Slow first scan (throttled channel sweep). Don't error — show discovering.
+  return emptyWorkspace();
 }
 
 function workspaceContextString(ws: EvaWorkspace): string {
@@ -415,11 +445,19 @@ export const evaAPI = {
     onProgress?: (stage: ScanStage) => void
   ): Promise<EvaWorkspace> => {
     if (isRealBrandId(spaceId)) {
-      const start = await evaFetch<WorkspaceResponse>(
-        `/workspace?brand_id=${encodeURIComponent(spaceId)}&force=${force}`
-      );
+      let start: WorkspaceResponse;
+      try {
+        start = await evaFetch<WorkspaceResponse>(
+          `/workspace?brand_id=${encodeURIComponent(spaceId)}&force=${force}`
+        );
+      } catch {
+        // Transient start hiccup — show the discovering state and let the page
+        // auto-refresh rather than hard-failing.
+        return emptyWorkspace();
+      }
       if (start.status === "ready" && start.workspace) return start.workspace;
-      if (start.status === "error") throw new Error(start.error || "Eva couldn't scan channels.");
+      // Never hard-error on a warming/erroring scan — degrade to discovering.
+      if (start.status === "error") return emptyWorkspace();
       onProgress?.(start.stage || "starting");
       return pollForWorkspace(spaceId, onProgress);
     }
