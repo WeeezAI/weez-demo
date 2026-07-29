@@ -122,6 +122,21 @@ export interface EvaMetrics {
   bySignalType: Record<string, number>;
 }
 
+export interface EnrichmentUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  month: string;
+}
+
+export interface EnrichLeadResult {
+  status: "enriched" | "no_email" | "limit_reached" | "not_found";
+  found?: boolean;
+  email?: string;
+  lead?: QualifiedLead;
+  usage?: EnrichmentUsage;
+}
+
 export interface EvaWorkspace {
   signals: ChannelSignal[];
   entities: TrackedEntity[];
@@ -136,6 +151,7 @@ export interface EvaWorkspace {
   };
   last_scan_at?: string;
   metrics: EvaMetrics;
+  enrichmentUsage?: EnrichmentUsage;
   isDemo?: boolean;
 }
 
@@ -438,6 +454,27 @@ export const evaAPI = {
       return res.lead || null;
     } catch (e) {
       console.warn("[eva] lead action failed (non-blocking):", e);
+      return null;
+    }
+  },
+
+  // On-demand enrichment ("Show Email"): resolve the lead's email via the
+  // Apollo → Hunter → PDL waterfall. Counts against the monthly cap; only
+  // enriched leads are handed to Max. Demo spaces already show emails, so this
+  // is a no-op there.
+  enrichLead: async (spaceId: string | undefined, leadId: string): Promise<EnrichLeadResult> => {
+    if (!isRealBrandId(spaceId)) return { status: "enriched", found: false };
+    return evaFetch<EnrichLeadResult>(`/lead/enrich?brand_id=${encodeURIComponent(spaceId)}`, {
+      method: "POST",
+      body: JSON.stringify({ lead_id: leadId }),
+    });
+  },
+
+  getEnrichmentUsage: async (spaceId: string | undefined): Promise<EnrichmentUsage | null> => {
+    if (!isRealBrandId(spaceId)) return null;
+    try {
+      return await evaFetch<EnrichmentUsage>(`/enrichment/usage?brand_id=${encodeURIComponent(spaceId)}`);
+    } catch {
       return null;
     }
   },

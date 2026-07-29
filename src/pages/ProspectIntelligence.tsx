@@ -703,12 +703,14 @@ function Dossier({
   group,
   icp,
   onAction,
+  onShowEmail,
   onOpenMax,
 }: {
   lead: QualifiedLead;
   group: CompanyGroup;
   icp?: EvaWorkspace["icp"];
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
+  onShowEmail: (lead: QualifiedLead) => Promise<void> | void;
   onOpenMax: () => void;
 }) {
   const tier = TIER_META[lead.acvTier];
@@ -718,6 +720,16 @@ function Dossier({
   const emailConfidence = toPercent(lead.contact?.emailConfidence);
   const blocks = angleBlocks(lead, icp);
   const host = hostOf(lead) || group.domain;
+  const [enriching, setEnriching] = useState(false);
+
+  const revealEmail = async () => {
+    setEnriching(true);
+    try {
+      await onShowEmail(lead);
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   const copyBrief = async () => {
     const text = [
@@ -809,9 +821,15 @@ function Dossier({
                   {lead.contact.email}
                 </a>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-[12px] font-medium text-zinc-500">
-                  <Mail className="h-3.5 w-3.5" /> {enrichment?.label || "No email yet"}
-                </span>
+                <button
+                  onClick={revealEmail}
+                  disabled={enriching}
+                  title="Find this decision-maker's email (uses one monthly enrichment credit)"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[12px] font-semibold text-violet-700 transition-colors hover:bg-violet-100 disabled:opacity-60"
+                >
+                  {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                  {enriching ? "Finding email…" : "Show Email"}
+                </button>
               )}
               {lead.contact?.linkedinUrl && (
                 <a
@@ -1166,6 +1184,41 @@ export default function ProspectIntelligence() {
     void evaAPI.leadAction(spaceId, lead.id, action);
   };
 
+  // On-demand enrichment ("Show Email"): resolve the email only when the founder
+  // asks, to conserve enrichment credits. On success the lead is auto-handed to
+  // Max. Enforces the monthly cap and reports remaining credits.
+  const onShowEmail = async (lead: QualifiedLead) => {
+    try {
+      const res = await evaAPI.enrichLead(spaceId, lead.id);
+      if (res.status === "limit_reached") {
+        toast.error(
+          `Monthly enrichment limit reached (${res.usage?.limit ?? 100}). It resets next month.`
+        );
+        return;
+      }
+      if (res.lead) {
+        const updated = res.lead;
+        setWs((prev) =>
+          prev
+            ? {
+                ...prev,
+                leads: prev.leads.map((l) => (l.id === lead.id ? updated : l)),
+                enrichmentUsage: res.usage || prev.enrichmentUsage,
+              }
+            : prev
+        );
+      }
+      const remaining = res.usage ? ` · ${res.usage.remaining} left this month` : "";
+      if (res.found && res.email) {
+        toast.success(`Email found — ${res.email}. Handed to Max${remaining}.`);
+      } else {
+        toast(`No email found for ${lead.company}. That counts as one enrichment${remaining}.`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't enrich this lead right now");
+    }
+  };
+
   const tierOptions: { key: TierFilter; label: string }[] = useMemo(() => {
     const counts = ws?.metrics?.byTier;
     return [
@@ -1403,6 +1456,7 @@ export default function ProspectIntelligence() {
                           group={selectedCompany}
                           icp={ws.icp}
                           onAction={onLeadAction}
+                          onShowEmail={onShowEmail}
                           onOpenMax={() => navigate(`/sales/${spaceId}`)}
                         />
                       ) : (
