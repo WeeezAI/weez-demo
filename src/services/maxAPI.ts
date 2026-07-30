@@ -1021,6 +1021,11 @@ async function pollForWorkspace(
   maxMs = 240000
 ): Promise<MaxWorkspace> {
   const deadline = Date.now() + maxMs;
+  // Keep the freshest workspace the poll has seen. A cycle that reports an error
+  // (or outruns the deadline) AFTER producing a usable queue should still show that
+  // queue — dead-ending on the error screen threw away data Max had already built.
+  let latest: MaxWorkspace | null = null;
+
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, intervalMs));
     let s: WorkspaceResponse;
@@ -1031,10 +1036,16 @@ async function pollForWorkspace(
     } catch {
       continue; // transient hiccup — keep polling
     }
+    if (s.workspace) latest = s.workspace;
     if (s.status === "ready" && s.workspace) return s.workspace;
-    if (s.status === "error") throw new Error(s.error || "Max couldn't complete monitoring.");
+    if (s.status === "error") {
+      if (latest) return latest;
+      throw new Error(s.error || "Max couldn't complete monitoring.");
+    }
     if (s.stage) onProgress?.(s.stage);
   }
+  // A slow first cycle (source sweep + reasoning) isn't a failure.
+  if (latest) return latest;
   throw new Error("Max is taking longer than usual to scan sources. Please try again.");
 }
 
