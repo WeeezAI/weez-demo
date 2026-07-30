@@ -674,7 +674,10 @@ export const evaAPI = {
   // enriched leads are handed to Max. Demo spaces already show emails, so this
   // is a no-op there.
   enrichLead: async (spaceId: string | undefined, leadId: string): Promise<EnrichLeadResult> => {
-    if (!isRealBrandId(spaceId)) return { status: "enriched", found: false };
+    // Demo spaces aren't linked to a real brand, so there's no provider to query
+    // and nothing to fabricate. Report it as "no email" rather than a contradictory
+    // "enriched but not found".
+    if (!isRealBrandId(spaceId)) return { status: "no_email", found: false };
     return evaFetch<EnrichLeadResult>(`/lead/enrich?brand_id=${encodeURIComponent(spaceId)}`, {
       method: "POST",
       body: JSON.stringify({ lead_id: leadId }),

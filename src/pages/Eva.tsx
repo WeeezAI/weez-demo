@@ -50,7 +50,6 @@ import {
   SIGNAL_META,
   ACTION_META,
   TIER_META,
-  ENRICHMENT_META,
   QUICK_PROMPTS,
   type ACVTier,
   type EvaAction,
@@ -60,6 +59,8 @@ import {
   type PotentialLead,
   type ChannelSignal,
   type EvaChatMessage,
+  type EnrichLeadResult,
+  type EnrichmentUsage,
   type ScanStage,
 } from "@/services/evaAPI";
 
@@ -470,7 +471,104 @@ function WhyQualified({ lead }: { lead: QualifiedLead }) {
   );
 }
 
-function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void }) {
+// ─── Email cell (on-demand enrichment) ───────────────────────────────────────
+
+// Email discovery costs paid provider credits, so Eva resolves it ON DEMAND
+// rather than for every discovered lead. The cell used to render a passive
+// "Enriching…" label, which was misleading — nothing was running and nothing ever
+// would. It now offers the action, runs the Apollo → Hunter → PDL waterfall on
+// click, and reveals the address in place as soon as it resolves.
+type EnrichState = "idle" | "working" | "none" | "limit" | "failed";
+
+function EmailCell({
+  lead,
+  onEnrich,
+}: {
+  lead: QualifiedLead;
+  onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+}) {
+  const [state, setState] = useState<EnrichState>("idle");
+  const email = lead.contact?.email;
+
+  // A lead enriched elsewhere (a background cycle, the Clay webhook) clears any
+  // local "not found" state so the row reflects the truth.
+  useEffect(() => { if (email) setState("idle"); }, [email]);
+
+  const run = async () => {
+    setState("working");
+    const res = await onEnrich(lead);
+    if (!res) { setState("failed"); return; }
+    if (res.status === "limit_reached") { setState("limit"); return; }
+    if (res.status === "enriched" && (res.email || res.lead?.contact?.email)) { setState("idle"); return; }
+    setState("none");
+  };
+
+  if (email) {
+    return (
+      <>
+        <a href={`mailto:${email}`} className="flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
+          {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
+          <span className="truncate">{email}</span>
+        </a>
+        {lead.contact?.name && (
+          <p className="truncate text-[10.5px] text-zinc-400">
+            {lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}
+          </p>
+        )}
+      </>
+    );
+  }
+
+  if (state === "working") {
+    return (
+      <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+        <span className="truncate">Finding email…</span>
+      </span>
+    );
+  }
+
+  if (state === "limit") {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600" title="This month's enrichment credits are used up.">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Monthly limit reached</span>
+      </span>
+    );
+  }
+
+  const notFound = state === "none";
+  const failed = state === "failed";
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={run}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors",
+          notFound || failed
+            ? "border-zinc-200 bg-white text-zinc-500 hover:border-emerald-300 hover:text-emerald-600"
+            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100"
+        )}
+      >
+        <Sparkles className="h-3 w-3 shrink-0" />
+        {notFound || failed ? "Try again" : "Enrich now"}
+      </button>
+      {notFound && <p className="truncate text-[10px] text-zinc-400">No verified email found yet</p>}
+      {failed && <p className="truncate text-[10px] text-amber-600">Enrichment service unreachable</p>}
+      {!notFound && !failed && lead.contact?.name && (
+        <p className="truncate text-[10px] text-zinc-400">
+          {lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LeadRow({ lead, onAction, onEnrich }: {
+  lead: QualifiedLead;
+  onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
+  onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+}) {
   const tier = TIER_META[lead.acvTier];
   const handed = lead.handoffState === "handed_to_max";
   const sources = leadSources(lead);
@@ -509,21 +607,9 @@ function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: Qua
         </div>
       </td>
 
-      {/* Email */}
+      {/* Email — on-demand: nothing is resolved until the founder asks for it */}
       <td className="px-4 py-3">
-        {lead.contact?.email ? (
-          <a href={`mailto:${lead.contact.email}`} className="flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
-            {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
-            <span className="truncate">{lead.contact.email}</span>
-          </a>
-        ) : (
-          <span className="flex items-center gap-1 text-[11px] text-zinc-400">
-            <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{ENRICHMENT_META[lead.enrichment?.status]?.label || "Enriching…"}</span>
-          </span>
-        )}
-        {lead.contact?.name && (
-          <p className="truncate text-[10.5px] text-zinc-400">{lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}</p>
-        )}
+        <EmailCell lead={lead} onEnrich={onEnrich} />
       </td>
 
       {/* Sources (capped + info hover) */}
@@ -557,7 +643,11 @@ function LeadRow({ lead, onAction }: { lead: QualifiedLead; onAction: (lead: Qua
   );
 }
 
-function LeadsTable({ leads, onAction }: { leads: QualifiedLead[]; onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void }) {
+function LeadsTable({ leads, onAction, onEnrich }: {
+  leads: QualifiedLead[];
+  onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
+  onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <div className="overflow-x-auto">
@@ -582,7 +672,7 @@ function LeadsTable({ leads, onAction }: { leads: QualifiedLead[]; onAction: (le
             </tr>
           </thead>
           <tbody>
-            {leads.map((l) => <LeadRow key={l.id} lead={l} onAction={onAction} />)}
+            {leads.map((l) => <LeadRow key={l.id} lead={l} onAction={onAction} onEnrich={onEnrich} />)}
           </tbody>
         </table>
       </div>
@@ -857,6 +947,7 @@ export default function Eva() {
   const [chatOpen, setChatOpen] = useState(true);
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
+  const [enrichUsage, setEnrichUsage] = useState<EnrichmentUsage | null>(null);
   const reqRef = useRef(0);
 
   const load = useCallback(async (force: boolean, isScan: boolean, silent = false) => {
@@ -952,6 +1043,34 @@ export default function Eva() {
   }, [ws, tierFilter]);
 
   const searchDegraded = !!ws?.searchHealth?.degraded;
+  // Live count after a click, falling back to whatever the workspace reported.
+  const usage = enrichUsage || ws?.enrichmentUsage || null;
+
+  // "Enrich now" — resolve ONE lead's email on demand and patch the row in place
+  // so the address appears without a page refresh. The backend also hands a
+  // successfully-enriched lead to Max, so we take its returned lead verbatim
+  // rather than guessing the new state.
+  const onEnrichLead = useCallback(async (lead: QualifiedLead): Promise<EnrichLeadResult | null> => {
+    try {
+      const res = await evaAPI.enrichLead(spaceId, lead.id);
+      if (res.usage) setEnrichUsage(res.usage);
+      const updated = res.lead;
+      if (updated) {
+        setWs((prev) => prev ? { ...prev, leads: prev.leads.map((l) => l.id === lead.id ? updated : l) } : prev);
+      }
+      if (res.status === "enriched" && (res.email || updated?.contact?.email)) {
+        toast.success(`${lead.company}: ${res.email || updated?.contact?.email}`);
+      } else if (res.status === "limit_reached") {
+        toast.error("This month's enrichment credits are used up.");
+      } else if (res.status === "no_email") {
+        toast.info(`No verified email for ${lead.company} yet — Eva will keep trying.`);
+      }
+      return res;
+    } catch (e) {
+      console.warn("[eva] enrichment failed", e);
+      return null;
+    }
+  }, [spaceId]);
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) => prev ? {
@@ -1087,7 +1206,20 @@ export default function Eva() {
                       </button>
                     ))}
                   </div>
-                  <span className="ml-auto text-[11px] font-medium text-zinc-400">{leads.length} shown</span>
+                  <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-400">
+                    {/* Emails cost paid provider credits, so show what's left —
+                        "Enrich now" is deliberate spend, not a free action. */}
+                    {usage && (
+                      <span
+                        className="rounded-full border border-zinc-200 bg-white px-2 py-0.5"
+                        title={`${usage.used} of ${usage.limit} enrichments used this month`}
+                      >
+                        <Mail className="mr-1 inline h-3 w-3" />
+                        {usage.remaining} enrichments left
+                      </span>
+                    )}
+                    <span>{leads.length} shown</span>
+                  </span>
                 </div>
 
                 {/* Full-width Clay-style leads table */}
@@ -1097,7 +1229,7 @@ export default function Eva() {
                     <p className="text-sm font-medium">No leads match these filters.</p>
                   </div>
                 ) : (
-                  <LeadsTable leads={leads} onAction={onLeadAction} />
+                  <LeadsTable leads={leads} onAction={onLeadAction} onEnrich={onEnrichLead} />
                 )}
 
                 {/* The rest of Eva's pipeline: tracked companies still working
