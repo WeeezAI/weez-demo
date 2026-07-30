@@ -202,8 +202,12 @@ export interface EvaWorkspace {
   last_scan_at?: string;
   metrics: EvaMetrics;
   enrichmentUsage?: EnrichmentUsage;
+  /** "running" = Eva is still sweeping and this workspace is still filling in. */
+  sweepState?: SweepState;
   isDemo?: boolean;
 }
+
+export type SweepState = "running" | "complete";
 
 export interface EvaChatMessage {
   role: "user" | "eva";
@@ -475,6 +479,12 @@ async function evaFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
 interface WorkspaceResponse {
   status: "ready" | "scanning" | "error" | "unknown";
+  /**
+   * Whether Eva's channel sweep is still in flight. Eva publishes a fast-ready
+   * workspace (status "ready" carrying the PREVIOUS results) before the sweep runs
+   * so the page paints instantly — so "ready" alone doesn't mean a scan finished.
+   */
+  sweepState?: SweepState;
   workspace?: EvaWorkspace;
   error?: string;
   stage?: ScanStage;
@@ -508,13 +518,28 @@ function emptyWorkspace(): EvaWorkspace {
   };
 }
 
-async function pollForWorkspace(
-  spaceId: string,
-  onProgress?: (stage: ScanStage) => void,
-  intervalMs = 3000,
-  maxMs = 90000
-): Promise<EvaWorkspace> {
+interface PollOptions {
+  onProgress?: (stage: ScanStage) => void;
+  /** Called every time the poll sees a newer workspace, so results stream in. */
+  onWorkspace?: (ws: EvaWorkspace) => void;
+  /**
+   * Wait for the channel sweep to actually FINISH rather than accepting the
+   * fast-ready snapshot. Used by "Scan channels": without this the poll returned
+   * the pre-sweep workspace within ~3s, so the button looked like it did nothing.
+   */
+  requireComplete?: boolean;
+  intervalMs?: number;
+  maxMs?: number;
+}
+
+async function pollForWorkspace(spaceId: string, opts: PollOptions = {}): Promise<EvaWorkspace> {
+  const { onProgress, onWorkspace, requireComplete = false, intervalMs = 3000, maxMs = 90000 } = opts;
   const deadline = Date.now() + maxMs;
+  // Remember the freshest workspace we've seen. On a timeout or a mid-scan error we
+  // return THIS rather than an empty one — replacing a populated board with zeros
+  // made a slow-but-healthy scan look like a wipe.
+  let latest: EvaWorkspace | null = null;
+
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, intervalMs));
     let s: WorkspaceResponse;
@@ -523,15 +548,25 @@ async function pollForWorkspace(
     } catch {
       continue;
     }
-    if (s.status === "ready" && s.workspace) return s.workspace;
+
+    if (s.workspace) {
+      latest = s.workspace;
+      onWorkspace?.(s.workspace); // stream partial results into the page
+    }
+
+    const sweeping = (s.sweepState ?? s.workspace?.sweepState) === "running";
+    if (s.status === "ready" && s.workspace && !(requireComplete && sweeping)) {
+      return s.workspace;
+    }
     // A scan hiccup shouldn't dump the founder on an error screen — Eva keeps
-    // scanning in the background. Serve an empty "discovering" workspace; the
-    // page auto-refreshes and leads appear as they're found.
-    if (s.status === "error") return emptyWorkspace();
+    // scanning in the background. Keep whatever we last saw.
+    if (s.status === "error") return latest ?? emptyWorkspace();
     if (s.stage) onProgress?.(s.stage);
   }
-  // Slow first scan (throttled channel sweep). Don't error — show discovering.
-  return emptyWorkspace();
+
+  // Slow sweep (throttled channel calls + first-party page fetches). Don't error
+  // and don't blank the board — serve the latest snapshot; the page keeps refreshing.
+  return latest ?? emptyWorkspace();
 }
 
 function workspaceContextString(ws: EvaWorkspace): string {
@@ -559,7 +594,8 @@ export const evaAPI = {
   getWorkspace: async (
     spaceId: string,
     force = false,
-    onProgress?: (stage: ScanStage) => void
+    onProgress?: (stage: ScanStage) => void,
+    onWorkspace?: (ws: EvaWorkspace) => void
   ): Promise<EvaWorkspace> => {
     if (isRealBrandId(spaceId)) {
       let start: WorkspaceResponse;
@@ -572,24 +608,44 @@ export const evaAPI = {
         // auto-refresh rather than hard-failing.
         return emptyWorkspace();
       }
+      // Page load stays FAST: the fast-ready snapshot is good enough to paint, and
+      // the page keeps auto-refreshing as the sweep fills it in.
       if (start.status === "ready" && start.workspace) return start.workspace;
       // Never hard-error on a warming/erroring scan — degrade to discovering.
       if (start.status === "error") return emptyWorkspace();
       onProgress?.(start.stage || "starting");
-      return pollForWorkspace(spaceId, onProgress);
+      return pollForWorkspace(spaceId, { onProgress, onWorkspace });
     }
     await new Promise((r) => setTimeout(r, 400));
     return buildDemoWorkspace();
   },
 
-  scan: async (spaceId: string, onProgress?: (stage: ScanStage) => void): Promise<EvaWorkspace> => {
+  /**
+   * "Scan channels" — force a fresh sweep across every channel.
+   *
+   * Unlike a page load this WAITS for the sweep to complete (requireComplete), so
+   * the button reflects real work instead of handing back the pre-sweep snapshot.
+   * Results stream in through `onWorkspace` while it runs, and the window is
+   * generous because a sweep also fetches first-party careers/changelog/newsroom
+   * pages.
+   */
+  scan: async (
+    spaceId: string,
+    onProgress?: (stage: ScanStage) => void,
+    onWorkspace?: (ws: EvaWorkspace) => void
+  ): Promise<EvaWorkspace> => {
     if (isRealBrandId(spaceId)) {
       const start = await evaFetch<WorkspaceResponse>(
         `/scan?brand_id=${encodeURIComponent(spaceId)}`,
         { method: "POST" }
       );
       onProgress?.(start.stage || "tracking");
-      return pollForWorkspace(spaceId, onProgress);
+      return pollForWorkspace(spaceId, {
+        onProgress,
+        onWorkspace,
+        requireComplete: true,
+        maxMs: 240000,
+      });
     }
     await new Promise((r) => setTimeout(r, 700));
     return buildDemoWorkspace();

@@ -866,13 +866,28 @@ export default function Eva() {
       setStage("starting");
       if (isScan) setScanning(true); else setLoading(true);
     }
+    const onStage = (s: ScanStage) => { if (!silent && my === reqRef.current) setStage(s); };
+    // Stream results into the page as the sweep finds them, so a scan visibly
+    // progresses instead of sitting on a spinner until it's completely done.
+    const onPartial = (partial: EvaWorkspace) => {
+      if (my !== reqRef.current) return;
+      setWs(partial);
+      if (!isScan) setLoading(false);
+    };
     try {
       const data = isScan
-        ? await evaAPI.scan(spaceId || "demo", (s) => !silent && my === reqRef.current && setStage(s))
-        : await evaAPI.getWorkspace(spaceId || "demo", force, (s) => !silent && my === reqRef.current && setStage(s));
+        ? await evaAPI.scan(spaceId || "demo", onStage, onPartial)
+        : await evaAPI.getWorkspace(spaceId || "demo", force, onStage, onPartial);
       if (my !== reqRef.current) return;
       setWs(data);
-      if (isScan && !silent) toast.success("Eva refreshed the lead list");
+      if (isScan && !silent) {
+        const swept = data.sweepState !== "running";
+        toast.success(
+          swept
+            ? `Eva finished scanning — ${data.metrics.qualifiedLeads} qualified, ${data.metrics.potentialLeads ?? 0} potential`
+            : "Eva is still sweeping channels — results keep arriving here"
+        );
+      }
     } catch (e) {
       // A silent (auto) refresh must never blank the page or nag.
       if (my !== reqRef.current || silent) return;
@@ -892,20 +907,27 @@ export default function Eva() {
     [ws]
   );
 
-  // Live discovery: while Eva has no leads yet, silently re-read every 15s so
-  // freshly-discovered accounts appear on their own (no manual refresh) — this is
-  // what makes the "event-driven, live" experience real. Stops once leads land.
+  // A sweep started elsewhere (campaign go-live, the periodic worker, an earlier
+  // visit) may still be filling this workspace in — say so, rather than presenting
+  // a half-populated board as if it were final.
+  const sweeping = !!ws && !ws.isDemo && ws.sweepState === "running";
+
+  // Live discovery: silently re-read every 15s so freshly-discovered accounts
+  // appear on their own (no manual refresh) — this is what makes the
+  // "event-driven, live" experience real. Runs while Eva has no leads yet AND
+  // while a sweep is in flight (a sweep keeps producing after the first lead
+  // lands, and stopping then made later results invisible until a reload).
   const autoRefreshRef = useRef(0);
   useEffect(() => {
     if (!ws || ws.isDemo || loading || scanning) return;
-    if (totalActiveLeads > 0) { autoRefreshRef.current = 0; return; }
+    if (totalActiveLeads > 0 && !sweeping) { autoRefreshRef.current = 0; return; }
     if (autoRefreshRef.current >= 40) return; // ~10 min safety cap
     const t = setTimeout(() => {
       autoRefreshRef.current += 1;
       load(false, false, true); // silent re-read
     }, 15000);
     return () => clearTimeout(t);
-  }, [ws, loading, scanning, totalActiveLeads, load]);
+  }, [ws, loading, scanning, totalActiveLeads, sweeping, load]);
 
   const leads = useMemo(() => {
     if (!ws) return [];
@@ -986,10 +1008,13 @@ export default function Eva() {
               </div>
             ) : ws ? (
               <>
-                {scanning && (
+                {(scanning || sweeping) && (
                   <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 text-[12px] font-medium text-emerald-700">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Eva is scanning channels — {SCAN_STEPS[scanStepIndex(stage)]?.label ?? "working"}…</span>
+                    <span>
+                      Eva is scanning channels — {SCAN_STEPS[scanStepIndex(stage)]?.label ?? "working"}…
+                      {" "}New accounts appear here as they're found.
+                    </span>
                   </div>
                 )}
                 {ws.isDemo && (
