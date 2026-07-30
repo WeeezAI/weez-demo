@@ -185,6 +185,20 @@ export interface WaterfallStep {
   detail: string;
 }
 
+/**
+ * What Max did with a lead the moment its email was revealed.
+ *   curating – ingested; Max is writing the personalized email now
+ *   queued   – ingested, but there's no opportunity to curate yet
+ *   skipped  – no email, so there's nothing to send
+ */
+export interface MaxHandoff {
+  status: "curating" | "already_curated" | "queued" | "skipped" | "error" | "scheduled";
+  company?: string;
+  accountId?: string | null;
+  opportunityId?: string | null;
+  reason?: string;
+}
+
 export interface EnrichLeadResult {
   status: "enriched" | "no_email" | "limit_reached" | "not_found";
   found?: boolean;
@@ -194,6 +208,8 @@ export interface EnrichLeadResult {
   /** Per-provider trace, so a miss can be explained rather than guessed at. */
   waterfall?: WaterfallStep[];
   providersTried?: string[];
+  /** Set when the reveal handed the lead straight to Max. */
+  maxHandoff?: MaxHandoff | null;
   lead?: QualifiedLead;
   usage?: EnrichmentUsage;
 }

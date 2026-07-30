@@ -1099,7 +1099,12 @@ export default function Eva() {
         setWs((prev) => prev ? { ...prev, leads: prev.leads.map((l) => l.id === lead.id ? updated : l) } : prev);
       }
       if (res.status === "enriched" && (res.email || updated?.contact?.email)) {
-        toast.success(`${lead.company}: ${res.email || updated?.contact?.email}`);
+        const addr = res.email || updated?.contact?.email;
+        toast.success(
+          res.maxHandoff?.status === "curating"
+            ? `${lead.company}: ${addr} — Max is writing the outreach now`
+            : `${lead.company}: ${addr}`
+        );
       } else if (res.status === "limit_reached") {
         toast.error("This month's enrichment credits are used up.");
       } else if (res.status === "no_email") {
