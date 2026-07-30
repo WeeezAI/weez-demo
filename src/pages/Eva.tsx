@@ -61,6 +61,7 @@ import {
   type EvaChatMessage,
   type EnrichLeadResult,
   type EnrichmentUsage,
+  type WaterfallStep,
   type ScanStage,
 } from "@/services/evaAPI";
 
@@ -488,6 +489,7 @@ function EmailCell({
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
 }) {
   const [state, setState] = useState<EnrichState>("idle");
+  const [trace, setTrace] = useState<WaterfallStep[]>([]);
   const email = lead.contact?.email;
 
   // A lead enriched elsewhere (a background cycle, the Clay webhook) clears any
@@ -498,23 +500,28 @@ function EmailCell({
     setState("working");
     const res = await onEnrich(lead);
     if (!res) { setState("failed"); return; }
+    setTrace(res.waterfall || []);
     if (res.status === "limit_reached") { setState("limit"); return; }
     if (res.status === "enriched" && (res.email || res.lead?.contact?.email)) { setState("idle"); return; }
     setState("none");
   };
 
   if (email) {
+    const verified = lead.contact.emailVerified;
     return (
       <>
-        <a href={`mailto:${email}`} className="flex items-center gap-1 text-[12px] font-medium text-emerald-600 hover:underline">
-          {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
+        <a href={`mailto:${email}`} className={cn(
+          "flex items-center gap-1 text-[12px] font-medium hover:underline",
+          verified ? "text-emerald-600" : "text-zinc-600")}>
+          {verified ? <MailCheck className="h-3.5 w-3.5 shrink-0" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
           <span className="truncate">{email}</span>
         </a>
-        {lead.contact?.name && (
-          <p className="truncate text-[10.5px] text-zinc-400">
-            {lead.contact.name}{lead.contact.role ? ` · ${lead.contact.role}` : ""}
-          </p>
-        )}
+        <p className="truncate text-[10.5px] text-zinc-400">
+          {lead.contact?.name
+            ? `${lead.contact.name}${lead.contact.role ? ` · ${lead.contact.role}` : ""}`
+            : lead.contact?.emailSource || ""}
+          {!verified && <span className="ml-1 text-amber-600">· unverified</span>}
+        </p>
       </>
     );
   }
@@ -553,7 +560,40 @@ function EmailCell({
         <Sparkles className="h-3 w-3 shrink-0" />
         {notFound || failed ? "Try again" : "Enrich now"}
       </button>
-      {notFound && <p className="truncate text-[10px] text-zinc-400">No verified email found yet</p>}
+      {notFound && (
+        <HoverCard openDelay={80}>
+          <HoverCardTrigger asChild>
+            <p className="cursor-help truncate text-[10px] text-zinc-400 underline decoration-dotted">
+              No email found — see why
+            </p>
+          </HoverCardTrigger>
+          <HoverCardContent align="start" className="w-[340px]">
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+              Enrichment waterfall
+            </p>
+            {trace.length === 0 ? (
+              <p className="text-[12px] text-zinc-500">No provider detail returned.</p>
+            ) : (
+              <div className="space-y-1">
+                {trace.map((s, i) => (
+                  <div key={i} className="flex items-start gap-1.5 text-[11px] leading-snug">
+                    <span className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+                      s.outcome === "hit" || s.outcome === "verified" ? "bg-emerald-500"
+                        : s.outcome === "error" ? "bg-red-400" : "bg-zinc-300")} />
+                    <span className="font-semibold text-zinc-700">{s.provider}</span>
+                    <span className="text-zinc-400">{s.outcome}</span>
+                    {s.detail && <span className="truncate text-zinc-400">· {s.detail}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
+              Eva tries each provider in order and only accepts an address a verifier confirms.
+              A provider that's out of credits is skipped and retried later.
+            </p>
+          </HoverCardContent>
+        </HoverCard>
+      )}
       {failed && <p className="truncate text-[10px] text-amber-600">Enrichment service unreachable</p>}
       {!notFound && !failed && lead.contact?.name && (
         <p className="truncate text-[10px] text-zinc-400">

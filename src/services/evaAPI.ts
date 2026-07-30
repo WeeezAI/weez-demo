@@ -177,10 +177,23 @@ export interface EnrichmentUsage {
   month: string;
 }
 
+/** One provider attempt in the enrichment waterfall. */
+export interface WaterfallStep {
+  stage: "resolve" | "identify" | "find_email" | "fallback" | "verify" | string;
+  provider: string;
+  outcome: "hit" | "miss" | "rejected" | "error" | "skipped" | "verified" | "unverified" | "unavailable" | string;
+  detail: string;
+}
+
 export interface EnrichLeadResult {
   status: "enriched" | "no_email" | "limit_reached" | "not_found";
   found?: boolean;
   email?: string;
+  /** True only when a verifier confirmed the address is deliverable. */
+  verified?: boolean;
+  /** Per-provider trace, so a miss can be explained rather than guessed at. */
+  waterfall?: WaterfallStep[];
+  providersTried?: string[];
   lead?: QualifiedLead;
   usage?: EnrichmentUsage;
 }
