@@ -57,6 +57,7 @@ import {
   type EvaWorkspace,
   type EvaMetrics,
   type QualifiedLead,
+  type PotentialLead,
   type ChannelSignal,
   type EvaChatMessage,
   type ScanStage,
@@ -324,7 +325,7 @@ function SummaryHeader({ ws, metrics }: { ws: EvaWorkspace; metrics: EvaMetrics 
       <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <StatTile label="Channels" value={metrics.channelsMonitored} sub="monitored" />
         <StatTile label="Signals / wk" value={metrics.signalsThisWeek} sub={`${metrics.signalsCaptured} total`} />
-        <StatTile label="Orgs tracked" value={metrics.orgsTracked} />
+        <StatTile label="Orgs tracked" value={metrics.orgsTracked} sub={`${metrics.potentialLeads ?? 0} potential`} />
         <StatTile label="Qualified" value={metrics.qualifiedLeads} sub={`L${metrics.byTier.low} · M${metrics.byTier.medium} · H${metrics.byTier.high}`} />
         <StatTile label="Emails found" value={metrics.emailsFound} sub={`${metrics.enrichedLeads} enriched`} tone="text-emerald-600" />
         <StatTile label="Handed to Max" value={metrics.handedToMax} sub="for outreach" tone="text-violet-600" />
@@ -589,6 +590,147 @@ function LeadsTable({ leads, onAction }: { leads: QualifiedLead[]; onAction: (le
   );
 }
 
+// ─── Potential leads (tracked, not yet qualified) ────────────────────────────
+
+// Companies Eva has found and is tracking that haven't cleared the qualification
+// bar yet. This is deliberately a SEPARATE, clearly-labelled table rather than
+// being mixed into the qualified list: these are leads-in-progress, and showing
+// them is what lets a founder watch discovery working the moment a campaign goes
+// live instead of staring at an empty board.
+function PotentialLeadRow({ lead }: { lead: PotentialLead }) {
+  const fit = lead.icpFit ?? 0;
+  const fitTone = fit >= 70 ? "text-emerald-600" : fit >= 50 ? "text-amber-600" : "text-zinc-500";
+  const signalLabel = lead.topSignalType ? SIGNAL_META[lead.topSignalType]?.label || lead.topSignalType : "No signal yet";
+  const signalTone = lead.topSignalType ? SIGNAL_META[lead.topSignalType]?.tone || "zinc" : "zinc";
+  return (
+    <tr className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/60">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <CompanyLogo logoUrl={lead.logoUrl} domain={lead.domain} company={lead.company} className="h-8 w-8" />
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold text-zinc-900">{lead.company}</p>
+            <p className="truncate text-[10.5px] text-zinc-400">
+              {lead.domain || "domain pending"}
+              {lead.hqLocation ? ` · ${lead.hqLocation}` : ""}
+            </p>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <p className="truncate text-[12px] text-zinc-600">{lead.industry || "—"}</p>
+        {lead.employeeRange && <p className="text-[10.5px] text-zinc-400">{lead.employeeRange} employees</p>}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <Gauge className={cn("h-3.5 w-3.5", fitTone)} />
+          <span className={cn("text-[13px] font-semibold tabular-nums", fitTone)}>{lead.icpFit ?? "—"}</span>
+        </div>
+        {lead.acvTier && <p className="text-[10px] text-zinc-400">{TIER_META[lead.acvTier].label} ACV</p>}
+      </td>
+      <td className="px-4 py-3">
+        <Chip tone={signalTone}>{signalLabel}</Chip>
+        {lead.topSignal && (
+          <p className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-zinc-500">
+            {lead.topSignal.replace(/^\[[^\]]+\]\s*/, "")}
+          </p>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <p className="text-[11px] font-medium text-zinc-500">
+          {lead.signalCount} signal{lead.signalCount === 1 ? "" : "s"}
+        </p>
+        {lead.sourceCount > 0 && (
+          <p className="text-[10.5px] text-zinc-400">{lead.sourceCount} owned page{lead.sourceCount === 1 ? "" : "s"} watched</p>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <HoverCard openDelay={80}>
+          <HoverCardTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10.5px] font-semibold text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+            >
+              <Info className="h-3 w-3" />
+              {lead.trackingState === "potential" ? "Gathering evidence" : "Awaiting trigger"}
+            </button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-[300px] text-[12px] leading-relaxed">
+            <p className="mb-1 font-semibold text-zinc-800">Why it hasn't qualified yet</p>
+            <p className="text-zinc-600">{lead.reason || "Eva is still building the case for this account."}</p>
+            {lead.url && (
+              <a href={lead.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline">
+                View the signal <ArrowRight className="h-3 w-3" />
+              </a>
+            )}
+          </HoverCardContent>
+        </HoverCard>
+      </td>
+    </tr>
+  );
+}
+
+function PotentialLeadsTable({ leads }: { leads: PotentialLead[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!leads || leads.length === 0) return null;
+  const visible = expanded ? leads : leads.slice(0, 8);
+  return (
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+            <Layers className="h-3.5 w-3.5" /> Potential leads
+          </p>
+          <p className="mt-1 text-[12px] text-zinc-500">
+            Companies Eva is tracking that haven't qualified yet. They move into the qualified list as soon as a
+            trigger strong enough for their ACV tier lands.
+          </p>
+        </div>
+        <span className="text-[11px] font-medium text-zinc-400">
+          {visible.length} of {leads.length} shown
+        </span>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
+            <colgroup>
+              <col style={{ width: "23%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "12%" }} />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50/70 text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                <th className="px-4 py-2.5 font-bold">Company</th>
+                <th className="px-4 py-2.5 font-bold">What they do</th>
+                <th className="px-4 py-2.5 font-bold">ICP fit</th>
+                <th className="px-4 py-2.5 font-bold">Latest signal</th>
+                <th className="px-4 py-2.5 font-bold">Evidence</th>
+                <th className="px-4 py-2.5 font-bold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((l) => <PotentialLeadRow key={l.id} lead={l} />)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {leads.length > 8 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mx-auto flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+        >
+          {expanded ? "Show fewer" : `Show all ${leads.length}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Eva chat sidebar ────────────────────────────────────────────────────────
 
 function EvaChat({ ws, spaceId, open, onClose }: { ws: EvaWorkspace; spaceId?: string; open: boolean; onClose: () => void }) {
@@ -779,6 +921,16 @@ export default function Eva() {
     );
   }, [ws, tierFilter, qualityFilter]);
 
+  // Potential leads respect the ACV-tier filter (so the two tables stay in sync)
+  // but NOT the quality filter — quality grades qualified leads, and hiding
+  // low-fit potential leads would hide exactly the accounts still being worked.
+  const potentialLeads = useMemo(() => {
+    const list = ws?.potentialLeads || [];
+    return tierFilter === "all" ? list : list.filter((p) => p.acvTier === tierFilter);
+  }, [ws, tierFilter]);
+
+  const searchDegraded = !!ws?.searchHealth?.degraded;
+
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) => prev ? {
       ...prev,
@@ -847,17 +999,38 @@ export default function Eva() {
                   </div>
                 )}
 
+                {searchDegraded && (
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-[12px] text-amber-700">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      Eva's web-search provider is rate-limiting requests, so news-driven channels
+                      (funding, launches, tech changes) are capturing less than usual. First-party channels
+                      — careers pages, changelogs and newsrooms — are unaffected and still running.
+                    </span>
+                  </div>
+                )}
+
                 {totalActiveLeads === 0 && !ws.isDemo ? (
-                  // Cold start: no leads yet → live-discovery experience instead of
-                  // a wall of zeros. Any signals already captured stream in below.
+                  // Cold start: no qualified leads yet → lead with the live-discovery
+                  // hero, but ALWAYS surface the signal metrics, the live signal
+                  // feed AND the potential leads so the founder can see Eva actively
+                  // working (funding / hiring / launches / tech changes) as they
+                  // stream in. Potential leads are the companies already on Eva's
+                  // map — hiding them made a working scan look like a broken one.
                   <>
                     <LiveDiscovery icp={ws.icp} />
-                    {ws.signals.length > 0 && (
-                      <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/60 p-4">
-                        <ChannelsStrip ws={ws} />
+                    <SummaryHeader ws={ws} metrics={ws.metrics} />
+                    <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/60 p-4">
+                      <ChannelsStrip ws={ws} />
+                      {ws.signals.length > 0 ? (
                         <LiveSignalStrip signals={ws.signals} />
-                      </div>
-                    )}
+                      ) : (
+                        <p className="px-1 py-2 text-[12px] text-zinc-400">
+                          No signals captured yet this cycle — Eva is still sweeping channels. New signals appear here automatically.
+                        </p>
+                      )}
+                    </div>
+                    <PotentialLeadsTable leads={potentialLeads} />
                   </>
                 ) : (
                 <>
@@ -901,6 +1074,10 @@ export default function Eva() {
                 ) : (
                   <LeadsTable leads={leads} onAction={onLeadAction} />
                 )}
+
+                {/* The rest of Eva's pipeline: tracked companies still working
+                    their way toward qualification. */}
+                <PotentialLeadsTable leads={potentialLeads} />
                 </>
                 )}
               </>

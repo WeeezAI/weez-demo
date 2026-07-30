@@ -114,12 +114,60 @@ export interface EvaMetrics {
   signalsCaptured: number;
   signalsThisWeek: number;
   orgsTracked: number;
+  /** Tracked companies that haven't qualified yet (leads-in-progress). */
+  potentialLeads: number;
   qualifiedLeads: number;
   enrichedLeads: number;
   emailsFound: number;
   handedToMax: number;
   byTier: Record<ACVTier, number>;
   bySignalType: Record<string, number>;
+}
+
+/**
+ * A company Eva has discovered and is tracking, but that hasn't qualified yet.
+ *
+ * Every qualified lead starts here. Qualification needs a strong enough signal for
+ * the account's ACV tier (an early-stage funding round at a mid-ACV account, for
+ * example, is tracked rather than actioned), so this list is where a founder sees
+ * discovery working immediately after a campaign goes live.
+ */
+export interface PotentialLead {
+  id: string;
+  company: string;
+  domain: string;
+  website: string;
+  logoUrl?: string;
+  industry: string;
+  employeeRange: string;
+  hqLocation: string;
+  icpFit: number | null;
+  acvTier: ACVTier | null;
+  icpSimilarity?: number | null;
+  /** "tracked" = cleared ICP selection; "potential" = still gathering evidence. */
+  trackingState: "tracked" | "potential";
+  /** Why it hasn't qualified yet. */
+  reason: string;
+  signalCount: number;
+  topSignalType: SignalType | null;
+  topSignal: string;
+  channel: string;
+  url: string;
+  /** Owned pages (careers / changelog / newsroom) Eva is monitoring. */
+  sourceCount: number;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+/** Health of the web-search layer behind the news-driven channels. */
+export interface SearchHealth {
+  degraded: boolean;
+  providers: string[];
+  queries: number;
+  served: number;
+  failures: number;
+  consecutiveFailures: number;
+  lastProvider?: string | null;
 }
 
 export interface EnrichmentUsage {
@@ -141,7 +189,9 @@ export interface EvaWorkspace {
   signals: ChannelSignal[];
   entities: TrackedEntity[];
   leads: QualifiedLead[];
+  potentialLeads: PotentialLead[];
   channels: ChannelInfo[];
+  searchHealth?: SearchHealth;
   icp?: {
     brand_name: string;
     industry: string;
@@ -300,6 +350,60 @@ function buildDemoWorkspace(): EvaWorkspace {
     });
   });
 
+  // Tracked-but-not-yet-qualified companies, so the demo shows the same
+  // discovery-in-progress pipeline a live workspace does. These are real entities
+  // in the backend too — they just haven't cleared the qualification bar.
+  const DEMO_POTENTIAL: {
+    company: string; industry: string; emp: string; hq: string; fit: number;
+    tier: ACVTier; event: SignalType; detail: string; channel: string; reason: string;
+    state: "tracked" | "potential"; sources: number;
+  }[] = [
+    {
+      company: "Northbeam Labs", industry: "B2B SaaS", emp: "51–200", hq: "Austin, TX", fit: 68,
+      tier: "medium", event: "funding", detail: "Northbeam Labs raises $4M seed round",
+      channel: "Funding news", state: "tracked", sources: 3,
+      reason: "Early-stage funding at a mid-ACV account — monitoring for a stronger trigger.",
+    },
+    {
+      company: "Cadence Data", industry: "Data / Analytics", emp: "11–50", hq: "Remote", fit: 61,
+      tier: "low", event: "product_launch", detail: "Product update: usage-based billing now GA",
+      channel: "Company changelogs (product updates)", state: "tracked", sources: 2,
+      reason: "Launch noted from their changelog — waiting on a persona-relevant hire or tech change.",
+    },
+    {
+      company: "Vessel HQ", industry: "Martech", emp: "", hq: "London, UK", fit: 52,
+      tier: "low", event: "job_posting", detail: "Hiring: Growth Marketing Manager",
+      channel: "Company careers pages (first-party jobs)", state: "potential", sources: 1,
+      reason: "Firmographics still thin — Eva is gathering more evidence before qualifying.",
+    },
+  ];
+
+  const potentialLeads: PotentialLead[] = DEMO_POTENTIAL.map((p, i) => {
+    const domain = `${p.company.toLowerCase().split(" ")[0]}.com`;
+    const sig: ChannelSignal = {
+      id: `evs_p_${i}`, signalType: p.event, company: p.company, detail: p.detail,
+      channel: p.channel, confidence: 0.6, timestamp: isoDaysAgo(i % 3),
+      website: `https://${domain}`,
+    };
+    signals.push(sig);
+    entities.push({
+      id: `ent_p_${i}`, company: p.company, entityType: "organization", domain,
+      website: sig.website!, industry: p.industry, employeeRange: p.emp, hqLocation: p.hq,
+      signalIds: [sig.id], firstSeen: isoDaysAgo(4), lastSeen: isoDaysAgo(0),
+      acvTier: p.tier, icpFit: p.fit, qualified: false, leadId: null,
+    });
+    return {
+      id: `ent_p_${i}`, company: p.company, domain, website: sig.website!,
+      logoUrl: `https://logo.clearbit.com/${domain}`,
+      industry: p.industry, employeeRange: p.emp, hqLocation: p.hq,
+      icpFit: p.fit, acvTier: p.tier, icpSimilarity: p.fit - 4,
+      trackingState: p.state, reason: p.reason, signalCount: 1,
+      topSignalType: p.event, topSignal: `[${p.event}] ${p.detail}`,
+      channel: p.channel, url: "", sourceCount: p.sources,
+      firstSeen: isoDaysAgo(4), lastSeen: isoDaysAgo(0),
+    };
+  });
+
   const byTier = { low: 0, medium: 0, high: 0 } as Record<ACVTier, number>;
   leads.forEach((l) => (byTier[l.acvTier] += 1));
   const bySignalType: Record<string, number> = {};
@@ -309,11 +413,15 @@ function buildDemoWorkspace(): EvaWorkspace {
     signals,
     entities,
     leads,
+    potentialLeads,
     channels: [
       { key: "job_boards", signalType: "job_posting", displayName: "Job boards (Lever / Greenhouse / Ashby)", live: true },
       { key: "funding_news", signalType: "funding", displayName: "Funding news", live: true },
       { key: "product_launches", signalType: "product_launch", displayName: "Product launches / announcements", live: true },
       { key: "tech_change", signalType: "tech_change", displayName: "Tech-stack changes", live: true },
+      { key: "owned_careers", signalType: "job_posting", displayName: "Company careers pages (first-party jobs)", live: true },
+      { key: "owned_changelog", signalType: "product_launch", displayName: "Company changelogs (product updates)", live: true },
+      { key: "owned_newsroom", signalType: "funding", displayName: "Company newsroom / blog (funding + announcements)", live: true },
       { key: "research_engine", signalType: "engagement", displayName: "Research engine (web/events)", live: false },
       { key: "linkedin_vm", signalType: "engagement", displayName: "LinkedIn VM (engagement)", live: true },
     ],
@@ -324,8 +432,9 @@ function buildDemoWorkspace(): EvaWorkspace {
     },
     last_scan_at: isoDaysAgo(0),
     metrics: {
-      channelsMonitored: 6, signalsCaptured: signals.length, signalsThisWeek: signals.length,
-      orgsTracked: entities.length, qualifiedLeads: leads.length,
+      channelsMonitored: 9, signalsCaptured: signals.length, signalsThisWeek: signals.length,
+      orgsTracked: entities.length, potentialLeads: potentialLeads.length,
+      qualifiedLeads: leads.length,
       enrichedLeads: leads.filter((l) => l.enrichment.status === "enriched").length,
       emailsFound: leads.filter((l) => l.contact.email).length,
       handedToMax: leads.filter((l) => l.handoffState === "handed_to_max").length,
@@ -380,12 +489,14 @@ function emptyWorkspace(): EvaWorkspace {
     signals: [],
     entities: [],
     leads: [],
+    potentialLeads: [],
     channels: [],
     metrics: {
       channelsMonitored: 0,
       signalsCaptured: 0,
       signalsThisWeek: 0,
       orgsTracked: 0,
+      potentialLeads: 0,
       qualifiedLeads: 0,
       enrichedLeads: 0,
       emailsFound: 0,
@@ -430,11 +541,17 @@ function workspaceContextString(ws: EvaWorkspace): string {
     .slice(0, 6)
     .map((l) => `- ${l.company} (${l.acvTier} ACV, fit ${l.icpFit}, ${l.eventType}, ${l.recommendedAction})`)
     .join("\n");
+  const potential = (ws.potentialLeads || [])
+    .slice(0, 6)
+    .map((p) => `- ${p.company} (fit ${p.icpFit ?? "?"}, ${p.topSignalType || "no signal"}) — ${p.reason}`)
+    .join("\n");
   return [
     `Channels monitored: ${m.channelsMonitored}. Signals: ${m.signalsCaptured} (${m.signalsThisWeek} this week).`,
     `Orgs tracked: ${m.orgsTracked}. Qualified leads: ${m.qualifiedLeads} (low ${m.byTier.low} / med ${m.byTier.medium} / high ${m.byTier.high}).`,
+    `Potential leads (tracked, not yet qualified): ${m.potentialLeads ?? 0}.`,
     `Emails found: ${m.emailsFound}. Handed to Max: ${m.handedToMax}.`,
     `Top qualified leads:\n${top || "(none yet)"}`,
+    `Potential leads and what they're waiting on:\n${potential || "(none yet)"}`,
   ].join("\n");
 }
 
