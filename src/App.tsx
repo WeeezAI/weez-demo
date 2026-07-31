@@ -23,6 +23,7 @@ import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
 import SalesWorkspace from "./pages/SalesWorkspace";
+import Meetings from "./pages/Meetings";
 import GrowthStrategist from "./pages/GrowthStrategist";
 import Max from "./pages/Max";
 import Eva from "./pages/Eva";
@@ -148,7 +149,11 @@ const AppContent = () => {
               <Route path="/sales/:spaceId" element={<Max />} />
               <Route path="/leads/:spaceId" element={<SalesAssistant />} />
               <Route path="/sales-intelligence/:spaceId" element={<SalesIntelligence />} />
-              <Route path="/sales-workspace/:spaceId" element={<SalesWorkspace />} />
+              {/* Meetings — the booked pipeline, styled with the Eva/Max shell.
+                  The legacy SalesWorkspace CRM it replaced is kept below on its own
+                  path so nothing that deep-links to it breaks. */}
+              <Route path="/sales-workspace/:spaceId" element={<Meetings />} />
+              <Route path="/sales-workspace-legacy/:spaceId" element={<SalesWorkspace />} />
               <Route path="/growth/:spaceId" element={<GrowthStrategist />} />
               {/* Ninna — the AI GTM Strategist Command Center. Default homepage
                   of every workspace; the single interface that orchestrates EVA

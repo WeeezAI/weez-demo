@@ -956,8 +956,26 @@ function computeDemoMetrics(
     accountsMonitored: acc.length,
     accountsQueued: opps.filter((o) => ["pending", "approved"].includes(o.approvalState)).length,
     accountsActive: acc.filter((a) => ["contacted", "qualified", "meeting"].includes(a.status)).length,
-    meetingsBooked: 0,
-    repliesAwaiting: 0,
+    // Derived from real outbound outcomes rather than hardcoded to 0 (which made
+    // Max's "Meetings" tile always read zero even after a meeting was booked).
+    // A meeting is either an account flipped to "meeting" or an opportunity whose
+    // tracking reports one; counted per ACCOUNT so two emails to the same company
+    // can't inflate it.
+    meetingsBooked: new Set([
+      ...acc.filter((a) => a.status === "meeting").map((a) => String(a.id)),
+      ...opps
+        .filter((o) => o.tracking?.meetingBooked || o.tracking?.status === "meeting_booked")
+        .map((o) => String(o.accountId)),
+    ]).size,
+    repliesAwaiting: acc.reduce(
+      (n, a) =>
+        n +
+        ((Array.isArray(a.outboundHistory) ? a.outboundHistory : []) as {
+          outcome?: string;
+          handled?: boolean;
+        }[]).filter((ev) => ev?.outcome === "positive_reply" && !ev?.handled).length,
+      0
+    ),
     activeSignalsThisWeek: weekSignals.length,
     autoSent: opps.filter((o) => o.approvalState === "sent").length,
     replyRate: 0,
