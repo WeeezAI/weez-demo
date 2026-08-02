@@ -448,6 +448,7 @@ function buildDemoWorkspace(): EvaWorkspace {
     leads,
     potentialLeads,
     channels: [
+      { key: "linkedin_jobs", signalType: "job_posting", displayName: "LinkedIn Jobs (hiring signals)", live: true },
       { key: "job_boards", signalType: "job_posting", displayName: "Job boards (Lever / Greenhouse / Ashby)", live: true },
       { key: "funding_news", signalType: "funding", displayName: "Funding news", live: true },
       { key: "product_launches", signalType: "product_launch", displayName: "Product launches / announcements", live: true },
@@ -465,7 +466,7 @@ function buildDemoWorkspace(): EvaWorkspace {
     },
     last_scan_at: isoDaysAgo(0),
     metrics: {
-      channelsMonitored: 9, signalsCaptured: signals.length, signalsThisWeek: signals.length,
+      channelsMonitored: 10, signalsCaptured: signals.length, signalsThisWeek: signals.length,
       orgsTracked: entities.length, potentialLeads: potentialLeads.length,
       qualifiedLeads: leads.length,
       enrichedLeads: leads.filter((l) => l.enrichment.status === "enriched").length,

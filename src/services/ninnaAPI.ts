@@ -830,7 +830,9 @@ function computeRevenueMetrics(eva: EvaSlice, max: MaxSlice): RevenueMetric[] {
     { key: "outreach", label: "Active Outreach", value: activeOutreach.toLocaleString("en-US") },
     { key: "replies", label: "Positive Replies", value: positiveReplies.toLocaleString("en-US") },
     { key: "meetings", label: "Meetings Booked", value: meetingsBooked.toLocaleString("en-US") },
-    { key: "pipeline", label: "Pipeline Generated", value: fmtMoney(pipeline) },
+    // "Potential" is the honest framing: this is qualified accounts × ACV — the
+    // value in play if they convert, not pipeline that has actually been created.
+    { key: "pipeline", label: "Potential Pipeline", value: fmtMoney(pipeline) },
     { key: "revenue", label: "Revenue Influenced", value: fmtMoney(revenueInfluenced) },
   ];
 }
