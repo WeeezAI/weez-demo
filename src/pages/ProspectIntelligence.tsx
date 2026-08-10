@@ -60,6 +60,7 @@ import {
   ENRICHMENT_META,
   SIGNAL_META,
   TIER_META,
+  tierMeta,
   type ACVTier,
   type ChannelSignal,
   type EvaAction,
@@ -541,7 +542,7 @@ function CompanyCard({
   active: boolean;
   onSelect: () => void;
 }) {
-  const tier = TIER_META[group.topTier];
+  const tier = tierMeta(group.topTier);
   return (
     <button
       type="button"
@@ -713,11 +714,16 @@ function Dossier({
   onShowEmail: (lead: QualifiedLead) => Promise<void> | void;
   onOpenMax: () => void;
 }) {
-  const tier = TIER_META[lead.acvTier];
+  const tier = tierMeta(lead.acvTier);
   const action = ACTION_META[lead.recommendedAction];
   const enrichment = ENRICHMENT_META[lead.enrichment?.status];
   const handed = lead.handoffState === "handed_to_max";
   const emailConfidence = toPercent(lead.contact?.emailConfidence);
+  // "Show Email" is only offered on a CONFIRMED company (its own domain, a name
+  // that isn't an article headline). The server refuses anything else with
+  // "unresolved_company" and spends no credit — this only avoids offering an
+  // action that would be refused. Undefined (an older stored row) still gets it.
+  const enrichable = lead.enrichable !== false;
   const blocks = angleBlocks(lead, icp);
   const host = hostOf(lead) || group.domain;
   const [enriching, setEnriching] = useState(false);
@@ -784,11 +790,11 @@ function Dossier({
               {[lead.contact?.role, lead.company].filter(Boolean).join(" · ")}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-zinc-500">
-              {lead.industry && (
-                <span className="flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> {lead.industry}
-                </span>
-              )}
+              {/* An unknown industry is an evidence gap, shown as "—" — never
+                  filled in with the declared ICP label. */}
+              <span className="flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> {lead.industry || "—"}
+              </span>
               {lead.employeeRange && (
                 <span className="flex items-center gap-1">
                   <Users className="h-3 w-3" /> {lead.employeeRange}
@@ -820,7 +826,7 @@ function Dossier({
                   {lead.contact.emailVerified ? <MailCheck className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
                   {lead.contact.email}
                 </a>
-              ) : (
+              ) : enrichable ? (
                 <button
                   onClick={revealEmail}
                   disabled={enriching}
@@ -830,6 +836,13 @@ function Dossier({
                   {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
                   {enriching ? "Finding email…" : "Show Email"}
                 </button>
+              ) : (
+                <span
+                  title="This record has no confirmed company identity (its own domain), so contact enrichment isn't offered."
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-[12px] font-medium text-zinc-400"
+                >
+                  <Mail className="h-3.5 w-3.5" /> Company not confirmed
+                </span>
               )}
               {lead.contact?.linkedinUrl && (
                 <a
@@ -1216,6 +1229,11 @@ export default function ProspectIntelligence() {
         toast.error(
           `Monthly enrichment limit reached (${res.usage?.limit ?? 100}). It resets next month.`
         );
+        return;
+      }
+      if (res.status === "unresolved_company") {
+        // Refused before any provider was touched, so no credit was spent.
+        toast.info(res.reason || `${lead.company} isn't a confirmed company — no credit spent.`);
         return;
       }
       if (res.lead) {

@@ -17,6 +17,13 @@ export const EVA_BASE_URL = `${CONFIG.WEEZ_BASE_URL}/eva`;
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export type ACVTier = "low" | "medium" | "high";
+/**
+ * The ACV tier is derived from EVIDENCE about the company (a known employee band,
+ * the classified size estimate, else the funding stage). When there is none, the
+ * backend says so with "unknown" rather than labelling the row MEDIUM by default,
+ * and the UI renders that as "—".
+ */
+export type ACVTierOrUnknown = ACVTier | "unknown";
 export type SignalType =
   | "job_posting"
   | "product_launch"
@@ -54,15 +61,25 @@ export interface TrackedEntity {
   domain: string;
   website: string;
   industry: string;
+  /** Where the industry came from: the company's own evidence, or nothing. */
+  industrySource?: "company_evidence" | "unknown";
   employeeRange: string;
+  companyStage?: string;
+  employeeEstimate?: { band?: string; confidence?: number } | null;
   hqLocation: string;
   signalIds: string[];
   firstSeen: string;
   lastSeen: string;
-  acvTier: ACVTier | null;
+  acvTier: ACVTierOrUnknown | null;
+  /** Which evidence set the tier: employee_band | employee_estimate | stage | unknown. */
+  tierBasis?: string;
   icpFit: number | null;
   qualified: boolean;
   leadId: string | null;
+  /** A confirmed company: own domain, and a name that isn't an article headline. */
+  identityVerified?: boolean;
+  /** False = contact enrichment is refused server-side, so it isn't offered. */
+  enrichable?: boolean;
 }
 
 export interface LeadContact {
@@ -83,9 +100,20 @@ export interface QualifiedLead {
   website: string;
   logoUrl?: string;
   industry: string;
+  industrySource?: "company_evidence" | "unknown";
   employeeRange: string;
+  companyStage?: string;
+  employeeEstimate?: { band?: string; confidence?: number } | null;
   hqLocation: string;
   acvTier: ACVTier;
+  tierBasis?: string;
+  /** A confirmed company: own domain, and a name that isn't an article headline. */
+  identityVerified?: boolean;
+  /**
+   * False = this record has no confirmed company identity, so enrichment is
+   * refused server-side ("unresolved_company") and the control is not offered.
+   */
+  enrichable?: boolean;
   icpFit: number;
   recommendedAction: EvaAction;
   escalation: string;
@@ -142,10 +170,13 @@ export interface PotentialLead {
   employeeRange: string;
   hqLocation: string;
   icpFit: number | null;
-  acvTier: ACVTier | null;
+  acvTier: ACVTierOrUnknown | null;
   icpSimilarity?: number | null;
-  /** "tracked" = cleared ICP selection; "potential" = still gathering evidence. */
-  trackingState: "tracked" | "potential";
+  /**
+   * "tracked" = cleared ICP selection; "potential" = still gathering evidence;
+   * "below_icp_floor" / "unevaluated" = tracked but gated out of qualification.
+   */
+  trackingState: "tracked" | "potential" | "below_icp_floor" | "unevaluated" | string;
   /** Why it hasn't qualified yet. */
   reason: string;
   signalCount: number;
@@ -200,7 +231,13 @@ export interface MaxHandoff {
 }
 
 export interface EnrichLeadResult {
-  status: "enriched" | "no_email" | "limit_reached" | "not_found";
+  /**
+   * ``unresolved_company`` = the record has no confirmed company identity, so the
+   * request was refused before any provider was touched and no credit was spent.
+   */
+  status: "enriched" | "no_email" | "unresolved_company" | "limit_reached" | "not_found";
+  /** Set on a refusal: what the record is missing. */
+  reason?: string;
   found?: boolean;
   email?: string;
   /** True only when a verifier confirmed the address is deliverable. */
@@ -267,6 +304,18 @@ export const TIER_META: Record<ACVTier, { label: string; range: string; tone: st
   medium: { label: "Medium ACV", range: "$10K–$50K", tone: "violet" },
   high: { label: "High ACV", range: "$50K+", tone: "orange" },
 };
+
+/** What an unknown tier looks like: a stated gap, never a default band. */
+export const UNKNOWN_TIER_META = { label: "—", range: "ACV unknown", tone: "zinc" };
+
+/**
+ * Tier metadata that never returns undefined. A tier can be "unknown" (no size and
+ * no stage evidence yet) or missing entirely on an older stored row, and indexing
+ * TIER_META directly with either one crashes the row it renders.
+ */
+export function tierMeta(tier?: ACVTierOrUnknown | null): { label: string; range: string; tone: string } {
+  return (tier && TIER_META[tier as ACVTier]) || UNKNOWN_TIER_META;
+}
 
 export const ENRICHMENT_META: Record<EnrichmentStatus, { label: string; tone: string }> = {
   enriched: { label: "Email found", tone: "emerald" },

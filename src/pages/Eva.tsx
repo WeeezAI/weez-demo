@@ -50,6 +50,7 @@ import {
   SIGNAL_META,
   ACTION_META,
   TIER_META,
+  tierMeta,
   QUICK_PROMPTS,
   type ACVTier,
   type EvaAction,
@@ -433,7 +434,7 @@ function leadSources(lead: QualifiedLead): { label: string; tone: string }[] {
 
 // Hover "i" → why Eva qualified this lead (event, reason, tier, routing).
 function WhyQualified({ lead }: { lead: QualifiedLead }) {
-  const tier = TIER_META[lead.acvTier];
+  const tier = tierMeta(lead.acvTier);
   const action = ACTION_META[lead.recommendedAction];
   return (
     <HoverCard openDelay={80} closeDelay={40}>
@@ -479,7 +480,7 @@ function WhyQualified({ lead }: { lead: QualifiedLead }) {
 // "Enriching…" label, which was misleading — nothing was running and nothing ever
 // would. It now offers the action, runs the Apollo → Hunter → PDL waterfall on
 // click, and reveals the address in place as soon as it resolves.
-type EnrichState = "idle" | "working" | "none" | "limit" | "failed";
+type EnrichState = "idle" | "working" | "none" | "limit" | "unresolved" | "failed";
 
 function EmailCell({
   lead,
@@ -491,6 +492,11 @@ function EmailCell({
   const [state, setState] = useState<EnrichState>("idle");
   const [trace, setTrace] = useState<WaterfallStep[]>([]);
   const email = lead.contact?.email;
+  // Enrichment is only offered on a CONFIRMED company (its own domain, a name that
+  // isn't an article headline). The server refuses anything else with
+  // "unresolved_company" and spends no credit; this only avoids offering a button
+  // that would be refused. Undefined (an older stored row) still gets the button.
+  const enrichable = lead.enrichable !== false;
 
   // A lead enriched elsewhere (a background cycle, the Clay webhook) clears any
   // local "not found" state so the row reflects the truth.
@@ -502,6 +508,7 @@ function EmailCell({
     if (!res) { setState("failed"); return; }
     setTrace(res.waterfall || []);
     if (res.status === "limit_reached") { setState("limit"); return; }
+    if (res.status === "unresolved_company") { setState("unresolved"); return; }
     if (res.status === "enriched" && (res.email || res.lead?.contact?.email)) { setState("idle"); return; }
     setState("none");
   };
@@ -539,6 +546,20 @@ function EmailCell({
     return (
       <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600" title="This month's enrichment credits are used up.">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Monthly limit reached</span>
+      </span>
+    );
+  }
+
+  // No confirmed company behind this row, so there is no decision-maker to find and
+  // no credit worth spending. Say so instead of offering the action.
+  if (!enrichable || state === "unresolved") {
+    return (
+      <span
+        className="flex items-center gap-1 text-[11px] font-medium text-zinc-400"
+        title="This record has no confirmed company identity (its own domain), so contact enrichment isn't offered."
+      >
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">Company not confirmed</span>
       </span>
     );
   }
@@ -609,7 +630,7 @@ function LeadRow({ lead, onAction, onEnrich }: {
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
 }) {
-  const tier = TIER_META[lead.acvTier];
+  const tier = tierMeta(lead.acvTier);
   const handed = lead.handoffState === "handed_to_max";
   const sources = leadSources(lead);
   const siteHost = lead.website?.replace(/^https?:\/\//, "") || lead.domain;
@@ -755,7 +776,11 @@ function PotentialLeadRow({ lead }: { lead: PotentialLead }) {
           <Gauge className={cn("h-3.5 w-3.5", fitTone)} />
           <span className={cn("text-[13px] font-semibold tabular-nums", fitTone)}>{lead.icpFit ?? "—"}</span>
         </div>
-        {lead.acvTier && <p className="text-[10px] text-zinc-400">{TIER_META[lead.acvTier].label} ACV</p>}
+        {/* An unknown tier is a stated evidence gap, rendered as "—" rather than
+            as a default band the company never earned. */}
+        <p className="text-[10px] text-zinc-400">
+          {lead.acvTier && lead.acvTier !== "unknown" ? `${tierMeta(lead.acvTier).label} ACV` : "—"}
+        </p>
       </td>
       <td className="px-4 py-3">
         <Chip tone={signalTone}>{signalLabel}</Chip>
@@ -1107,6 +1132,9 @@ export default function Eva() {
         );
       } else if (res.status === "limit_reached") {
         toast.error("This month's enrichment credits are used up.");
+      } else if (res.status === "unresolved_company") {
+        // Refused before any provider was touched, so no credit was spent.
+        toast.info(res.reason || `${lead.company} isn't a confirmed company — no credit spent.`);
       } else if (res.status === "no_email") {
         toast.info(`No verified email for ${lead.company} yet — Eva will keep trying.`);
       }
