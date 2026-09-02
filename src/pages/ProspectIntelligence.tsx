@@ -9,6 +9,47 @@
 // Grounding rule: every number and sentence on this page comes from a field on
 // the workspace payload. Nothing is scored, invented or rotated client-side.
 // When a field is missing we say so instead of filling the gap.
+//
+// ─── The GTM state overlay (R28.2, R28.7) ─────────────────────────────────────
+//
+// Each decision-maker row and each dossier also carries where the prospect stands
+// in the GTM journey, how urgent the live recommendation is, and what intent has
+// been observed. None of that is on the Eva workspace payload — it belongs to the
+// prospect state engine — so it is read through `services/gtmAPI.ts` and joined
+// onto Eva's leads by `leadId`, which is the same `lead_id` the entry action
+// already carries into `GTMProspect`.
+//
+// **Two reads, both cheap, and neither one per row.**
+//
+//   `gtmAPI.getActionQueue()`  one read for the whole page. The queue is one row
+//                              per prospect with a live recommendation and carries
+//                              `journeyState`, `priorityTier`, `actionType` and
+//                              `channel` on each, so a single call fills the
+//                              journey badge and the tier for every row on screen.
+//                              `getProspectState()` also carries `journeyState`,
+//                              but only for one lead — firing it per row would be
+//                              one request per decision-maker on mount, which is
+//                              exactly what a company with twelve contacts must
+//                              not cost.
+//   `gtmAPI.getProspectState()` one read for the *selected* lead only, because the
+//                              eleven Intent records live on `ProspectStateFull`
+//                              and on no list payload. So the intent summary is a
+//                              dossier field rather than a row field: the dossier
+//                              shows one prospect at a time, and that is the whole
+//                              reason it is affordable here.
+//
+// **Absence is absence.** A prospect with no live recommendation has no tier and
+// no queue-side journey value, and both render as *absent* — never as `LATER`,
+// which is a real tier, and never as `UNKNOWN`, which would be a claim we looked.
+// Where the single queue read did not reach the end of the queue we say only that
+// the row was not on the page we read, because "not found in a truncated list" and
+// "has no live recommendation" are different facts. An intent summary with nothing
+// behind it says so rather than showing a zero.
+//
+// **Neither read can take the dossier down.** Both are secondary: their failures
+// are held in their own state, surfaced as a line of text next to the fields they
+// would have filled, and never touch `ws`, `loading` or `error`. Eva's rows render
+// exactly as they did before whether or not the GTM layer answers.
 
 import {
   useCallback,
@@ -29,8 +70,10 @@ import {
   Brain,
   Building2,
   Check,
+  Compass,
   Copy,
   ExternalLink,
+  Flag,
   Globe,
   Info,
   Layers,
@@ -42,6 +85,7 @@ import {
   Radar,
   RefreshCw,
   RotateCcw,
+  Route,
   Search,
   ShieldCheck,
   Signal as SignalIcon,
@@ -54,6 +98,24 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ConversationSidebar from "@/components/ConversationSidebar";
+import { JourneyStateBadge } from "@/components/gtm/JourneyStateBadge";
+import { ACTION_CARD_LABELS, PRIORITY_TIER_LABELS } from "@/components/gtm/NextActionPanel";
+import { INTENT_PANEL_LABELS } from "@/components/gtm/IntentPanel";
+import { UNKNOWN_SR_NOTE, UNKNOWN_TEXT } from "@/components/gtm/ObservedValue";
+import {
+  CHANNEL_LABEL,
+  GTM_INTENT_LABELS,
+  GTM_JOURNEY_LABELS,
+  GTM_NBA_ACTION_LABELS,
+  GTM_PAGE_LABELS,
+  GTM_UI_LABELS,
+  TONE as GTM_TONE,
+} from "@/components/gtm/labels";
+import gtmAPI, {
+  type ActionQueueItem,
+  type Intent,
+  type ProspectStateFull,
+} from "@/services/gtmAPI";
 import {
   evaAPI,
   ACTION_META,
@@ -211,6 +273,223 @@ function stripEventPrefix(text?: string | null): string {
 
 function hostOf(lead: QualifiedLead): string {
   return (lead.website || "").replace(/^https?:\/\//, "").replace(/\/$/, "") || lead.domain || "";
+}
+
+// ─── The GTM state overlay ────────────────────────────────────────────────────
+
+/**
+ * The strings this overlay needs and `labels.ts` does not carry.
+ *
+ * One exported object, in the shape `NextActionPanel.tsx`'s `ACTION_CARD_LABELS` and
+ * `GTMActionQueue.tsx`'s `ACTION_QUEUE_LABELS` established, because `labels.ts` was
+ * closed for this feature. They belong there beside `GTM_PAGE_LABELS`, and moving
+ * them is a one-line change at each use site.
+ *
+ * Everything already in `labels.ts` is taken from there rather than restated:
+ * `GTM_JOURNEY_LABELS`, `GTM_PRIORITY_TIER_LABELS` (through `PRIORITY_TIER_LABELS`),
+ * `GTM_INTENT_LABELS`, `GTM_NBA_ACTION_LABELS`, `CHANNEL_LABEL`,
+ * `GTM_UI_LABELS.computed` and `.confidence`, `ACTION_CARD_LABELS.priority`,
+ * `INTENT_PANEL_LABELS.neverEvaluated`, `GTM_PAGE_LABELS.entryAction`.
+ *
+ * No entry states or implies that Weez sends anything. The only strings here that
+ * name a channel are `CHANNEL_LABEL`'s and the action titles from
+ * `GTM_NBA_ACTION_LABELS`, which carry the `Open <channel> & <verb>` form.
+ *
+ * The three absence strings are three different facts and are deliberately not one
+ * string. `noRecommendation` is a statement about the prospect — the queue was read
+ * to its end and this lead is not on it. `notOnQueuePage` is a statement about the
+ * read — the queue was longer than the one page we took, so we do not know. And
+ * `overlayFailed` is a statement about us. None of them is a tier, because `LATER`
+ * is a real tier and would be a plausible-looking lie.
+ */
+export const PROSPECT_GTM_LABELS = {
+  sectionTitle: "Journey, priority & intent",
+  journeyLabel: "Journey",
+  intentHeading: "Intent observed",
+  recommendationHeading: "Live recommendation",
+
+  /** What the tier is banded from, so the badge reads as re-derivable and not as a verdict. */
+  tierNote:
+    "Banded from urgency, expected outcome, business value, signal freshness, action confidence and relationship state. The full ranking is on the relationship intelligence page.",
+
+  /** The three absences, kept apart. */
+  noRecommendation: "No live recommendation — nothing is ranked for this prospect",
+  notOnQueuePage: "Not on the page of the queue we read — priority unknown here",
+  overlayFailed: "Couldn't read the journey and priority for this prospect",
+
+  /** Absence in a row chip, where there is no room for the sentence above it. */
+  noRecommendationShort: "No live recommendation",
+  notOnQueuePageShort: "Priority unknown",
+  overlayFailedShort: "Journey unavailable",
+
+  /**
+   * The intent summary's own absences. `noIntentObserved` is the plural of
+   * `INTENT_PANEL_LABELS.noSupport`: every one of the eleven types was evaluated and
+   * none is supported, which is a real answer and not an empty state.
+   */
+  noIntentObserved: "Nothing observed for any intent type",
+  intentUnavailable: "Couldn't read the intent records for this prospect",
+  intentLoading: "Reading intent records",
+  intentNote: "Eleven types are held separately. The strongest observed are shown here.",
+} as const;
+
+/** How many of the eleven intent records the dossier summarises. The rest are on `GTMProspect`. */
+export const INTENT_SUMMARY_LIMIT = 3;
+
+/**
+ * One page of the action queue is all this page reads, and `complete` says whether
+ * that page was the whole queue.
+ *
+ * The distinction is the only thing that keeps the absence honest: a lead missing
+ * from a queue we read to the end has no live recommendation, and a lead missing
+ * from a truncated page is simply a lead we did not look at.
+ */
+export interface QueueOverlay {
+  byLead: Map<string, ActionQueueItem>;
+  complete: boolean;
+}
+
+/**
+ * How much of the queue one read takes.
+ *
+ * One page, deliberately: the join has to cost a fixed number of requests no matter
+ * how many decision-makers are on screen. A queue longer than this leaves the rows
+ * past it reading `notOnQueuePage`, which is the truth, rather than walking the cursor
+ * on mount.
+ */
+export const PROSPECT_QUEUE_PAGE_SIZE = 100;
+
+/** The overlay for one lead: the queue row, or the reason there isn't one. */
+export type OverlayState =
+  | { kind: "row"; item: ActionQueueItem }
+  | { kind: "none" }
+  | { kind: "unknown" }
+  | { kind: "failed" };
+
+/**
+ * Which of the four states a lead is in.
+ *
+ * `failed` wins over everything: when the read did not land we say so rather than
+ * reporting an empty map as an absence of recommendations.
+ */
+export function overlayFor(
+  leadId: string,
+  overlay: QueueOverlay | null,
+  failed: boolean
+): OverlayState {
+  if (failed) return { kind: "failed" };
+  if (!overlay) return { kind: "unknown" };
+  const item = overlay.byLead.get(leadId);
+  if (item) return { kind: "row", item };
+  return overlay.complete ? { kind: "none" } : { kind: "unknown" };
+}
+
+/** The short absence text for a row chip, or null when there is a queue row to render. */
+export function absenceShort(state: OverlayState): string | null {
+  switch (state.kind) {
+    case "row":
+      return null;
+    case "none":
+      return PROSPECT_GTM_LABELS.noRecommendationShort;
+    case "unknown":
+      return PROSPECT_GTM_LABELS.notOnQueuePageShort;
+    case "failed":
+      return PROSPECT_GTM_LABELS.overlayFailedShort;
+  }
+}
+
+/** The full absence sentence for the dossier, or null when there is a queue row. */
+export function absenceSentence(state: OverlayState): string | null {
+  switch (state.kind) {
+    case "row":
+      return null;
+    case "none":
+      return PROSPECT_GTM_LABELS.noRecommendation;
+    case "unknown":
+      return PROSPECT_GTM_LABELS.notOnQueuePage;
+    case "failed":
+      return PROSPECT_GTM_LABELS.overlayFailed;
+  }
+}
+
+/**
+ * The strongest observed intents, and what to say when there are none.
+ *
+ * A sort over the numbers the server sent, then a filter on `value > 0` — nothing is
+ * scored here and no threshold is invented. A row at value zero is not "weak intent",
+ * it is *nothing observed for that type* (R5.5), which is why it is summarised as a
+ * sentence rather than shown as a zero in a chip.
+ *
+ * `note` distinguishes the two zeros the engine keeps apart: a type with an
+ * `evaluatedAt` was looked at and found unsupported, and a type without one has never
+ * been looked at. Where nothing is supported at all, the note says which of those is
+ * true rather than picking the friendlier reading.
+ */
+export function intentSummary(intents: Intent[]): { rows: Intent[]; note: string | null } {
+  const ranked = [...(intents || [])].sort((a, b) =>
+    b.value !== a.value ? b.value - a.value : b.confidence - a.confidence
+  );
+  const observed = ranked.filter((i) => i.value > 0);
+  if (observed.length > 0) return { rows: observed.slice(0, INTENT_SUMMARY_LIMIT), note: null };
+  const everEvaluated = ranked.some((i) => Boolean(i.evaluatedAt));
+  return {
+    rows: [],
+    note: everEvaluated
+      ? PROSPECT_GTM_LABELS.noIntentObserved
+      : INTENT_PANEL_LABELS.neverEvaluated,
+  };
+}
+
+/** A number as the server sent it, to two places when it has a fraction. `ActionCard`'s format. */
+function formatMeasure(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+/**
+ * The journey projection and the priority tier as two phrasing-level chips.
+ *
+ * Phrasing-level on purpose: these render inside `ProspectCard`, which is a
+ * `<button>`, and a button may only contain phrasing content. The dossier mounts the
+ * real `JourneyStateBadge` — with its display-only note — where block content is
+ * allowed. Both carry visible text and an `sr-only` name, so neither one leans on its
+ * tone to be readable (R18.9).
+ */
+function JourneyTierChips({ state }: { state: OverlayState }) {
+  const absent = absenceShort(state);
+  if (absent) {
+    return (
+      <Chip tone="zinc" icon={Route}>
+        <span className="sr-only">{PROSPECT_GTM_LABELS.journeyLabel}: </span>
+        {absent}
+      </Chip>
+    );
+  }
+
+  const item = (state as { kind: "row"; item: ActionQueueItem }).item;
+  const journey = item.journeyState;
+  const journeyUnknown = journey.isUnknown || journey.value == null;
+
+  return (
+    <>
+      <Chip tone="zinc" icon={Route}>
+        <span className="sr-only">
+          {GTM_UI_LABELS.computed} {PROSPECT_GTM_LABELS.journeyLabel}:{" "}
+        </span>
+        {journeyUnknown ? (
+          <>
+            {UNKNOWN_TEXT}
+            <span className="sr-only">{UNKNOWN_SR_NOTE}</span>
+          </>
+        ) : (
+          GTM_JOURNEY_LABELS[journey.value as string] ?? String(journey.value)
+        )}
+      </Chip>
+      <Chip tone="amber" icon={Flag}>
+        <span className="sr-only">{ACTION_CARD_LABELS.priority}: </span>
+        {PRIORITY_TIER_LABELS[item.priorityTier] ?? item.priorityTier}
+      </Chip>
+    </>
+  );
 }
 
 // ─── Company grouping (the only derivation this page performs) ────────────────
@@ -589,10 +868,13 @@ function CompanyCard({
 function ProspectCard({
   lead,
   active,
+  overlay,
   onSelect,
 }: {
   lead: QualifiedLead;
   active: boolean;
+  /** Where this prospect stands in the GTM journey, or why we can't say. */
+  overlay: OverlayState;
   onSelect: () => void;
 }) {
   const action = ACTION_META[lead.recommendedAction];
@@ -631,6 +913,12 @@ function ProspectCard({
         )}
         {enrichment && <Chip tone={enrichment.tone}>{enrichment.label}</Chip>}
         {handed && <Chip tone="violet">With Max</Chip>}
+      </div>
+      {/* Where this prospect stands in the GTM journey, and how urgent the live
+          recommendation is. Both come from one action-queue read joined by lead id;
+          a prospect with no live recommendation says so rather than showing a tier. */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        <JourneyTierChips state={overlay} />
       </div>
       {lead.eventType && (
         <p className="mt-2 line-clamp-2 text-[11.5px] leading-snug text-zinc-500">
@@ -699,20 +987,160 @@ function SignalTimeline({ signals }: { signals: ChannelSignal[] }) {
   );
 }
 
+/** What the dossier knows about the selected lead's intent records, and how it knows. */
+export interface IntentReadState {
+  loading: boolean;
+  failed: boolean;
+  state: ProspectStateFull | null;
+}
+
+/**
+ * The journey projection, the priority tier and the intent summary for one dossier.
+ *
+ * The journey badge is the shared `JourneyStateBadge`, mounted unchanged and carrying
+ * its own display-only note — the projection is recomputed from the dimensions on
+ * every read and this panel is not allowed to let it read as an observed fact. The
+ * dimensions it summarises live on the relationship intelligence page, which is what
+ * the existing entry action below opens.
+ *
+ * The tier is a band and carries no disclaimer, so the six inputs it was banded from
+ * are named beside it in `tierNote` and the ranking itself is one click away. The
+ * intent rows are the strongest of the eleven the engine holds; the other eight are on
+ * that same page, held separately, because a hiring signal is not a buying signal.
+ */
+function JourneyPriorityIntentPanel({
+  overlay,
+  intent,
+}: {
+  overlay: OverlayState;
+  intent: IntentReadState;
+}) {
+  const sentence = absenceSentence(overlay);
+  const item = overlay.kind === "row" ? overlay.item : null;
+  const summary = useMemo(
+    () => intentSummary(intent.state?.intents ?? []),
+    [intent.state]
+  );
+
+  return (
+    <div className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <PanelTitle icon={Route}>{PROSPECT_GTM_LABELS.sectionTitle}</PanelTitle>
+
+      {item ? (
+        <div className="space-y-2.5">
+          {/* The projection, with the note that keeps it from reading as authority. */}
+          <JourneyStateBadge journeyState={item.journeyState} />
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                GTM_TONE.amber
+              )}
+            >
+              <Flag className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">{ACTION_CARD_LABELS.priority}: </span>
+              {PRIORITY_TIER_LABELS[item.priorityTier] ?? item.priorityTier}
+            </span>
+            {/* What the tier is a priority *for*. The action title comes from
+                `GTM_NBA_ACTION_LABELS`, which never says Weez sends anything. */}
+            <span className="text-[11.5px] font-medium text-zinc-600">
+              <span className="sr-only">{PROSPECT_GTM_LABELS.recommendationHeading}: </span>
+              {GTM_NBA_ACTION_LABELS[item.actionType] ?? item.actionType}
+            </span>
+            {item.channel && (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  GTM_TONE.zinc
+                )}
+              >
+                {CHANNEL_LABEL[item.channel] ?? item.channel}
+              </span>
+            )}
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-zinc-500">{PROSPECT_GTM_LABELS.tierNote}</p>
+        </div>
+      ) : (
+        /* No tier, no queue-side journey value — and the reason, which is a different
+           fact in each of the three cases. Never `LATER`, never a zero. */
+        <p className="rounded-xl border border-dashed border-zinc-200 px-3 py-4 text-center text-[12px] text-zinc-500">
+          {sentence}
+        </p>
+      )}
+
+      {/* Intent, read for this one prospect because the eleven records live on the
+          prospect state and on no list payload. */}
+      <div className="mt-3.5 border-t border-zinc-100 pt-3">
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+          <Compass className="h-3 w-3" aria-hidden="true" /> {PROSPECT_GTM_LABELS.intentHeading}
+        </p>
+        {intent.loading ? (
+          <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-zinc-400">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            {PROSPECT_GTM_LABELS.intentLoading}
+          </p>
+        ) : intent.failed ? (
+          <p className="mt-1.5 text-[12px] text-zinc-500">{PROSPECT_GTM_LABELS.intentUnavailable}</p>
+        ) : summary.rows.length > 0 ? (
+          <>
+            <ul className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {summary.rows.map((row) => (
+                <li key={row.intentType} data-intent-type={row.intentType}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                      GTM_TONE.zinc
+                    )}
+                  >
+                    {GTM_INTENT_LABELS[row.intentType] ?? row.intentType}
+                    <span className="font-bold tabular-nums">{formatMeasure(row.value)}</span>
+                    <span className="font-medium text-zinc-500">
+                      <span className="sr-only">{GTM_UI_LABELS.confidence}: </span>
+                      {formatMeasure(row.confidence)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">
+              {PROSPECT_GTM_LABELS.intentNote}
+            </p>
+          </>
+        ) : (
+          /* Nothing behind the summary says so — a zero row is "nothing observed for
+             that type", never "weak intent", and never a number in a chip. */
+          <p className="mt-1.5 text-[12px] text-zinc-500">{summary.note}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Dossier({
   lead,
   group,
   icp,
+  overlay,
+  intent,
   onAction,
   onShowEmail,
   onOpenMax,
+  onOpenRelationshipIntelligence,
 }: {
   lead: QualifiedLead;
   group: CompanyGroup;
   icp?: EvaWorkspace["icp"];
+  /** Where this prospect stands in the GTM journey, or why we can't say. */
+  overlay: OverlayState;
+  /** The selected lead's intent records, or the reason there are none to show. */
+  intent: IntentReadState;
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onShowEmail: (lead: QualifiedLead) => Promise<void> | void;
   onOpenMax: () => void;
+  /** Open this lead on the LinkedIn GTM execution surface (relationship intelligence). */
+  onOpenRelationshipIntelligence: () => void;
 }) {
   const tier = tierMeta(lead.acvTier);
   const action = ACTION_META[lead.recommendedAction];
@@ -866,6 +1294,9 @@ function Dossier({
         </div>
       </div>
 
+      {/* Journey, priority and intent — the GTM state overlay for this prospect. */}
+      <JourneyPriorityIntentPanel overlay={overlay} intent={intent} />
+
       {/* Why this prospect */}
       <div className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
         <PanelTitle icon={Target}>Why this prospect</PanelTitle>
@@ -978,6 +1409,18 @@ function Dossier({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Entry to the LinkedIn GTM execution surface. Eva qualifies the lead
+              here; the relationship-intelligence page acts on it. Offered whether or
+              not the lead is with Max, because the two are different jobs. */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
+            onClick={onOpenRelationshipIntelligence}
+          >
+            <Linkedin className="h-3.5 w-3.5" aria-hidden="true" />
+            {GTM_PAGE_LABELS.entryAction}
+          </Button>
           {handed ? (
             <>
               <Button
@@ -1086,7 +1529,19 @@ export default function ProspectIntelligence() {
   const [companyKey, setCompanyKey] = useState<string>("");
   const [leadId, setLeadId] = useState<string>("");
 
+  // The GTM state overlay. Held apart from `ws` / `loading` / `error` on purpose:
+  // these are secondary reads and neither one is allowed to take the dossier down.
+  const [queue, setQueue] = useState<QueueOverlay | null>(null);
+  const [queueFailed, setQueueFailed] = useState(false);
+  const [intent, setIntent] = useState<IntentReadState>({
+    loading: false,
+    failed: false,
+    state: null,
+  });
+
   const reqRef = useRef(0);
+  const queueReqRef = useRef(0);
+  const intentReqRef = useRef(0);
 
   const load = useCallback(
     async (force: boolean, silent = false) => {
@@ -1128,6 +1583,52 @@ export default function ProspectIntelligence() {
   useEffect(() => {
     load(false);
   }, [load]);
+
+  /**
+   * The one action-queue read this page makes, joined onto Eva's leads by lead id.
+   *
+   * The same monotonic-ticket idiom `load` uses, for the same reason: a slow read must
+   * not land on top of a newer one. A failure sets `queueFailed` and nothing else —
+   * `ws`, `loading` and `error` are untouched, so the rows and the dossier render
+   * exactly as they did before whether or not the GTM layer answers.
+   */
+  const loadQueue = useCallback(async () => {
+    const brandId = spaceId ?? "";
+    if (!brandId) {
+      setQueue(null);
+      setQueueFailed(false);
+      return;
+    }
+    const my = ++queueReqRef.current;
+    setQueueFailed(false);
+    try {
+      const page = await gtmAPI.getActionQueue(brandId, {
+        sort: "priority",
+        limit: PROSPECT_QUEUE_PAGE_SIZE,
+      });
+      if (my !== queueReqRef.current) return;
+      setQueue({
+        byLead: new Map(page.items.map((item) => [item.leadId, item])),
+        // Only a page that reached the end licenses "no live recommendation" for a
+        // lead that isn't on it.
+        complete: !page.hasMore,
+      });
+    } catch {
+      if (my !== queueReqRef.current) return;
+      setQueue(null);
+      setQueueFailed(true);
+    }
+  }, [spaceId]);
+
+  useEffect(() => {
+    void loadQueue();
+  }, [loadQueue]);
+
+  /** Eva's workspace and the GTM overlay, re-read together when the operator asks. */
+  const refreshAll = useCallback(() => {
+    void load(true);
+    void loadQueue();
+  }, [load, loadQueue]);
 
   const activeLeads = useMemo(() => (ws ? ws.leads.filter((l) => l.status !== "rejected") : []), [ws]);
 
@@ -1189,6 +1690,39 @@ export default function ProspectIntelligence() {
     () => prospects.find((p) => p.id === leadId) || prospects[0] || null,
     [prospects, leadId]
   );
+
+  const selectedLeadId = selectedLead?.id ?? "";
+
+  /**
+   * The intent records for the *selected* lead, and only for it.
+   *
+   * The eleven Intent rows live on `ProspectStateFull` and on no list payload, so this
+   * is the one read that has to be keyed on a prospect. Keyed on the *selected* one
+   * rather than fired per row: the dossier shows one prospect at a time, so the cost is
+   * one request per selection instead of one per decision-maker on mount.
+   *
+   * Same ticket idiom, same isolation — a failure lands in `intent.failed` and the
+   * dossier renders around it.
+   */
+  useEffect(() => {
+    const brandId = spaceId ?? "";
+    if (!brandId || !selectedLeadId) {
+      setIntent({ loading: false, failed: false, state: null });
+      return;
+    }
+    const my = ++intentReqRef.current;
+    setIntent({ loading: true, failed: false, state: null });
+    void (async () => {
+      try {
+        const full = await gtmAPI.getProspectState(brandId, selectedLeadId);
+        if (my !== intentReqRef.current) return;
+        setIntent({ loading: false, failed: false, state: full });
+      } catch {
+        if (my !== intentReqRef.current) return;
+        setIntent({ loading: false, failed: true, state: null });
+      }
+    })();
+  }, [spaceId, selectedLeadId]);
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) =>
@@ -1297,7 +1831,7 @@ export default function ProspectIntelligence() {
               variant="outline"
               size="sm"
               className="h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
-              onClick={() => load(true)}
+              onClick={refreshAll}
               disabled={loading || refreshing}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
@@ -1320,7 +1854,7 @@ export default function ProspectIntelligence() {
                   <p className="mx-auto mt-0.5 max-w-md text-xs text-zinc-500">{error}</p>
                 </div>
                 <Button
-                  onClick={() => load(true)}
+                  onClick={refreshAll}
                   className="mt-1 h-9 gap-1.5 rounded-xl bg-zinc-900 px-4 text-xs font-semibold hover:bg-zinc-800"
                 >
                   <RefreshCw className="h-4 w-4" /> Try again
@@ -1342,7 +1876,7 @@ export default function ProspectIntelligence() {
                       variant="outline"
                       size="sm"
                       className="h-7 shrink-0 gap-1.5 rounded-full border-amber-200 bg-white text-[11px]"
-                      onClick={() => load(true)}
+                      onClick={refreshAll}
                     >
                       <RotateCcw className="h-3 w-3" /> Try again
                     </Button>
@@ -1410,7 +1944,7 @@ export default function ProspectIntelligence() {
                       variant="outline"
                       size="sm"
                       className="mt-1 h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
-                      onClick={() => load(true)}
+                      onClick={refreshAll}
                     >
                       <RefreshCw className="h-3.5 w-3.5" /> Refresh now
                     </Button>
@@ -1480,6 +2014,7 @@ export default function ProspectIntelligence() {
                               key={p.id}
                               lead={p}
                               active={p.id === selectedLead?.id}
+                              overlay={overlayFor(p.id, queue, queueFailed)}
                               onSelect={() => setLeadId(p.id)}
                             />
                           ))
@@ -1495,9 +2030,18 @@ export default function ProspectIntelligence() {
                           lead={selectedLead}
                           group={selectedCompany}
                           icp={ws.icp}
+                          overlay={overlayFor(selectedLead.id, queue, queueFailed)}
+                          intent={intent}
                           onAction={onLeadAction}
                           onShowEmail={onShowEmail}
                           onOpenMax={() => navigate(`/sales/${spaceId}`)}
+                          onOpenRelationshipIntelligence={() =>
+                            navigate(
+                              `/relationship-intelligence/${spaceId}?lead_id=${encodeURIComponent(
+                                selectedLead.id
+                              )}`
+                            )
+                          }
                         />
                       ) : (
                         <EmptyPanel

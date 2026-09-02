@@ -31,6 +31,9 @@ import Ninna from "./pages/Ninna";
 import MarketDiscovery from "./pages/MarketDiscovery";
 import RevenueIntelligence from "./pages/RevenueIntelligence";
 import ProspectIntelligence from "./pages/ProspectIntelligence";
+import GTMProspect from "./pages/GTMProspect";
+import GTMActionQueue from "./pages/GTMActionQueue";
+import GTMDashboard from "./pages/GTMDashboard";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -162,6 +165,16 @@ const AppContent = () => {
               <Route path="/eva/:spaceId" element={<Eva />} />
               {/* Prospect Intelligence — the AI reasoning layer between EVA and MAX. */}
               <Route path="/prospect-intelligence/:spaceId" element={<ProspectIntelligence />} />
+              {/* Relationship Intelligence — the LinkedIn GTM execution surface for
+                  one Eva-qualified prospect. Entered from the dossier above with
+                  ?lead_id=<lead>; :spaceId is the brand id, as everywhere else. */}
+              <Route path="/relationship-intelligence/:spaceId" element={<GTMProspect />} />
+              {/* Action Queue — the cross-prospect ranked queue of live GTM
+                  recommendations. Read-only; :spaceId is the brand id, as above. */}
+              <Route path="/action-queue/:spaceId" element={<GTMActionQueue />} />
+              {/* GTM Dashboard — the seven aggregate statements, each linking to the
+                  rows behind it. Read-only; :spaceId is the brand id, as above. */}
+              <Route path="/gtm-dashboard/:spaceId" element={<GTMDashboard />} />
               <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
