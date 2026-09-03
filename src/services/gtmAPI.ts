@@ -735,6 +735,12 @@ export interface TimelineEntry {
  *
  * `messageVersions` retains prior drafts newest-first; `latestMessage` is the head
  * of that list, kept as its own field because it is what the composer opens with.
+ *
+ * The six fields at the bottom are the state engine's intelligence, riding on the
+ * payload the prospect screen already reads (R26.7). Every one of them is `null`
+ * when the server left the key off, which it does whenever there is no belief, an
+ * incomplete belief, or no evaluation — see the block comment on them below, because
+ * the distinction between *absent* and *unknown* is what the screen is built on.
  */
 export interface ProspectDetail {
   leadId: string;
@@ -748,6 +754,46 @@ export interface ProspectDetail {
   latestMessage: Message | null;
   messageVersions: Message[];
   updatedAt: string | null;
+
+  // ── The state engine's intelligence, when the server had any to send ──
+  //
+  // Six additive fields, dropped from the JSON entirely rather than sent as `null`
+  // when the prospect has no belief, an incomplete belief, or no evaluation. So
+  // `null` here means exactly one thing — *nothing has been read about this
+  // prospect yet* — and never "read, and the answer was nothing".
+  //
+  // `journeyState` is the field where that distinction bites. `null` is "no belief
+  // exists", while an `ObservedFact` whose `isUnknown` is true is "a belief exists
+  // and it places this prospect nowhere". The first is a gap in what Weez has done;
+  // the second is a reading Weez has made. They are different claims, they get
+  // different copy on screen, and that is why an absent key must never be
+  // normalised into an unknown fact.
+  //
+  // The same rule holds for the other five: an absent `intents` is `null` and not
+  // `[]`, because eleven zero-valued intents *are* a real answer the engine sends
+  // (R5.5) and an empty list would read as that answer rather than as its absence.
+  // An absent `buyingStage` is `null` and not a `UNKNOWN`-valued stage, an absent
+  // `timing` is `null` and not a row of zeroes, and an absent `nextBestAction` is
+  // `null` and not a ranking with no winner.
+
+  /** The 21-value Journey_State projection. `null` when no belief was read. */
+  journeyState: ObservedFact | null;
+  /** The eleven Intent_States. `null` when no belief was read. */
+  intents: Intent[] | null;
+  /**
+   * The three Channel_States.
+   *
+   * `channelStates`, not `channels`: `channels` on this payload is already the three
+   * *scored channel results*, and the server names this field `channel_states` for
+   * the same reason.
+   */
+  channelStates: ChannelState[] | null;
+  /** Where the prospect stands in their own buying process. `null` when unread. */
+  buyingStage: BuyingStageState | null;
+  /** Freshness, urgency, the window and the working-hours reading. `null` when unread. */
+  timing: TimingState | null;
+  /** The persisted ranking. `null` when no evaluation has been run or read. */
+  nextBestAction: NextBestAction | null;
 }
 
 /** One row of the ranked queue. The four dimensions travel here too, in `state`. */
@@ -1851,6 +1897,16 @@ interface WireProspectDetail {
   latest_message?: WireMessage | null;
   message_versions?: WireMessage[];
   updated_at?: string | null;
+  // The state engine's six additive fields (R26.7). Optional on the wire in the
+  // strongest sense available: `schemas/gtm.py` drops the keys from the serialised
+  // body rather than sending them as `null`, so `undefined` here is the normal
+  // shape of a prospect nobody has evaluated — not a malformed payload.
+  journey_state?: WireObservedFact | null;
+  intents?: WireIntent[] | null;
+  channel_states?: WireChannelState[] | null;
+  buying_stage?: WireBuyingStageState | null;
+  timing?: WireTimingState | null;
+  next_best_action?: WireNextBestAction | null;
 }
 
 interface WireProspectListItem {
@@ -2505,6 +2561,28 @@ function toProspectDetail(raw: WireProspectDetail): ProspectDetail {
       .map(toMessage)
       .filter((item): item is Message => item !== null),
     updatedAt: raw.updated_at ?? null,
+
+    // ── The state engine's six, through the converters the dedicated routes use ──
+    //
+    // Every one is guarded on the key's presence and normalises to `null` when it is
+    // absent — never `0`, never `[]`, never `false`, and never a synthesised object.
+    // The converters themselves all have honest defaults for a *present* payload
+    // with holes in it (`toBuyingStage` answers `UNKNOWN`, `toTiming` answers zeroes,
+    // `toFact` answers an unknown fact), and calling one on an absent key would turn
+    // "we have read nothing" into "we have read this and the answer is nothing".
+    // Those are different claims, so the guard is the whole point.
+    //
+    // `toFact` is the sharpest case. `toFact(undefined)` returns `unknownFact()`,
+    // which is a *belief that places the prospect nowhere*. An absent
+    // `journey_state` is the absence of any belief at all, so it stays `null` and the
+    // page can tell the two apart: no belief gets copy saying nothing has been read,
+    // while an unknown projection gets the badge's own "Unknown" reading.
+    journeyState: raw.journey_state ? toFact(raw.journey_state) : null,
+    intents: raw.intents ? raw.intents.map(toIntent) : null,
+    channelStates: raw.channel_states ? raw.channel_states.map(toChannelState) : null,
+    buyingStage: raw.buying_stage ? toBuyingStage(raw.buying_stage) : null,
+    timing: raw.timing ? toTiming(raw.timing) : null,
+    nextBestAction: raw.next_best_action ? toNextBestAction(raw.next_best_action) : null,
   };
 }
 

@@ -48,28 +48,59 @@
 // socket, a missed frame, and every event this page cannot patch (a recomputed
 // score, a new draft).
 //
-// The state engine's sections
-// ---------------------------
-// R28.1 names sixteen sections, and the twelve this file did not already hold are
-// composed here from panels that already exist. They sit inside one native
-// disclosure — `<details>` with a `<summary>` — and three things follow from that,
-// all deliberate:
+// The decision hierarchy
+// ----------------------
+// The page is five sections, in the order the operator's questions arrive:
 //
-//   • **Nothing is read until it is asked for.** The default load stays two
+//   1. **Recommended action** — `NextActionPanel` with `ActionExplanation` beside it,
+//      in the same section and adjacent. A recommendation and the argument for it are
+//      one unit; splitting them asks the reader to trust rather than to check.
+//   2. **Current state** — the journey projection, the dimension grid, the engagement
+//      trend and the timing.
+//   3. **What Weez believes** — the whole-state confidence, the buying stage, the
+//      eleven intents, the per-channel readings, the scored channel recommendation and
+//      the meeting readiness.
+//   4. **Evidence** — the signals, the LinkedIn activity, the ledger.
+//   5. **Outcome and learning** — the state history and the learning statistics.
+//
+// **Sections 1–3 render from `detail` alone.** The prospect payload carries the state
+// engine's reading — `journeyState`, `intents`, `channelStates`, `buyingStage`,
+// `timing` and `nextBestAction` (R26.7) — so the recommendation is above the fold on
+// the strength of the request the page already makes. There is no second fetch in
+// front of the operator's first decision.
+//
+// `getProspectState` / `getNextBestAction` remain as a **fallback**: a server that
+// predates those six fields drops them from the payload, and on such a server the
+// disclosure's own reads are still what fills these sections in. The debug read
+// behind `LearningInsightsPanel` stays gated behind its own control, because
+// `getDebugView` returns six ledger collections and the whole state to feed one panel.
+//
+// **Absent intelligence is not an error.** The six fields are dropped from the JSON
+// entirely when the prospect has no belief, an incomplete belief, or no evaluation. So
+// `null` means *nothing has been read* and gets a sentence from
+// `GTM_PAGE_LABELS` — no alert, no retry, no zero, and no fabricated recommendation.
+// It is a different claim from a fact that reads "Unknown", which is a belief that
+// places nothing in that slot, and the two never share copy.
+//
+// Sections 4 and 5 sit inside one native disclosure — `<details>` with a `<summary>` —
+// and two things follow, both deliberate:
+//
+//   • **Nothing new is read until it is asked for.** The default load stays two
 //     requests: the prospect payload and the ledger. Opening the disclosure runs
 //     `loadState()`, which reads `GET /prospect/{lead_id}/state` and
 //     `GET /prospect/{lead_id}/next-best-action` in parallel through
-//     `Promise.allSettled`, so a ranking that failed cannot blank the belief. The
-//     debug read behind `LearningInsightsPanel` is gated *again*, behind its own
-//     control, because `getDebugView` returns six ledger collections and the whole
-//     state to feed one panel — that is a deliberate read, not a page load.
-//   • **The two panels the reads extend get richer once it is open.**
-//     `StateDimensionGrid` takes `stateFull` and `NextActionPanel` takes
-//     `nextBestAction`; both are additive and both render exactly as before while
-//     the page holds neither (R9.6, R27.5).
+//     `Promise.allSettled`, so a ranking that failed cannot blank the belief. The gate
+//     is about reads and not about visibility — `<details>` handles visibility — which
+//     is why `ProspectTimeline` and `ActivityPanel` are mounted with the page: the
+//     first is one of the two requests the load contract already names, and the second
+//     reads nothing at all.
 //   • **The control is native markup rather than a `<button>`.** A `<summary>` is
 //     focusable and Enter/Space operable without a keydown handler, an
 //     `aria-expanded` of our own, or a second thing to keep in sync.
+//
+// `StateDimensionGrid` takes `stateFull` and `NextActionPanel` takes `nextBestAction`;
+// both are additive and both render exactly as before while the page holds neither
+// (R9.6, R27.5).
 //
 // Structure and announcements
 // ---------------------------
@@ -490,7 +521,6 @@ export default function GTMProspect() {
    * a socket because somebody opened a panel would be a real bug.
    */
   const stateOpenRef = useRef(false);
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
 
   const load = useCallback(
     async (force: boolean, silent = false) => {
@@ -744,19 +774,15 @@ export default function GTMProspect() {
   /**
    * The operator opened a candidate's reasoning.
    *
-   * The explanation is already on the candidate, so this selects it and makes sure
-   * the section that renders it is open — it asks for nothing and edits nothing.
+   * The explanation is already on the candidate, so this only selects it: it asks for
+   * nothing and edits nothing. It no longer has to open a disclosure either, because
+   * `ActionExplanation` sits in the recommended-action section beside the card the
+   * control was pressed on — the reasoning is already on screen, and pressing this
+   * swaps which candidate is being argued for.
    */
-  const onEditReasoning = useCallback(
-    (action: CandidateAction) => {
-      setExplained(action);
-      if (detailsRef.current) detailsRef.current.open = true;
-      setStateOpen(true);
-      stateOpenRef.current = true;
-      if (!stateFull) void loadState();
-    },
-    [loadState, stateFull],
-  );
+  const onEditReasoning = useCallback((action: CandidateAction) => {
+    setExplained(action);
+  }, []);
 
   /** A message row the server rewrote: a saved edit, or a new version. */
   const onMessagePersisted = useCallback((message: Message) => {
@@ -788,6 +814,46 @@ export default function GTMProspect() {
 
   const hasLead = Boolean(brandId && leadId);
 
+  // ── Where the intelligence above the fold comes from (R26.7) ──
+  //
+  // The prospect payload carries the state engine's reading, so the recommendation,
+  // the current state and the belief are all rendered from `detail` — the one request
+  // the page already makes. There is no second fetch above the fold and no read to
+  // wait for before the operator can see what to do.
+  //
+  // `stateFull` / `nextBestAction` stay as a **fallback**, second in each expression
+  // below. A server that predates those six fields drops them from the payload, and
+  // on such a server the disclosure's own reads are still what fills these sections
+  // in — so the page degrades to its previous behaviour instead of going blank.
+  //
+  // `??` and not `||`: `null` here means *nothing was read*, and every one of these
+  // values has a legitimate falsy-looking member (an empty intent list, a zero
+  // confidence) that must not be treated as absence.
+  //
+  // Absent stays absent. Nothing below substitutes a zero, an empty collection, or a
+  // synthesised object for a value the server did not send: the panels take
+  // non-nullable props by contract, so a section with nothing to report renders the
+  // honest note instead of a panel fed an invented payload.
+  const journeyState = detail?.journeyState ?? stateFull?.journeyState ?? null;
+  const intents = detail?.intents ?? stateFull?.intents ?? null;
+  const channelStates = detail?.channelStates ?? stateFull?.channels ?? null;
+  const buyingStage = detail?.buyingStage ?? stateFull?.buyingStage ?? null;
+  const timing = detail?.timing ?? stateFull?.timing ?? null;
+  const ranking = detail?.nextBestAction ?? nextBestAction ?? null;
+
+  // Two readings the detail payload does not carry at all: the trailing engagement
+  // counts and the whole-state confidence live on the state read only. So they have
+  // no `detail` half to prefer, and their absence is reported rather than filled —
+  // a confidence of `0` is a real reading and cannot stand in for "not read".
+  const engagement = stateFull?.engagement ?? null;
+  const stateConfidence = stateFull ? stateFull.stateConfidence : null;
+  const dimensionConfidence = stateFull?.dimensionConfidence ?? null;
+
+  /** True when nothing in section 2 beyond the four dimensions has been read. */
+  const stateBeliefAbsent = !journeyState && !engagement && !timing;
+  /** True when nothing in section 3 beyond the legacy scores has been read. */
+  const beliefAbsent = !intents && !buyingStage && !channelStates && stateConfidence === null;
+
   /**
    * The reasoning `ActionExplanation` renders: the candidate the operator opened, and
    * the ranking's own winner otherwise.
@@ -796,9 +862,9 @@ export default function GTMProspect() {
    * panel says so rather than showing four empty sections.
    */
   const explanation: RecommendationExplanation | null = useMemo(() => {
-    const candidate = explained ?? nextBestAction?.recommended ?? null;
+    const candidate = explained ?? ranking?.recommended ?? null;
     return candidate?.explanation ?? null;
-  }, [explained, nextBestAction]);
+  }, [explained, ranking]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#FAFAFB] font-inter">
@@ -905,90 +971,189 @@ export default function GTMProspect() {
                   headingAs="h2"
                 />
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-                  {/* Left: what we know and what it means. */}
-                  <div className="min-w-0 space-y-4">
-                    {channelError && (
-                      <Alert variant="destructive">
-                        <AlertDescription className="flex flex-wrap items-center gap-3">
-                          <span className="text-[13px]">{channelError}</span>
-                          <Button size="sm" variant="outline" onClick={() => void onReevaluate()}>
-                            {GTM_PAGE_LABELS.retry}
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    <ChannelRecommendationPanel
-                      channels={detail.channels}
-                      recommendedChannel={detail.recommendedChannel}
-                      onReevaluate={() => void onReevaluate()}
-                      evaluating={evaluating}
-                    />
-                    <ActivityPanel activity={detail.activity} />
-                    {/* `stateFull` is additive (R9.6, R28.3): null until the sections
-                        below are opened, and the four dimensions never move. With it,
-                        the added dimensions, the per-dimension confidence and the
-                        journey badge appear beside them. */}
-                    <StateDimensionGrid state={detail.state} stateFull={stateFull} />
-                    <CTAReadinessPanel cta={detail.cta} />
-                  </div>
+                {/* ── The decision hierarchy (R18.4, R26.7) ──
+                    Five sections, in the order an operator's questions actually
+                    arrive: what to do, where this prospect stands, what Weez believes,
+                    what it read, and what came of it. Sections 1–3 render from
+                    `detail` — the payload this page already fetched — so the
+                    recommendation is above the fold without a second request. Sections
+                    4 and 5 stay behind the disclosure.
 
-                  {/* Right: what to do, and the record of what has happened. */}
-                  <div className="min-w-0 space-y-4">
-                    {/* `nextBestAction` is additive in the same way (R27.5): without
-                        it this panel is what it always was, and with it the
-                        Action_Card for the ranking's winner appears above the
-                        recommendation, which keeps its composer and its confirm
-                        ladder. */}
-                    <NextActionPanel
-                      brandId={brandId}
-                      leadId={detail.leadId}
-                      nextAction={detail.nextAction}
-                      nextBestAction={nextBestAction}
-                      confirmationStatus={detail.state.confirmationStatus}
-                      messageVersions={detail.messageVersions}
-                      onActionRequested={onActionRequested}
-                      onLifecycleRecorded={onLifecycleRecorded}
-                      onFeedbackRecorded={onFeedbackRecorded}
-                      onEditReasoning={onEditReasoning}
-                      onMessagePersisted={onMessagePersisted}
-                    />
+                    None of the five carries a heading of its own, deliberately. Every
+                    panel inside already owns an `<h2>` naming exactly what it renders,
+                    so a section heading would either repeat one of those names — two
+                    headings for one thing — or invent a third name for a group. The
+                    sections are grouping elements; the outline stays one `<h2>` per
+                    panel, contiguous from the page's single `<h1>`. */}
 
-                    {/* The timeline fetches, pages, and fails on its own. The `<ol>`
-                        is the component's; this section only supplies the heading. */}
+                {/* ── 1. Recommended action ──
+                    The panel and the argument for it, in one section and adjacent by
+                    construction. A recommendation whose reasoning is somewhere else on
+                    the page asks the operator to trust it rather than to check it, so
+                    `ActionExplanation` is a sibling of `NextActionPanel` and cannot
+                    drift away from it without this section being taken apart. */}
+                <section
+                  data-gtm-section="recommended-action"
+                  className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]"
+                >
+                  {/* `nextBestAction` is additive (R27.5): without a ranking this panel
+                      is what it always was, and with one the Action_Card for the
+                      winner appears above the recommendation, which keeps its composer
+                      and its confirm ladder. `ranking` prefers the payload's own
+                      `next_best_action` and falls back to the dedicated read. */}
+                  <NextActionPanel
+                    className="min-w-0"
+                    brandId={brandId}
+                    leadId={detail.leadId}
+                    nextAction={detail.nextAction}
+                    nextBestAction={ranking}
+                    confirmationStatus={detail.state.confirmationStatus}
+                    messageVersions={detail.messageVersions}
+                    onActionRequested={onActionRequested}
+                    onLifecycleRecorded={onLifecycleRecorded}
+                    onFeedbackRecorded={onFeedbackRecorded}
+                    onEditReasoning={onEditReasoning}
+                    onMessagePersisted={onMessagePersisted}
+                  />
+                  {/* A null explanation is a real answer — nothing has been argued for
+                      this prospect yet — and the panel says so itself. */}
+                  <ActionExplanation className="min-w-0" explanation={explanation} />
+                </section>
+
+                {/* ── 2. Current state ──
+                    Where the prospect stands: the projection, the four dimensions and
+                    their provenance, then the two readings that say which way things
+                    are moving and when to move. */}
+                <section data-gtm-section="current-state" className="space-y-4">
+                  {/* The projection, from the payload (R9.2, R9.6). Rendered only when
+                      a belief was read: an absent `journeyState` is *no belief*, which
+                      is not the same claim as a belief that places this prospect
+                      nowhere — and the badge's own "Unknown" branch is that second
+                      claim. Substituting one for the other would be the page asserting
+                      a reading nobody made. */}
+                  {journeyState && <JourneyStateBadge journeyState={journeyState} />}
+
+                  {/* `stateFull` is additive (R9.6, R28.3): the four dimensions never
+                      move, and with the full read the added dimensions and the
+                      per-dimension confidences appear beside them. */}
+                  <StateDimensionGrid state={detail.state} stateFull={stateFull} />
+
+                  {(engagement || timing) && (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {/* Neither payload carries a confidence of its own; the engine
+                          reports one per dimension, so the map travels with them
+                          rather than a number invented here. */}
+                      {engagement && (
+                        <EngagementTrendPanel
+                          className="min-w-0"
+                          engagement={engagement}
+                          dimensionConfidence={dimensionConfidence}
+                        />
+                      )}
+                      {timing && (
+                        <TimingPanel
+                          className="min-w-0"
+                          timing={timing}
+                          dimensionConfidence={dimensionConfidence}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Nothing read beyond the dimensions. A sentence, not an alert and
+                      not a retry: there is no failed request behind this, only a
+                      prospect the engine has not formed a belief about. Suppressed
+                      while a read is in flight, so it never reports an absence that is
+                      about to be answered. */}
+                  {stateBeliefAbsent && !stateLoading && (
+                    <p className="text-[12px] leading-relaxed text-slate-500">
+                      {GTM_PAGE_LABELS.noStateBelief}
+                    </p>
+                  )}
+                </section>
+
+                {/* ── 3. What Weez believes ──
+                    The readings, each with its own confidence and its own evidence.
+                    `ChannelRecommendationPanel` and `CTAReadinessPanel` live here
+                    because a scored channel and a readiness band are beliefs about the
+                    prospect, not facts observed about them. */}
+                <section data-gtm-section="belief" className="space-y-4">
+                  {/* Confidence (R28.1). The whole-state number only — the
+                      per-dimension confidences are chips in the grid above, because a
+                      dimension's confidence belongs on that dimension. `null` rather
+                      than `0` when no belief was read: zero is a real confidence. */}
+                  {stateConfidence !== null && (
                     <section
-                      aria-labelledby="gtm-timeline-heading"
+                      aria-labelledby="gtm-confidence-heading"
                       className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
                     >
                       <h2
-                        id="gtm-timeline-heading"
+                        id="gtm-confidence-heading"
                         className="text-sm font-semibold text-zinc-900"
                       >
-                        {GTM_PAGE_LABELS.timelineTitle}
+                        {GTM_UI_LABELS.confidence}
                       </h2>
-                      <ProspectTimeline
-                        brandId={brandId}
-                        leadId={detail.leadId}
-                        refreshKey={timelineKey}
-                        className="mt-2"
-                      />
+                      <div className="mt-3 flex flex-wrap items-start gap-3">
+                        <span
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                            TONE.zinc,
+                          )}
+                        >
+                          <span className="sr-only">{GTM_UI_LABELS.confidence}: </span>
+                          {formatConfidence(stateConfidence)}
+                        </span>
+                      </div>
                     </section>
-                  </div>
-                </div>
+                  )}
 
-                {/* ── The state engine's sections (R28.1, R28.3) ──
-                    Twelve panels, each owning its own semantics and its own `<h2>`,
-                    behind one native disclosure. The disclosure is what keeps the
-                    default load at two requests: `loadState()` runs on the first
-                    open, `SignalList` and `StateHistoryPanel` read their own
-                    collections when they mount, and the debug read behind
-                    `LearningInsightsPanel` is gated once more inside.
+                  {buyingStage && <BuyingStagePanel buyingStage={buyingStage} />}
+                  {intents && <IntentPanel intents={intents} />}
+                  {channelStates && <ChannelIntelligencePanel channels={channelStates} />}
+
+                  {/* The same honest empty, for the readings this section is about. */}
+                  {beliefAbsent && !stateLoading && (
+                    <p className="text-[12px] leading-relaxed text-slate-500">
+                      {GTM_PAGE_LABELS.noIntelligenceRead}
+                    </p>
+                  )}
+
+                  {channelError && (
+                    <Alert variant="destructive">
+                      <AlertDescription className="flex flex-wrap items-center gap-3">
+                        <span className="text-[13px]">{channelError}</span>
+                        <Button size="sm" variant="outline" onClick={() => void onReevaluate()}>
+                          {GTM_PAGE_LABELS.retry}
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <ChannelRecommendationPanel
+                    channels={detail.channels}
+                    recommendedChannel={detail.recommendedChannel}
+                    onReevaluate={() => void onReevaluate()}
+                    evaluating={evaluating}
+                  />
+                  <CTAReadinessPanel cta={detail.cta} />
+                </section>
+
+                {/* ── 4 and 5, behind one native disclosure (R28.1, R28.3) ──
+                    The evidence and the record: what was read, and what came of it.
+                    Both are the answer to "why should I believe section 3", which is a
+                    question asked second — so they are here rather than above.
+
+                    The disclosure is what keeps the default load at two requests, and
+                    the gate is about *reads*, not about visibility: `<details>` already
+                    handles visibility. So `SignalList`, `StateHistoryPanel` and the
+                    debug read behind `LearningInsightsPanel` are mounted only once the
+                    disclosure is opened, while `ActivityPanel` (which reads nothing)
+                    and `ProspectTimeline` (whose read is one of the two the load
+                    contract already names) are mounted with the page.
 
                     A `<summary>` rather than a `<Button>`: it is focusable and
                     Enter/Space operable as it stands, with no `aria-expanded` of ours
                     to keep in sync with the element's own `open`. */}
                 <details
-                  ref={detailsRef}
                   className="rounded-lg border border-zinc-200 bg-white shadow-sm"
                   onToggle={(event) => onSectionsToggle(event.currentTarget.open)}
                 >
@@ -1002,146 +1167,123 @@ export default function GTMProspect() {
                     )}
                   </summary>
 
-                  {stateOpen && (
-                    <div className="space-y-4 border-t border-zinc-200 p-4">
-                      {/* One read failing is this section's failure, not the page's:
-                          the alert sits here and whatever landed stays on screen. */}
-                      {stateError && (
-                        <Alert variant="destructive">
-                          <AlertDescription className="flex flex-wrap items-center gap-3">
-                            <span className="text-[13px]">{stateError}</span>
-                            <Button size="sm" variant="outline" onClick={() => void loadState()}>
-                              {GTM_PAGE_LABELS.retry}
-                            </Button>
-                          </AlertDescription>
-                        </Alert>
-                      )}
+                  <div className="space-y-4 border-t border-zinc-200 p-4">
+                    {/* One read failing is this section's failure, not the page's: the
+                        alert sits here and whatever landed stays on screen. It reports
+                        a *request* that failed, which is why absent intelligence — a
+                        request nobody made — gets a sentence upstairs instead. */}
+                    {stateError && (
+                      <Alert variant="destructive">
+                        <AlertDescription className="flex flex-wrap items-center gap-3">
+                          <span className="text-[13px]">{stateError}</span>
+                          <Button size="sm" variant="outline" onClick={() => void loadState()}>
+                            {GTM_PAGE_LABELS.retry}
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                      {stateLoading && !stateFull ? (
-                        <div aria-busy="true" className="space-y-4">
-                          <span className="sr-only">{GTM_PAGE_LABELS.statusLoading}</span>
-                          <PanelSkeleton rows={4} />
-                          <PanelSkeleton rows={3} />
+                    {/* ── 4. Evidence ── */}
+                    <section
+                      data-gtm-section="evidence"
+                      className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]"
+                    >
+                      <div className="min-w-0 space-y-4">
+                        {/* Fetches, pages and fails on its own, so it does not wait on
+                            the state read and a state read that failed does not take
+                            the evidence down with it. */}
+                        {stateOpen && (
+                          <SignalList
+                            brandId={brandId}
+                            leadId={detail.leadId}
+                            refreshKey={stateKey}
+                          />
+                        )}
+                        <ActivityPanel activity={detail.activity} />
+                      </div>
+
+                      <div className="min-w-0 space-y-4">
+                        {/* The timeline fetches, pages, and fails on its own. The `<ol>`
+                            is the component's; this section only supplies the heading. */}
+                        <section
+                          aria-labelledby="gtm-timeline-heading"
+                          className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+                        >
+                          <h2
+                            id="gtm-timeline-heading"
+                            className="text-sm font-semibold text-zinc-900"
+                          >
+                            {GTM_PAGE_LABELS.timelineTitle}
+                          </h2>
+                          <ProspectTimeline
+                            brandId={brandId}
+                            leadId={detail.leadId}
+                            refreshKey={timelineKey}
+                            className="mt-2"
+                          />
+                        </section>
+                      </div>
+                    </section>
+
+                    {/* ── 5. Outcome and learning ── */}
+                    {stateOpen && (
+                      <section
+                        data-gtm-section="outcome-and-learning"
+                        className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]"
+                      >
+                        <div className="min-w-0 space-y-4">
+                          <StateHistoryPanel
+                            brandId={brandId}
+                            leadId={detail.leadId}
+                            refreshKey={stateKey}
+                          />
                         </div>
-                      ) : (
-                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-                          {/* Left: what the engine believes, and what it read. */}
-                          <div className="min-w-0 space-y-4">
-                            {stateFull && (
-                              <>
-                                {/* Confidence (R28.1). The whole-state number, and the
-                                    projection it qualifies. The per-dimension
-                                    confidences are chips in the grid above, because a
-                                    dimension's confidence belongs on that dimension. */}
-                                <section
-                                  aria-labelledby="gtm-confidence-heading"
-                                  className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
-                                >
-                                  <h2
-                                    id="gtm-confidence-heading"
-                                    className="text-sm font-semibold text-zinc-900"
-                                  >
-                                    {GTM_UI_LABELS.confidence}
-                                  </h2>
-                                  <div className="mt-3 flex flex-wrap items-start gap-3">
-                                    <span
-                                      className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                                        TONE.zinc,
-                                      )}
-                                    >
-                                      <span className="sr-only">{GTM_UI_LABELS.confidence}: </span>
-                                      {formatConfidence(stateFull.stateConfidence)}
-                                    </span>
-                                    <JourneyStateBadge journeyState={stateFull.journeyState} />
-                                  </div>
-                                </section>
 
-                                <IntentPanel intents={stateFull.intents} />
-                                <BuyingStagePanel buyingStage={stateFull.buyingStage} />
-                                <ChannelIntelligencePanel channels={stateFull.channels} />
-                                {/* Neither payload carries a confidence of its own; the
-                                    engine reports one per dimension, so the map goes
-                                    with them rather than a number invented here. */}
-                                <EngagementTrendPanel
-                                  engagement={stateFull.engagement}
-                                  dimensionConfidence={stateFull.dimensionConfidence}
-                                />
-                                <TimingPanel
-                                  timing={stateFull.timing}
-                                  dimensionConfidence={stateFull.dimensionConfidence}
-                                />
-                              </>
+                        {/* The debug read, behind its own control. `getDebugView`
+                            answers with six ledger collections and the whole state to
+                            feed this one panel, so it is asked for rather than fired
+                            on load. */}
+                        <div className="min-w-0 space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-expanded={learningOpen}
+                            aria-controls="gtm-learning-region"
+                            onClick={onLearningToggle}
+                          >
+                            {learningLoading && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                             )}
+                            {LEARNING_PANEL_LABELS.title}
+                          </Button>
 
-                            {/* These two fetch, page and fail on their own, so neither
-                                depends on the state read having landed. */}
-                            <SignalList
-                              brandId={brandId}
-                              leadId={detail.leadId}
-                              refreshKey={stateKey}
-                            />
-                            <StateHistoryPanel
-                              brandId={brandId}
-                              leadId={detail.leadId}
-                              refreshKey={stateKey}
-                            />
-                          </div>
-
-                          {/* Right: why this action, and what the outcomes say. */}
-                          <div className="min-w-0 space-y-4">
-                            <ActionExplanation explanation={explanation} />
-
-                            {/* The debug read, behind its own control. `getDebugView`
-                                answers with six ledger collections and the whole state
-                                to feed this one panel, so it is asked for rather than
-                                fired on load. */}
-                            <div className="space-y-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                aria-expanded={learningOpen}
-                                aria-controls="gtm-learning-region"
-                                onClick={onLearningToggle}
-                              >
-                                {learningLoading && (
-                                  <Loader2
-                                    className="h-3.5 w-3.5 animate-spin"
-                                    aria-hidden="true"
-                                  />
-                                )}
-                                {LEARNING_PANEL_LABELS.title}
-                              </Button>
-
-                              <div id="gtm-learning-region" className="space-y-2">
-                                {learningError && (
-                                  <Alert variant="destructive">
-                                    <AlertDescription className="flex flex-wrap items-center gap-3">
-                                      <span className="text-[13px]">{learningError}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => void loadLearning()}
-                                      >
-                                        {GTM_PAGE_LABELS.retry}
-                                      </Button>
-                                    </AlertDescription>
-                                  </Alert>
-                                )}
-                                {learningOpen && learningUpdates && (
-                                  <LearningInsightsPanel
-                                    updates={learningUpdates}
-                                    scope={explanation?.scope ?? null}
-                                  />
-                                )}
-                              </div>
-                            </div>
+                          <div id="gtm-learning-region" className="space-y-2">
+                            {learningError && (
+                              <Alert variant="destructive">
+                                <AlertDescription className="flex flex-wrap items-center gap-3">
+                                  <span className="text-[13px]">{learningError}</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => void loadLearning()}
+                                  >
+                                    {GTM_PAGE_LABELS.retry}
+                                  </Button>
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                            {learningOpen && learningUpdates && (
+                              <LearningInsightsPanel
+                                updates={learningUpdates}
+                                scope={explanation?.scope ?? null}
+                              />
+                            )}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+                      </section>
+                    )}
+                  </div>
                 </details>
               </>
             ) : null}

@@ -23,6 +23,12 @@
 //    request was superseded.
 // 6. **A GTM socket event patches state in place.** The dimension named by the
 //    event moves, with the provenance the event carried, and no refetch is issued.
+// 7. **The state engine's reading rides on that one payload.** With the six additive
+//    fields populated the recommendation, its argument and the belief are all on
+//    screen for the same two reads; the argument is in the same section as the
+//    recommendation and adjacent to it; and with the six fields absent the page says
+//    so — no alert, no retry, no invented recommendation and no zero standing in for
+//    a measure nobody read (R26.7).
 //
 // The transport is stubbed at `fetch` rather than at `gtmAPI`, so the real
 // normaliser runs and every assertion is about the whole path from wire to DOM.
@@ -36,7 +42,18 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import GTMProspect, { SILENT_REFETCH_MS, applySocketEvent } from "../GTMProspect";
-import { GTM_PAGE_LABELS, GTM_UI_LABELS } from "@/components/gtm/labels";
+import { ACTION_EXPLANATION_LABELS } from "@/components/gtm/ActionExplanation";
+import { BUYING_STAGE_PANEL_LABELS } from "@/components/gtm/BuyingStagePanel";
+import { CHANNEL_PANEL_LABELS } from "@/components/gtm/ChannelIntelligencePanel";
+import { INTENT_PANEL_LABELS } from "@/components/gtm/IntentPanel";
+import { ACTION_CARD_LABELS, actionCardTestId } from "@/components/gtm/NextActionPanel";
+import { TIMING_PANEL_LABELS } from "@/components/gtm/TimingPanel";
+import {
+  GTM_JOURNEY_LABELS,
+  GTM_NBA_ACTION_LABELS,
+  GTM_PAGE_LABELS,
+  GTM_UI_LABELS,
+} from "@/components/gtm/labels";
 import type { ProspectDetail } from "@/services/gtmAPI";
 
 vi.mock("sonner", () => ({
@@ -198,6 +215,174 @@ function wireDetail(over: Record<string, unknown> = {}) {
     updated_at: iso(1),
     ...over,
   };
+}
+
+// ─── The state engine's six additive fields, on the prospect payload ──────────
+//
+// snake_case, because these are wire keys rather than normalised ones: `schemas/gtm.py`
+// serialises the six onto the prospect body (R26.7), so the real normaliser is what
+// turns them into `journeyState`, `intents`, `channelStates`, `buyingStage`, `timing`
+// and `nextBestAction`.
+//
+// The two shapes below are the two the backend actually sends. **Populated** is the six
+// keys present, which is a prospect the engine has read. **Unevaluated** is
+// `wireDetail()` exactly as it stands — the keys never set at all, because the server
+// drops them from the body rather than sending `null` — and every other test in this
+// file already runs against that shape.
+
+/** The six keys, so "absent" can be asserted rather than assumed. */
+const INTELLIGENCE_WIRE_KEYS = [
+  "journey_state",
+  "intents",
+  "channel_states",
+  "buying_stage",
+  "timing",
+  "next_best_action",
+] as const;
+
+function wireIntent(intentType: string, over: Record<string, unknown> = {}) {
+  return {
+    intent_type: intentType,
+    value: 0,
+    confidence: 0,
+    source: "DERIVED",
+    evaluated_at: null,
+    decay_rate: 0,
+    signal_ids: [],
+    is_derived: true,
+    ...over,
+  };
+}
+
+function wireChannelState(channel: string, over: Record<string, unknown> = {}) {
+  return {
+    channel,
+    availability: "AVAILABLE",
+    reachability: 70,
+    activity: 55,
+    engagement: 40,
+    responsiveness: 35,
+    response_rate: 20,
+    historical_conversion_rate: 8,
+    confidence: 60,
+    suitability: 66,
+    last_interaction_at: iso(4),
+    last_inbound_at: null,
+    last_outbound_at: iso(4),
+    cooldown_until: null,
+    consecutive_unanswered: 0,
+    provenance: {},
+    ...over,
+  };
+}
+
+function wireTiming() {
+  return {
+    last_meaningful_signal_at: iso(5),
+    signal_freshness: 74,
+    urgency: 62,
+    cooldown_until: null,
+    ideal_next_action_window_start: iso(-1),
+    ideal_next_action_window_end: iso(-5),
+    within_business_hours: "UNKNOWN",
+    activity_trend_flag: "SPIKE",
+  };
+}
+
+/** The winner's argument — what `ActionExplanation` renders beside the card. */
+function wireExplanation() {
+  return {
+    why_now: [
+      {
+        signal_id: "sig-1",
+        signal_type: "PROFILE_VIEW",
+        event_timestamp: iso(6),
+        effective_strength: 34,
+        term: "signal_freshness",
+        contribution_hundredths: 18,
+        evidence_id: "ev-1",
+      },
+    ],
+    why_this_channel: [wireFactor({ factor: "channel_suitability", persisted_value: "66" })],
+    why_this_message: {
+      message_id: null,
+      message_purpose: "WARMUP",
+      grounding_signal_ids: ["sig-1"],
+      note: "Ground the angle in the hiring push.",
+    },
+    why_not_the_other_channels: [],
+    scope: {
+      applied_scope: "WORKSPACE",
+      sample_size: 48,
+      min_sample: 30,
+      decision: "APPLIED",
+      decision_reason: null,
+    },
+    versions: {
+      policy_version: "policy-v3",
+      model_version: "model-v2",
+      learning_version: "learning-v1",
+      weight_set_id: "weights-1",
+    },
+  };
+}
+
+function wireCandidate(over: Record<string, unknown> = {}) {
+  return {
+    recommendation_id: "reco-1",
+    action_type: "SEND_LINKEDIN_WARMUP",
+    channel: "LINKEDIN",
+    rank: 1,
+    is_recommended: true,
+    action_score: wireScore(77),
+    action_confidence: 63,
+    state_confidence: 66,
+    terms: [wireFactor({ factor: "expected_success_probability", value: 41 })],
+    unavailable_terms: ["prior_interaction_outcomes"],
+    available_weight_mass: 88,
+    exclusion_reason: null,
+    explanation: wireExplanation(),
+    expires_at: iso(-6),
+    computed_at: iso(1),
+    ...over,
+  };
+}
+
+function wireNextBestAction(over: Record<string, unknown> = {}) {
+  return {
+    lead_id: "lead-1",
+    evaluation_id: "eval-1",
+    computed_at: iso(1),
+    expires_at: iso(-6),
+    recommended: wireCandidate(),
+    candidates: [wireCandidate()],
+    policy_version: "policy-v3",
+    model_version: "model-v2",
+    learning_version: "learning-v1",
+    weight_set_id: "weights-1",
+    learning_scope_applied: "WORKSPACE",
+    lifecycle: null,
+    ...over,
+  };
+}
+
+/** `wireDetail()` with all six keys populated: a prospect the engine has read. */
+function wireEvaluatedDetail() {
+  return wireDetail({
+    journey_state: wireFact("CONVERSATION_ACTIVE", { is_derived: true }),
+    intents: [
+      wireIntent("BUYING", {
+        value: 72,
+        confidence: 61,
+        evaluated_at: iso(2),
+        signal_ids: ["sig-1"],
+      }),
+    ],
+    channel_states: [wireChannelState("LINKEDIN"), wireChannelState("EMAIL")],
+    buying_stage: { value: "EVALUATING", confidence: 58, signal_ids: ["sig-1"], is_derived: true },
+    timing: wireTiming(),
+    next_best_action: wireNextBestAction(),
+  });
 }
 
 function wireTimelinePage(entries: unknown[] = [], next: string | null = null) {
@@ -369,8 +554,17 @@ describe("structure", () => {
     expect(h1s).toHaveLength(1);
     expect(h1s[0].textContent).toBe(GTM_PAGE_LABELS.pageTitle);
 
-    // Seven panels: header, channels, activity, state, CTA, next action, timeline.
-    expect(container.querySelectorAll("h2")).toHaveLength(7);
+    // Eight panels, in the five sections the page is composed of and in their order:
+    //   1. recommended action — next action, why this action
+    //   2. current state      — the dimension grid
+    //   3. what Weez believes — channel recommendation, meeting readiness
+    //   4. evidence           — LinkedIn activity, the timeline
+    // plus the prospect header above them all. The panels only the state read can feed
+    // (intents, buying stage, per-channel readings, engagement, timing, confidence) and
+    // section 5's two are absent here: this payload carries no intelligence and the
+    // disclosure is closed, so neither is invented. `GTMProspect.a11y.test.tsx` counts
+    // the opened state.
+    expect(container.querySelectorAll("h2")).toHaveLength(8);
 
     // Levels present must be contiguous from 1: h3 is the channel cards.
     const levels = [...container.querySelectorAll("h1,h2,h3,h4,h5,h6")].map((node) =>
@@ -654,6 +848,169 @@ describe("socket events", () => {
     });
 
     expect(screen.getByText("Warm-up ready")).toBeInTheDocument();
+  });
+});
+
+// ─── 7. The state engine's reading, on the payload the page already fetches ────
+
+describe("the intelligence on the prospect payload", () => {
+  it("renders the recommendation and the belief from the one prospect fetch", async () => {
+    await renderLoaded(wireEvaluatedDetail());
+
+    // Section 1: the ranking's winner, and the argument for it, both from `detail`.
+    const card = await screen.findByTestId(actionCardTestId("reco-1"));
+    // The card names the winning action twice on purpose — as its own heading, and on
+    // the control that opens the channel — so both are addressed by role.
+    expect(
+      within(card).getByRole("heading", { name: GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP }),
+    ).toBeInTheDocument();
+    expect(
+      within(card).getByRole("button", { name: GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(ACTION_EXPLANATION_LABELS.note)).toBeInTheDocument();
+    expect(screen.queryByText(ACTION_EXPLANATION_LABELS.empty)).not.toBeInTheDocument();
+
+    // Sections 2 and 3, from the same payload: the projection, the timing, the stage,
+    // the intents and the per-channel readings.
+    expect(screen.getAllByText(GTM_JOURNEY_LABELS.CONVERSATION_ACTIVE).length).toBeGreaterThan(0);
+    [
+      TIMING_PANEL_LABELS.title,
+      BUYING_STAGE_PANEL_LABELS.title,
+      INTENT_PANEL_LABELS.title,
+      CHANNEL_PANEL_LABELS.title,
+    ].forEach((name) =>
+      expect(screen.getByRole("heading", { name, level: 2 })).toBeInTheDocument(),
+    );
+
+    // Neither honest-empty sentence is on screen, because something *was* read.
+    expect(screen.queryByText(GTM_PAGE_LABELS.noStateBelief)).not.toBeInTheDocument();
+    expect(screen.queryByText(GTM_PAGE_LABELS.noIntelligenceRead)).not.toBeInTheDocument();
+
+    // ── The load cost (R26.7) ──
+    //
+    // The recommendation is above the fold on the strength of the request the page
+    // already makes: the load is still the same two reads the closed-state contract
+    // names, the prospect payload is read exactly once, and the two dedicated routes
+    // that used to fill these sections in — `/state` and `/next-best-action` — are not
+    // reached at all.
+    //
+    // What follows the load is *not* a read. Showing an Action_Card records `VIEWED` on
+    // the ledger (R26.1), and that write is what makes the page re-read the ledger — so
+    // the two calls after the first two are one POST and the ledger refresh it caused.
+    // They are named individually rather than folded into a total, because a total
+    // would hide which of them is a read.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    const calls = fetchMock.mock.calls.map((call) => ({
+      url: String(call[0]),
+      method: String((call[1] as RequestInit | undefined)?.method ?? "GET"),
+    }));
+
+    // The load starts with the prospect payload, and reads it exactly once. Every read
+    // on the page is one of the two the load contract names — the payload, or the
+    // ledger the card's write landed on.
+    const reads = calls.filter((call) => call.method === "GET");
+    expect(calls[0].url).toContain("/prospect/lead-1?");
+    expect(calls.filter((call) => call.url.includes("/prospect/lead-1?"))).toHaveLength(1);
+    expect(
+      reads
+        .filter(
+          (call) => !call.url.includes("/prospect/lead-1?") && !call.url.includes("/timeline"),
+        )
+        .map((call) => call.url),
+    ).toEqual([]);
+
+    // Nothing was asked for to obtain the intelligence.
+    expect(calls.filter((call) => call.url.includes("/next-best-action"))).toHaveLength(0);
+    expect(calls.filter((call) => /\/prospect\/lead-1\/state/.test(call.url))).toHaveLength(0);
+
+    // And the one write is the card's own ledger row, not a read dressed as one.
+    const writes = calls.filter((call) => call.method === "POST");
+    expect(writes).toHaveLength(1);
+    expect(writes[0].url).toContain("/lifecycle");
+  });
+
+  it("keeps the argument for a recommendation in the same section as the recommendation", async () => {
+    await renderLoaded();
+
+    // Two panels, each its own `<section>`: the recommendation, and the reasoning.
+    const nextAction = screen.getByRole("heading", { name: "Next action" })
+      .closest("section") as HTMLElement;
+    const explanation = screen
+      .getByRole("heading", { name: ACTION_EXPLANATION_LABELS.title })
+      .closest("section") as HTMLElement;
+    expect(nextAction).not.toBe(explanation);
+
+    // The one section that holds both — section 1, the recommended action. A refactor
+    // that moved the reasoning anywhere else on the page fails here.
+    const recommended = nextAction.parentElement?.closest("section") as HTMLElement;
+    expect(recommended).not.toBeNull();
+    expect(recommended).toHaveAttribute("data-gtm-section", "recommended-action");
+    expect(explanation.parentElement?.closest("section")).toBe(recommended);
+    expect(within(recommended).getByText("Send a warm-up message on LinkedIn")).toBeInTheDocument();
+    expect(within(recommended).getByText(ACTION_EXPLANATION_LABELS.empty)).toBeInTheDocument();
+
+    // Adjacent, and not merely co-located: nothing sits between the two.
+    expect(explanation.previousElementSibling).toBe(nextAction);
+  });
+
+  it("reports an unevaluated prospect as an absence rather than a failure or a zero", async () => {
+    // Absent, not `null`: the keys are never set, which is the shape the server
+    // serialises for a prospect nobody has evaluated.
+    const detail = wireDetail();
+    INTELLIGENCE_WIRE_KEYS.forEach((key) => expect(key in detail).toBe(false));
+
+    await renderLoaded(detail);
+
+    // The page is whole: every panel that predates the state engine is still here.
+    [
+      GTM_UI_LABELS.prospectTitle,
+      GTM_UI_LABELS.activityTitle,
+      GTM_UI_LABELS.channelsTitle,
+      GTM_UI_LABELS.stateTitle,
+      GTM_UI_LABELS.ctaTitle,
+    ].forEach((name) => expect(screen.getByRole("heading", { name })).toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: "Next action" })).toBeInTheDocument();
+
+    // The absence is a sentence, in both sections that would have carried a reading.
+    expect(screen.getByText(GTM_PAGE_LABELS.noIntelligenceRead)).toBeInTheDocument();
+    expect(screen.getByText(GTM_PAGE_LABELS.noStateBelief)).toBeInTheDocument();
+
+    // And not a failure. Nothing was refused, so there is nothing to alert about and
+    // nothing to retry — an unevaluated prospect is not a broken request.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: GTM_PAGE_LABELS.retry })).not.toBeInTheDocument();
+
+    // No recommendation is invented: no card, no ranked action, none of the card's own
+    // measures, and the reasoning panel says nothing has been argued for this prospect
+    // instead of arguing for something.
+    expect(screen.queryByTestId(actionCardTestId("reco-1"))).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(ACTION_CARD_LABELS.priority)).not.toBeInTheDocument();
+    expect(screen.queryByText(ACTION_CARD_LABELS.expectedOutcome)).not.toBeInTheDocument();
+    expect(screen.getByText(ACTION_EXPLANATION_LABELS.empty)).toBeInTheDocument();
+
+    // Nothing claims a score either. The whole-state confidence has no half on this
+    // payload at all, so its panel is absent rather than reading `0`.
+    expect(
+      screen.queryByRole("heading", { name: GTM_UI_LABELS.confidence }),
+    ).not.toBeInTheDocument();
+
+    // The zero that is not there. Scoped to the belief section, and excluding the two
+    // panels that predate the state engine, whose numbers are the server's own — what
+    // is left is every slot an absent measure could have been rendered into, and the
+    // honest sentence is what occupies it.
+    const belief = document.querySelector('[data-gtm-section="belief"]') as HTMLElement;
+    expect(belief).not.toBeNull();
+    const legacy = [GTM_UI_LABELS.channelsTitle, GTM_UI_LABELS.ctaTitle].map(
+      (name) => screen.getByRole("heading", { name }).closest("section") as HTMLElement,
+    );
+    const substituted = [...belief.querySelectorAll("*")].filter(
+      (node) => node.textContent?.trim() === "0" && !legacy.some((panel) => panel.contains(node)),
+    );
+    expect(substituted.map((node) => node.outerHTML)).toEqual([]);
+    expect(within(belief).getByText(GTM_PAGE_LABELS.noIntelligenceRead)).toBeInTheDocument();
   });
 });
 

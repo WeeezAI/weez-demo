@@ -43,12 +43,17 @@
 //
 // The state engine's sections
 // ---------------------------
-// The twelve sections the prospect state engine adds sit behind a native
-// `<details>` / `<summary>` disclosure that is **closed on first paint**, which is
-// what keeps the default load at two requests and the default outline at seven
-// `<h2>`s. So every claim about them is made in its own test, after the disclosure
-// has been opened, and the four claims above keep being made about the page as it
-// actually arrives. Nothing in the closed-state assertions moves.
+// The page is five sections — recommended action, current state, what Weez believes,
+// evidence, outcome and learning. The first three render from the prospect payload
+// alone; the last two sit behind a native `<details>` / `<summary>` disclosure that is
+// **closed on first paint**, which is what keeps the default load at two requests and
+// the default outline at eight `<h2>`s. The panels only the dedicated state read can
+// feed — the engagement counts, the timing, the buying stage, the intents, the
+// per-channel readings, the whole-state confidence — appear in sections 2 and 3 once
+// that read has landed, and until then their absence is a sentence rather than a
+// fabricated value. So every claim about them is made in its own test, after the
+// disclosure has been opened, and the four claims above keep being made about the page
+// as it actually arrives.
 //
 // Two limits of jsdom are worth naming, because they shape what these tests can say
 // about the `<summary>` itself. jsdom implements the element's *click* activation
@@ -1008,19 +1013,21 @@ describe("keyboard traversal", () => {
 
     const order = await expectFullyTraversable(9);
 
-    // Reading order, top-left to bottom-right: the page chrome, the prospect
-    // header, the left column, then the next-action panel — composer first, because
-    // the operator reads the draft before deciding to open LinkedIn with it.
+    // Reading order, which is now the decision hierarchy's order: the page chrome,
+    // the prospect header, then section 1 — the recommended action, composer first,
+    // because the operator reads the draft before deciding to open LinkedIn with it.
+    // `Re-evaluate channels` comes last of the nine because its panel is a *belief*
+    // and lives in section 3, below the recommendation and the current state.
     expect(order).toEqual([
       GTM_PAGE_LABELS.backToProspects,
       GTM_UI_LABELS.viewProfile,
       GTM_UI_LABELS.refresh,
-      GTM_UI_LABELS.reevaluate,
       "Message draft",
       GTM_ACTION_LABELS.EDIT,
       GTM_ACTION_LABELS.REGENERATE,
       GTM_ACTION_LABELS.SEND_MESSAGE,
       GTM_ACTION_LABELS.COPY,
+      GTM_UI_LABELS.reevaluate,
     ]);
   });
 
@@ -1226,9 +1233,14 @@ describe("the state engine's sections", () => {
     // And the twelve sections did not bring a landmark of their own along with them.
     expect(container.querySelectorAll("main")).toHaveLength(1);
 
-    // The closed page's seven `<h2>`s — the count `GTMProspect.compose.test.tsx`
-    // pins — plus one per added section and one for the learning panel just opened.
-    // Asserted here, in the opened state, rather than by moving that file's number.
+    // The closed page's eight `<h2>`s — the count `GTMProspect.compose.test.tsx` pins:
+    // the prospect header, section 1's next action and why-this-action, section 2's
+    // dimension grid, section 3's channel recommendation and meeting readiness, and
+    // section 4's LinkedIn activity and timeline. Opening the disclosure adds nine:
+    // the four panels the state read feeds in sections 2 and 3 (engagement, timing,
+    // buying stage, intents), the per-channel readings, the whole-state confidence,
+    // section 4's signal list, section 5's state history, and the learning panel just
+    // opened. Asserted here, in the opened state, rather than by moving that number.
     expect(container.querySelectorAll("h2")).toHaveLength(17);
 
     const levels = [...container.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((node) =>
@@ -1248,25 +1260,28 @@ describe("the state engine's sections", () => {
 
     // A separate test from the closed-state walk, and a separate order: the Action_Card
     // renders above the composer, so opening the sections inserts four controls into
-    // the middle of the order rather than appending to it.
+    // section 1 rather than appending to the end of the order.
     const order = await expectFullyTraversable(14);
     expect(order).toEqual([
       GTM_PAGE_LABELS.backToProspects,
       GTM_UI_LABELS.viewProfile,
       GTM_UI_LABELS.refresh,
-      GTM_UI_LABELS.reevaluate,
-      // The Action_Card's four (R27.2, R27.4, R27.8).
+      // Section 1, the recommended action. The Action_Card's four (R27.2, R27.4,
+      // R27.8), then the recommendation's composer and its own controls.
       GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP,
       ACTION_CARD_LABELS.editReasoning,
       ACTION_CARD_LABELS.notRelevant,
       ACTION_CARD_LABELS.dismiss,
-      // The composer and the recommendation's own controls, unmoved.
       "Message draft",
       GTM_ACTION_LABELS.EDIT,
       GTM_ACTION_LABELS.REGENERATE,
       GTM_ACTION_LABELS.SEND_MESSAGE,
       GTM_ACTION_LABELS.COPY,
-      // Inside the disclosure: the `as_of` field, then the gated learning read.
+      // Section 3, what Weez believes: the scored channels are a belief, so their
+      // re-evaluation control sits below the recommendation rather than above it.
+      GTM_UI_LABELS.reevaluate,
+      // Sections 4 and 5, inside the disclosure: the `as_of` field, then the gated
+      // learning read.
       STATE_HISTORY_LABELS.asOfLabel,
       LEARNING_PANEL_LABELS.title,
     ]);
@@ -1312,5 +1327,75 @@ describe("the state engine's sections", () => {
     expect(screen.getAllByText(INTENT_PANEL_LABELS.neverEvaluated).length).toBeGreaterThan(1);
     expect(screen.getByText(SIGNAL_LIST_LABELS.atFloorNote)).toBeInTheDocument();
     expect(screen.getByText(ACTION_EXPLANATION_LABELS.notScoredNote)).toBeInTheDocument();
+  });
+
+  it("is clean under axe with the intelligence absent, and keeps the outline contiguous", async () => {
+    // The state the honest-empty copy exists for: no belief was ever formed about this
+    // prospect. `wireDetail()` carries none of the six additive fields
+    // (R26.7) — the server drops the keys rather than sending `null` — and the two
+    // fallback reads have no row to answer with, so nothing fills these sections in and
+    // every absent-intelligence branch is the one on screen. It is not the
+    // unknown-heavy payload above: that one is a belief that places the prospect
+    // nowhere, and this one is the absence of any belief at all.
+    const detail = wireDetail();
+    [
+      "journey_state",
+      "intents",
+      "channel_states",
+      "buying_stage",
+      "timing",
+      "next_best_action",
+    ].forEach((key) => expect(key in detail).toBe(false));
+
+    routeFetch((url) => {
+      if (url.includes("/timeline")) return { body: wireTimelinePage([TIMELINE_ENTRY]) };
+      if (url.includes("/state/history")) return { body: wireStateHistoryPage() };
+      if (url.includes("/signals")) return { body: wireSignalPage() };
+      if (url.includes("/next-best-action")) {
+        return { ok: false, status: 404, body: { detail: "No evaluation for this prospect" } };
+      }
+      if (url.includes("/state")) {
+        return { ok: false, status: 404, body: { detail: "No state for this prospect" } };
+      }
+      return { body: detail };
+    });
+
+    const { container } = renderPage();
+    await screen.findByText("Ada Lovelace");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText(GTM_PAGE_LABELS.subtitle));
+    expect(disclosure(container).open).toBe(true);
+
+    // Both honest-empty sentences, which also settles that no read is still in flight:
+    // the page suppresses them while one is, so their presence is the wait.
+    await screen.findByText(GTM_PAGE_LABELS.noIntelligenceRead);
+    expect(screen.getByText(GTM_PAGE_LABELS.noStateBelief)).toBeInTheDocument();
+    // Sections 4 and 5 are open and reading on their own, unaffected by the refusals.
+    expect(
+      await screen.findByRole("heading", { name: SIGNAL_LIST_LABELS.title, level: 2 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: STATE_HISTORY_LABELS.title, level: 2 }),
+    ).toBeInTheDocument();
+    // Nothing was invented in the recommendation's place.
+    expect(screen.queryByTestId(actionCardTestId("reco-1"))).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: INTENT_PANEL_LABELS.title }),
+    ).not.toBeInTheDocument();
+
+    expect(await axe(container)).toHaveNoViolations();
+
+    // The outline still starts at the page's one `<h1>` and never skips a level, so the
+    // panels that dropped out took their headings with them without leaving a gap.
+    const levels = [...container.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((node) =>
+      Number(node.tagName[1]),
+    );
+    expect(levels[0]).toBe(1);
+    expect(levels.filter((level) => level === 1)).toHaveLength(1);
+    expect(container.querySelectorAll("h1")).toHaveLength(1);
+    levels.slice(1).forEach((level, index) => {
+      expect(level - levels[index]).toBeLessThanOrEqual(1);
+    });
   });
 });

@@ -4,8 +4,10 @@ import {
   LayoutDashboard,
   Signal as SignalIcon,
   Users,
+  ListChecks,
   Send,
   CalendarCheck,
+  GraduationCap,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,10 @@ const ConversationSidebar = ({
   // Capability-based GTM navigation. The AI workforce (Nina, EVA, MAX) runs
   // behind the scenes — the founder navigates by outcome, not by agent. Nina
   // orchestrates strategy, EVA drives revenue intelligence, MAX executes sales.
+  //
+  // Action Queue sits under Prospect Intelligence because it is the same population
+  // ranked by what to do next, and Learning sits under Meetings because it is what
+  // the booked-or-not outcomes taught the ranking. Ninna stays the landing page.
   const navItems = [
     {
       label: "Dashboard",
@@ -64,6 +70,14 @@ const ConversationSidebar = ({
       tint: "bg-violet-500/10",
     },
     {
+      label: "Action Queue",
+      role: "Ranked next moves",
+      path: `/action-queue/${spaceId}`,
+      icon: ListChecks,
+      color: "text-sky-500",
+      tint: "bg-sky-500/10",
+    },
+    {
       label: "Outreach",
       role: "Sales execution",
       path: `/sales/${spaceId}`,
@@ -78,6 +92,14 @@ const ConversationSidebar = ({
       icon: CalendarCheck,
       color: "text-amber-500",
       tint: "bg-amber-500/10",
+    },
+    {
+      label: "Learning",
+      role: "Outcomes & accuracy",
+      path: `/gtm-dashboard/${spaceId}`,
+      icon: GraduationCap,
+      color: "text-cyan-500",
+      tint: "bg-cyan-500/10",
     },
     {
       label: "Settings",

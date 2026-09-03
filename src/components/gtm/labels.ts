@@ -676,6 +676,26 @@ export const GTM_PAGE_LABELS = {
   noLeadTitle: "No prospect selected",
   noLeadBody:
     "Open this page from a decision-maker in Prospect Intelligence, so it knows which prospect to read.",
+
+  // ── Honest empties for absent intelligence (R26.7) ──
+  //
+  // The prospect payload carries the state engine's reading when there is one, and
+  // drops those keys entirely when the prospect has no belief, an incomplete belief,
+  // or no evaluation. Absence is therefore a normal condition and not a failure: it
+  // gets a sentence, never an alert, never a retry, and never a zero standing in for
+  // a value nobody read.
+  //
+  // Both strings are in the two-clause form `GTM_UI_LABELS.noEvaluation` established
+  // — what is absent, then what that means — and neither apologises or promises a
+  // reading later. They say what has not happened, in the present tense, and stop.
+  //
+  // They are notes *about a section*, not about a dimension: a dimension nobody
+  // observed already reads "Unknown" through `ObservedValue`, which is a different
+  // claim. "Unknown" means a belief exists and places nothing here; these mean no
+  // belief was read at all.
+  noStateBelief: "No journey or timing reading yet. Nothing has been observed beyond the dimensions below.",
+  noIntelligenceRead:
+    "No intent, buying stage or channel reading yet. Nothing has been evaluated for this prospect.",
 } as const;
 
 // ─── Prospect state engine labels (R27.7, R27.3) ──────────────────────────────
