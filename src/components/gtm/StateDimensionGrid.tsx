@@ -60,7 +60,15 @@ import type { ObservedFact, ProspectState, ProspectStateFull } from "@/services/
 import { ConfirmationStatusBadge } from "./ConfirmationStatusBadge";
 import { JourneyStateBadge } from "./JourneyStateBadge";
 import { ObservedValue } from "./ObservedValue";
-import { CHANNEL_LABEL, DIMENSION_LABEL, FIELD_LABEL, GTM_UI_LABELS, STATE_TONE, TONE } from "./labels";
+import {
+  CHANNEL_AVAILABILITY_LABEL,
+  CHANNEL_LABEL,
+  DIMENSION_LABEL,
+  FIELD_LABEL,
+  GTM_UI_LABELS,
+  STATE_TONE,
+  TONE,
+} from "./labels";
 
 export interface StateDimensionGridProps {
   state: ProspectState;
@@ -161,8 +169,16 @@ function derivedFact(value: string | null | undefined, observedAt: string | null
  *
  * Channel availability is one row per channel and never a blend — a prospect
  * reachable on LinkedIn and not by phone has two different facts, not one average
- * (R6.5) — and each row prefers the engine's own `provenance.availability` fact, so
- * the surface and observation time travel with it instead of being dropped.
+ * (R6.5).
+ *
+ * When the engine sent an observed `provenance.availability`, the row renders that
+ * fact whole, so its surface, its observation time and its stale badge all survive
+ * the trip to the screen. When it did not, the row falls back to the derived
+ * availability blend and carries no provenance at all — `ObservedValue`'s provenance
+ * line is suppressed rather than filled in. The alternative was to borrow
+ * `observed.observedAt` off the unobserved fact, which would print an observation
+ * time for a value nobody observed: a fabricated provenance line, and the one thing
+ * this panel exists to prevent.
  */
 function addedDimensions(full: ProspectStateFull): AddedDimension[] {
   const confidenceOf = (key: string): number | null => {
@@ -197,11 +213,14 @@ function addedDimensions(full: ProspectStateFull): AddedDimension[] {
     const observed = channel.provenance?.availability;
     rows.push({
       key: `channel_availability_${channel.channel}`,
-      label: CHANNEL_LABEL[channel.channel] ?? channel.channel,
+      label:
+        CHANNEL_AVAILABILITY_LABEL[channel.channel] ??
+        CHANNEL_LABEL[channel.channel] ??
+        channel.channel,
       fact:
         observed && !observed.isUnknown && observed.value != null
           ? observed
-          : derivedFact(channel.availability, observed?.observedAt ?? null),
+          : derivedFact(channel.availability),
       confidence: typeof channel.confidence === "number" ? channel.confidence : null,
     });
   }

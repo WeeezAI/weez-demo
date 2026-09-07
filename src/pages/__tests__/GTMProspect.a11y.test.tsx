@@ -82,6 +82,7 @@ import { STATE_HISTORY_LABELS } from "@/components/gtm/StateHistoryPanel";
 import { TIMING_PANEL_LABELS } from "@/components/gtm/TimingPanel";
 import {
   GTM_ACTION_LABELS,
+  GTM_IDENTITY_LABELS,
   GTM_LIFECYCLE_LABELS,
   GTM_NBA_ACTION_LABELS,
   GTM_PAGE_LABELS,
@@ -1011,17 +1012,26 @@ describe("keyboard traversal", () => {
   it("reaches every control on the loaded page, in reading order, each with a focus ring", async () => {
     await renderLoaded();
 
-    const order = await expectFullyTraversable(9);
+    const order = await expectFullyTraversable(10);
 
     // Reading order, which is now the decision hierarchy's order: the page chrome,
-    // the prospect header, then section 1 — the recommended action, composer first,
-    // because the operator reads the draft before deciding to open LinkedIn with it.
-    // `Re-evaluate channels` comes last of the nine because its panel is a *belief*
-    // and lives in section 3, below the recommendation and the current state.
+    // the prospect header, the identity gate, then section 1 — the recommended action,
+    // composer first, because the operator reads the draft before deciding to open
+    // LinkedIn with it. `Re-evaluate channels` comes last of the ten because its panel
+    // is a *belief* and lives in section 3, below the recommendation and the current
+    // state.
+    //
+    // `Enrich Now` is the identity gate's control and sits fourth, directly after the
+    // header, because the gate is above the five sections: a recommendation about
+    // somebody nobody has identified is a recommendation about a stranger. It is
+    // `Enrich Now` rather than `Track Prospect` for this fixture because `wireDetail()`
+    // carries no verification verdict at all — nobody has looked for this person on
+    // LinkedIn, so the only honest control is the one that starts looking.
     expect(order).toEqual([
       GTM_PAGE_LABELS.backToProspects,
       GTM_UI_LABELS.viewProfile,
       GTM_UI_LABELS.refresh,
+      GTM_IDENTITY_LABELS.resolve,
       "Message draft",
       GTM_ACTION_LABELS.EDIT,
       GTM_ACTION_LABELS.REGENERATE,
@@ -1034,13 +1044,17 @@ describe("keyboard traversal", () => {
   it("reaches every control when nothing has been observed", async () => {
     await renderUnknownHeavy();
 
-    // Three, and only three, controls survive an empty payload: leaving the page,
-    // asking for a fresh read, and asking for an evaluation that has not run. Each
-    // is still on the tab order and still carries its ring.
-    const order = await expectFullyTraversable(3);
+    // Four, and only four, controls survive an empty payload: leaving the page, asking
+    // for a fresh read, asking who this person is on LinkedIn, and asking for an
+    // evaluation that has not run. Each is still on the tab order and still carries its
+    // ring. `Enrich Now` and not `Track Prospect`: with no verdict on the payload the
+    // identity is unresolved, and the gate offers the search rather than a control the
+    // route would certainly refuse.
+    const order = await expectFullyTraversable(4);
     expect(order).toEqual([
       GTM_PAGE_LABELS.backToProspects,
       GTM_UI_LABELS.refresh,
+      GTM_IDENTITY_LABELS.resolve,
       GTM_UI_LABELS.reevaluate,
     ]);
   });
@@ -1261,11 +1275,15 @@ describe("the state engine's sections", () => {
     // A separate test from the closed-state walk, and a separate order: the Action_Card
     // renders above the composer, so opening the sections inserts four controls into
     // section 1 rather than appending to the end of the order.
-    const order = await expectFullyTraversable(14);
+    const order = await expectFullyTraversable(15);
     expect(order).toEqual([
       GTM_PAGE_LABELS.backToProspects,
       GTM_UI_LABELS.viewProfile,
       GTM_UI_LABELS.refresh,
+      // The identity gate, above the five sections and unaffected by the disclosure:
+      // it renders from the prospect payload, so opening the sections neither adds nor
+      // removes a control here.
+      GTM_IDENTITY_LABELS.resolve,
       // Section 1, the recommended action. The Action_Card's four (R27.2, R27.4,
       // R27.8), then the recommendation's composer and its own controls.
       GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP,

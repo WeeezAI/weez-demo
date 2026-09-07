@@ -403,6 +403,26 @@ export const CHANNEL_LABEL: Record<string, string> = {
   PHONE: "Phone",
 };
 
+/**
+ * The same three channels, named as the *dimension* a channel row reports.
+ *
+ * `StateDimensionGrid` heads every row by the dimension it reports — "Relationship",
+ * "Conversation", "Buying stage" — so a channel row has to name availability rather
+ * than the channel. `CHANNEL_LABEL` names the subject, which is right for a card, a
+ * chip or a column heading and wrong for a `<dt>`: with it, the grid heads a row
+ * "LinkedIn" while `ChannelIntelligencePanel` heads a column "LinkedIn" on the same
+ * prospect page, and one string stands for two different facts on one screen.
+ *
+ * A channel missing from this table falls back to `CHANNEL_LABEL`, which is the
+ * convention every table in this file follows: an unmapped key is a display gap, not
+ * a licence to invent a string.
+ */
+export const CHANNEL_AVAILABILITY_LABEL: Record<string, string> = {
+  LINKEDIN: "LinkedIn availability",
+  EMAIL: "Email availability",
+  PHONE: "Phone availability",
+};
+
 export const CHANNEL_TONE: Record<string, string> = {
   LINKEDIN: "sky",
   EMAIL: "indigo",
@@ -899,3 +919,251 @@ export const GTM_PRIORITY_TIER_LABELS: Record<string, string> = {
   THIS_WEEK: "This week",
   LATER: "Later",
 };
+
+// ─── LinkedIn identity and tracking (R30.7, R3.2, R14.2) ──────────────────────
+//
+// Three more dictionaries and one control table, in the shape every table above is
+// in: a key the server sent, a string a human reads. They cover the two steps that
+// come *before* everything else on this page — find out who this person is on
+// LinkedIn, then decide whether Weez should watch them.
+//
+// **Why these strings do not join `STATE_LABEL`.** They cannot. `STATE_LABEL`
+// already carries `VERIFIED`, where it is an `execution_state` and means "the
+// outcome of a requested action was confirmed". An identity verdict of `VERIFIED`
+// means "a profile page was opened and compared against what the lead row claims".
+// Same token, two unrelated facts, and `STATE_LABEL` is flat precisely because its
+// vocabularies do *not* collide. So the identity vocabulary gets its own table, and
+// the panel resolves the string before handing it to `ObservedValue` — which finds
+// nothing for it in `STATE_LABEL` and renders it as given, exactly as the
+// unmapped-key convention at the top of this file describes.
+//
+// **The four states are four different claims, and the fourth is the one that
+// matters.** `VERIFIED`, `POSSIBLE_MATCH` and `NO_MATCH` all mean *an attempt ran*.
+// Absence — a null verdict, which is how every lead starts — means **nobody has
+// tried**, and it gets its own entry under `UNRESOLVED` rather than borrowing
+// `NO_MATCH`'s. `models/lead.py` states the prohibition at the column ("Do not
+// backfill NULL to NO_MATCH — a lead nobody has tried to enrich has not failed
+// enrichment") and this table is the screen's half of it: rendering "we found no
+// matching profile" for a lead nobody searched for would be Weez reporting the
+// result of work it never did.
+
+/**
+ * The identity verdict, in words. Four keys, four different claims.
+ *
+ * `NO_MATCH` says an attempt ran, so it is written as a report of that attempt —
+ * "we looked" is load-bearing. `UNRESOLVED` is the absence of an attempt and says
+ * so without using the word "no", because "no match" is the claim it must not be
+ * confused with. `POSSIBLE_MATCH` names the ambiguity rather than resolving it in
+ * either direction: a candidate was found and it was not confirmed, and an operator
+ * reading this should understand that acting on it is their judgement and not ours.
+ */
+export const GTM_VERIFICATION_LABELS: Record<string, string> = {
+  VERIFIED: "LinkedIn profile verified",
+  POSSIBLE_MATCH: "Possible match — not confirmed",
+  NO_MATCH: "We looked and found no matching profile",
+  UNRESOLVED: "LinkedIn identity not yet resolved",
+};
+
+/**
+ * The tone each verdict carries. Decoration only — the text carries the meaning
+ * (R18.9), and every chip built on this pairs the tone with the label above.
+ *
+ * `NO_MATCH` and `UNRESOLVED` are both `zinc` on purpose. Neither is a failure: one
+ * is a search that came back empty and the other is a search nobody has run, and
+ * rose would tell an operator to go and fix something. What tells them apart is the
+ * sentence, not the colour.
+ */
+export const GTM_VERIFICATION_TONE: Record<string, string> = {
+  VERIFIED: "emerald",
+  POSSIBLE_MATCH: "amber",
+  NO_MATCH: "zinc",
+  UNRESOLVED: "zinc",
+};
+
+/**
+ * Whether Weez is watching this prospect. Three keys, and there is no fourth.
+ *
+ * **There is deliberately no `PAUSED` and no `STOPPED`.** Neither is expressible:
+ * nothing in the schema records "is this prospect tracked" — the presence of the
+ * profile row *is* the flag — so `TrackProspectOut.tracking_state` has exactly one
+ * member, `TRACKING`, and a payload only exists once the rows do. Expressing a
+ * paused state would need a new column and a new engine to honour it. A label for a
+ * state nothing can reach would be a promise the product cannot keep: an operator
+ * who saw "Paused" would reasonably look for the control that resumes it, and there
+ * is none, because there is nothing to resume.
+ *
+ * So the three here are the three a screen can actually be in. `TRACKING` is the
+ * server's own value. `NOT_TRACKING` and `UNRESOLVED` are what the *absence* of
+ * tracking looks like, split in two because they need different things next:
+ * `NOT_TRACKING` is a verified prospect nobody has clicked Track on yet, and
+ * `UNRESOLVED` is a prospect who cannot be tracked at all until their identity is
+ * settled. One is a decision waiting to be made, the other is a precondition that
+ * has not been met.
+ */
+export const GTM_TRACKING_STATE_LABELS: Record<string, string> = {
+  TRACKING: "Weez is tracking this prospect",
+  NOT_TRACKING: "Not tracked yet",
+  UNRESOLVED: "Can't be tracked until the identity is resolved",
+};
+
+export const GTM_TRACKING_STATE_TONE: Record<string, string> = {
+  TRACKING: "emerald",
+  NOT_TRACKING: "zinc",
+  UNRESOLVED: "zinc",
+};
+
+/**
+ * The identity block's own chrome: its field labels, its two controls, and one
+ * refusal sentence per case the track route actually refuses.
+ *
+ * **The two controls describe what happens, not what Weez achieves.** `resolve` is
+ * "Enrich Now" because that is what the operator is asking for and the honest
+ * report of it is that a search was *queued* — the API process navigates nothing,
+ * a job row lands in the queue and the LinkedIn VM does the work later. So
+ * `resolveQueued` says a search was queued and `resolveDeduped` says an identical
+ * one already was, and neither claims a profile was found. `track` is "Track
+ * Prospect", which is a decision the operator makes rather than an action Weez
+ * performs on LinkedIn, and no string here is or could be a send.
+ *
+ * **`candidateUrl` is the honesty rule of this whole block.** A lead can arrive
+ * from a data provider carrying a LinkedIn address, and landing that address in
+ * `sales_leads.linkedin_url` says nothing about whether that profile is this
+ * person. So a url beside an unresolved verdict is labelled a candidate and
+ * `candidateNote` says why, in words, next to it. Only `verifiedUrl` — reachable
+ * only from a `VERIFIED` verdict with a verification instant — calls a url this
+ * prospect's profile.
+ *
+ * **`cannotTrack` has one entry per 409 the route returns**, because the four
+ * refusals call for four different things on screen. `unresolved` needs Enrich Now.
+ * `possibleMatch` and `noMatch` are attempts that ran, so they say what the attempt
+ * concluded rather than suggesting the operator try the same thing again — and they
+ * are two sentences, not one, because "we found somebody we could not confirm" and
+ * "we found nobody" are different situations for a human to act on. `noAddress` is
+ * the defensive case a verdict with no url produces, and `unrecognised` is the
+ * fourth-verdict case: a status the screen does not know, reported as unknown rather
+ * than guessed at.
+ */
+export const GTM_IDENTITY_LABELS = {
+  // Field labels, read by `ObservedValue` in this block.
+  verificationField: "LinkedIn identity",
+  trackingField: "Tracking",
+  confidenceField: "Match confidence",
+
+  // Controls.
+  resolve: "Enrich Now",
+  resolving: "Looking for their LinkedIn profile",
+  track: "Track Prospect",
+  tracking: "Starting to track",
+
+  // What each control actually did. Neither claims more than a queued job.
+  resolveQueued: "Looking for their LinkedIn profile. The result lands on the next read.",
+  resolveDeduped: "Already looking — an identical search is queued for this lead.",
+  resolveFailed: "Couldn't ask for an identity search",
+  tracked: "Weez is tracking this prospect.",
+  alreadyTracking: "Already tracking this prospect — nothing changed.",
+  trackFailed: "Couldn't start tracking this prospect",
+
+  // The url, and the two very different things it can be.
+  verifiedUrl: "Verified profile",
+  candidateUrl: "Unverified candidate profile",
+  candidateNote:
+    "A provider gave us this address and nothing has checked it. It may not be this person, so it is not their confirmed profile.",
+
+  /** One sentence per 409 the track route returns. */
+  cannotTrack: {
+    unresolved:
+      "Nobody has looked for this person on LinkedIn yet. Run Enrich Now first — tracking needs a profile we have actually confirmed.",
+    possibleMatch:
+      "We found a candidate and could not confirm it is them. Tracking an unconfirmed profile would attach everything we learn to the wrong person.",
+    noMatch:
+      "We looked and found no matching profile, so there is nothing to track. Their details may need correcting before another search is worth running.",
+    noAddress:
+      "The identity is confirmed but no profile address came with it, so there is no page to observe.",
+    unrecognised:
+      "This lead's identity verdict isn't one this screen knows how to read, so tracking is held rather than guessed at.",
+  },
+} as const;
+
+/**
+ * The connection flow's own chrome: one control, one return prompt, one status
+ * check, and the sentences that keep all three honest.
+ *
+ * **Why this flow is shaped the way it is.** Weez cannot connect on anyone's
+ * behalf and cannot see whether a connection exists. Connection degree is rendered
+ * relative to whoever is signed in, so no logged-off reader — no scraping vendor,
+ * no public fetch — can ever supply it. That leaves the operator, who did the thing
+ * in their own browser, as the only witness. Every string below exists to ask them
+ * a question they can actually answer, and to avoid claiming anything they did not
+ * say.
+ *
+ * **`send` opens LinkedIn and stops there.** The label is "Send Connection
+ * Request", which is what the operator is about to go and do — not what Weez does.
+ * Clicking it records an intent and hands back their profile url. It moves no
+ * relationship state, because a click proves somebody asked and proves nothing
+ * about LinkedIn.
+ *
+ * **`askOnReturn` is a question, not a confirmation.** This is the load-bearing
+ * string of the whole flow. Returning to the tab does not prove an invitation was
+ * sent: the operator may have closed it, hit the wrong profile, been rate-limited,
+ * or changed their mind. Inferring "Connection Requested" from a mere return would
+ * leave a prospect wedged in a pending state that nothing can ever correct, because
+ * nothing observed it. So we ask, and the answer is the evidence.
+ *
+ * **There is a "no" and it writes nothing.** `didNotSend` exists so the honest
+ * answer is available and costs nothing. A prompt with only a confirming button is
+ * a prompt that manufactures its own answer.
+ *
+ * **`stillAwaiting` writes nothing either.** Nothing was observed, so there is
+ * nothing to assert; the state is already pending and re-stamping it would refresh
+ * a staleness clock that ought to keep running. What the operator gets back is the
+ * count of days, which is a subtraction over the confirmation's own timestamp and
+ * not a stored field.
+ *
+ * **`accepted` is the sentence that unblocks the rest of the product.** A confirmed
+ * connection is the precondition the warm-up action carries, so this is the moment
+ * a prospect becomes actionable. It is worth saying plainly rather than as a state
+ * name.
+ */
+export const GTM_CONNECTION_LABELS = {
+  // The control, and what it is honestly doing.
+  send: "Send Connection Request",
+  sending: "Opening their LinkedIn profile",
+  sendHint:
+    "This opens their profile in a new tab. Send the request there — Weez never clicks anything inside LinkedIn.",
+  sendFailed: "Couldn't record the connection request",
+
+  // The prompt on return. A question, deliberately.
+  askOnReturn: "Did you send the connection request?",
+  askOnReturnWhy:
+    "We can't see invitations you send, so we only record it if you tell us. Nothing is saved until you answer.",
+  didSend: "Yes, I sent it",
+  didNotSend: "No, not yet",
+
+  // The periodic status check, and its two real answers.
+  checkStatus: "Has this connection been accepted?",
+  checkStatusWhy:
+    "LinkedIn does not tell us when someone accepts, and their connection degree is only visible to you. Checking their profile is the only way to know.",
+  accepted: "Connection accepted",
+  stillAwaiting: "Still awaiting",
+  declined: "They declined or it expired",
+
+  // What each answer actually did.
+  recordedPending: "Recorded — waiting on them to accept.",
+  recordedAccepted:
+    "Connection confirmed. Weez can now recommend a warm-up message for this prospect.",
+  recordedDeclined: "Recorded. This prospect is no longer awaiting a connection.",
+  // Nothing was written, and the copy says so rather than implying a save.
+  awaitingAcknowledged: "Nothing changed — we'll ask again in a few days.",
+  confirmFailed: "Couldn't record what you told us",
+  // Shown when the reconciler declined the assertion. `reason` is appended.
+  confirmDeclined: "That change wasn't applied",
+
+  // The pending banner. `{days}` is substituted by the caller.
+  pendingFor: "Invitation pending for {days}",
+  pendingForOneDay: "Invitation pending since yesterday",
+  pendingForToday: "Invitation sent today",
+  // Said once the wait has gone on long enough to be worth a decision, and framed
+  // as a choice rather than as a failure: an unanswered invitation is ordinary.
+  pendingLongEnough:
+    "This has been pending a while. If they are not going to accept, marking it declined frees the prospect for another channel.",
+} as const;

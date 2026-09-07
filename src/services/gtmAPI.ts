@@ -188,6 +188,19 @@ export type EventOutcome =
 
 export type EnqueueOutcome = "ENQUEUED" | "DEDUPED";
 
+/**
+ * The three verdicts a LinkedIn identity resolution can reach
+ * (`models/gtm_identity.IDENTITY_STATUSES`).
+ *
+ * **All three mean an attempt ran.** Never having tried is `null`, not
+ * `"NO_MATCH"`, which is why every field typed by this union below is
+ * `... | null` and why nothing in this module defaults one to the other. The
+ * column itself is nullable with no server default for exactly this reason, and
+ * `models/lead.py` spells out the prohibition: do not backfill NULL to NO_MATCH,
+ * because a lead nobody has tried to enrich has not failed enrichment.
+ */
+export type LinkedInVerificationStatus = "VERIFIED" | "POSSIBLE_MATCH" | "NO_MATCH";
+
 /** The two orderings the ranked queue supports. */
 export type ProspectSort = "score" | "recency";
 
@@ -538,6 +551,19 @@ export interface Activity {
  * Who this prospect is: observed identity from the profile page, plus Eva's
  * qualification. `seniority`, `icpMatch`, `intentSignal`, and `acvTier` arrive
  * marked derived, so the UI can say so.
+ *
+ * The three `linkedin*` fields are the identity *verdict* off `sales_leads`, and
+ * they are the reason the prospect screen can decide whether Track Prospect is
+ * offerable without asking a second route first. All three are dropped from the
+ * JSON when no attempt has ever run, so all three arrive here as `null` and
+ * `null` means **nobody has tried** — a different claim from `"NO_MATCH"`, which
+ * is the verdict that an attempt ran and found nobody.
+ *
+ * `profileUrl` is *not* a verification and never becomes one. It is the address on
+ * the tracked-profile row, and a lead can also carry a provider-supplied candidate
+ * url that nothing in this system has checked. Only
+ * `linkedinVerificationStatus === "VERIFIED"` beside a `linkedinVerifiedAt` says a
+ * profile page was opened and compared against what the lead row claims.
  */
 export interface ProspectProfile {
   leadId: string;
@@ -554,6 +580,11 @@ export interface ProspectProfile {
   intentSignal: ObservedFact;
   acvTier: ObservedFact;
   leadScore: DerivedScore;
+  /** `null` means no attempt is on record. It does not mean `"NO_MATCH"`. */
+  linkedinVerificationStatus: LinkedInVerificationStatus | null;
+  linkedinVerifiedAt: string | null;
+  /** Absent rather than zero when no candidate was ever scored. */
+  linkedinMatchConfidence: number | null;
 }
 
 /**
@@ -842,6 +873,126 @@ export interface ObservationEnqueued {
   sourceSurface: SourceSurface | null;
   deduped: boolean;
   reason: string | null;
+}
+
+/**
+ * What "Enrich Now" did to the queue, and what is currently known about this
+ * lead's LinkedIn identity.
+ *
+ * Two halves in one payload, because the screen asks one question — who is this
+ * person on LinkedIn — and the honest answer has two parts: a search has been
+ * asked for, and here is the verdict of the last one, if there was one.
+ *
+ * **Every verdict and attempt field is nullable, and that is the whole point.**
+ * `verificationStatus === null` means *nobody has tried*, which is a different
+ * claim from `"NO_MATCH"` — the verdict that an attempt ran and found nobody. The
+ * six attempt fields are null when no resolution row exists for this lead, and
+ * their absence says "no attempt is on record" rather than "the attempt reached no
+ * stage". Nothing in this module fills one of them in.
+ *
+ * `linkedinUrl` may be populated while `verificationStatus` is null. A lead can
+ * arrive from a data provider carrying a LinkedIn address nothing here has checked,
+ * so in that state the url is a **candidate, not a verification**. A screen that
+ * renders it as confirmed identity is reading a guess as a fact.
+ *
+ * `DEDUPED` is not a failure: ten clicks inside the dedupe window collapse to one
+ * search and every one of them can poll the same `jobId`.
+ */
+export interface IdentityResolution {
+  // The enqueue half: what this call did to the queue.
+  outcome: EnqueueOutcome;
+  jobId: number | null;
+  deduped: boolean;
+  reason: string | null;
+
+  // The verdict half, off `sales_leads`. All four null before any attempt.
+  verificationStatus: LinkedInVerificationStatus | null;
+  verifiedAt: string | null;
+  matchConfidence: number | null;
+  linkedinUrl: string | null;
+
+  // The newest attempt, when there is one.
+  attemptId: string | null;
+  stage: string | null;
+  engineUsed: string | null;
+  candidateCount: number | null;
+  failureReason: string | null;
+  attemptedAt: string | null;
+}
+
+/**
+ * Acknowledgement that an operator turned a verified prospect into a *tracked*
+ * one.
+ *
+ * **`ALREADY_TRACKING` is not a failure.** A second click is the same tracked
+ * prospect: the rows already exist and the honest answer is to return the prospect
+ * that is already being tracked. Rendering it as an error would tell an operator
+ * their previous click did not work.
+ *
+ * **`trackingState` only ever reads `"TRACKING"`.** Nothing in the schema records
+ * "is this prospect tracked" — the presence of the profile row *is* the flag — so
+ * the server derives this from row existence and a payload is only ever built once
+ * the rows exist. There is deliberately no `PAUSED` and no `STOPPED`: neither is
+ * expressible today, and a value set promising a state nothing can reach would be a
+ * claim this layer exists not to make.
+ *
+ * `createdProfile` / `createdRelationship` are about *this* call and not about the
+ * prospect. Both false beside `ALREADY_TRACKING` is the ordinary repeat.
+ *
+ * `nbaMarked` is a recompute **mark**, never a ranking: it says the worker will pick
+ * this prospect up on its own schedule. No score was computed and no recommendation
+ * row was written by the route that returned this.
+ */
+export interface ProspectTracking {
+  /** `"TRACKING_STARTED"` | `"ALREADY_TRACKING"` — both successes. */
+  outcome: string;
+  /** Always `"TRACKING"`. Derived from row existence; see the doc comment. */
+  trackingState: string;
+
+  profileId: string;
+  profileUrl: string;
+  createdProfile: boolean;
+  createdRelationship: boolean;
+
+  signalId: string | null;
+  ingestOutcome: string | null;
+  /** `null` means no application was attempted, not that one failed silently. */
+  applyOutcome: string | null;
+  stateVersion: number | null;
+  nbaMarked: boolean;
+
+  observationJobId: number | null;
+  observationOutcome: string | null;
+}
+
+/**
+ * What the reconciler did with the operator's assertion about the connection.
+ *
+ * **`relationshipState` is what is persisted now, never what was asked for.** The
+ * server returns `ReconcileResult.new_value`, which equals the prior value on every
+ * rejection and on a duplicate. So a screen renders this field directly and is
+ * incapable of showing a state the engine declined — which is the entire reason the
+ * field is on the response instead of the caller assuming its own request won.
+ *
+ * **A refusal is not an error and does not throw.** `outcome` carries the verdict
+ * (`"APPLIED"`, `"DUPLICATE"`, or a `"REJECTED_*"`) and `reason` carries why. An
+ * operator asserting a state the transition table forbids gets a 200, the truth, and
+ * an explanation — all three of which a thrown error would destroy.
+ *
+ * `eventId` is `null` on a refusal: a declined assertion records its reason without
+ * writing a transition event, and absence here means "nothing moved" rather than
+ * zero.
+ */
+export interface RelationshipConfirmed {
+  profileId: string;
+  /** `"APPLIED"` | `"CORRECTED"` | `"DUPLICATE"` | `"REJECTED_*"`. */
+  outcome: string;
+  applied: boolean;
+  /** The value the database now holds. Render this, not the request. */
+  relationshipState: RelationshipState;
+  priorState: RelationshipState | null;
+  reason: string | null;
+  eventId: string | null;
 }
 
 /**
@@ -1778,6 +1929,12 @@ interface WireProspectProfile {
   intent_signal?: WireObservedFact;
   acv_tier?: WireObservedFact;
   lead_score?: WireDerivedScore;
+  // Dropped from the JSON entirely when no attempt has ever run, which is why they
+  // are optional here as well as nullable: absent and null both read "nobody has
+  // tried", and neither is `"NO_MATCH"`.
+  linkedin_verification_status?: LinkedInVerificationStatus | null;
+  linkedin_verified_at?: string | null;
+  linkedin_match_confidence?: number | null;
 }
 
 interface WireProspectState {
@@ -1945,6 +2102,49 @@ interface WireObservationEnqueued {
   source_surface?: SourceSurface | null;
   deduped?: boolean;
   reason?: string | null;
+}
+
+interface WireIdentityResolution {
+  outcome?: EnqueueOutcome;
+  job_id?: number | null;
+  deduped?: boolean;
+  reason?: string | null;
+  verification_status?: LinkedInVerificationStatus | null;
+  verified_at?: string | null;
+  match_confidence?: number | null;
+  linkedin_url?: string | null;
+  attempt_id?: string | null;
+  stage?: string | null;
+  engine_used?: string | null;
+  candidate_count?: number | null;
+  failure_reason?: string | null;
+  attempted_at?: string | null;
+}
+
+interface WireProspectTracking {
+  outcome?: string;
+  tracking_state?: string;
+  profile_id?: string;
+  profile_url?: string;
+  created_profile?: boolean;
+  created_relationship?: boolean;
+  signal_id?: string | null;
+  ingest_outcome?: string | null;
+  apply_outcome?: string | null;
+  state_version?: number | null;
+  nba_marked?: boolean;
+  observation_job_id?: number | null;
+  observation_outcome?: string | null;
+}
+
+interface WireRelationshipConfirmed {
+  profile_id?: string;
+  outcome?: string;
+  applied?: boolean;
+  relationship_state?: RelationshipState;
+  prior_state?: RelationshipState | null;
+  reason?: string | null;
+  event_id?: string | null;
 }
 
 interface WireOutcomeRecorded {
@@ -2423,6 +2623,83 @@ function toProfile(raw?: WireProspectProfile | null): ProspectProfile {
     intentSignal: toFact(raw?.intent_signal),
     acvTier: toFact(raw?.acv_tier),
     leadScore: toScore(raw?.lead_score),
+    // `?? null` and nothing more. A missing key and an explicit null both mean "no
+    // attempt is on record", and neither is turned into `"NO_MATCH"` or into a
+    // confidence of zero here — that substitution is the one thing this whole
+    // vocabulary exists to prevent.
+    linkedinVerificationStatus: raw?.linkedin_verification_status ?? null,
+    linkedinVerifiedAt: raw?.linkedin_verified_at ?? null,
+    linkedinMatchConfidence: raw?.linkedin_match_confidence ?? null,
+  };
+}
+
+/**
+ * The identity resolution response, with every verdict left exactly as it arrived.
+ *
+ * No default anywhere except `outcome` and `deduped`, which describe what the call
+ * did rather than what is known about the lead. Every other field passes through as
+ * `?? null`, so an absent verdict stays absent.
+ */
+function toIdentityResolution(raw?: WireIdentityResolution | null): IdentityResolution {
+  return {
+    outcome: raw?.outcome ?? "ENQUEUED",
+    jobId: raw?.job_id ?? null,
+    deduped: raw?.deduped ?? false,
+    reason: raw?.reason ?? null,
+    verificationStatus: raw?.verification_status ?? null,
+    verifiedAt: raw?.verified_at ?? null,
+    matchConfidence: raw?.match_confidence ?? null,
+    linkedinUrl: raw?.linkedin_url ?? null,
+    attemptId: raw?.attempt_id ?? null,
+    stage: raw?.stage ?? null,
+    engineUsed: raw?.engine_used ?? null,
+    candidateCount: raw?.candidate_count ?? null,
+    failureReason: raw?.failure_reason ?? null,
+    attemptedAt: raw?.attempted_at ?? null,
+  };
+}
+
+/**
+ * The tracking acknowledgement.
+ *
+ * `trackingState` falls back to `"TRACKING"` because that is the only value the
+ * server ever sends and a payload only exists once the rows do — there is no second
+ * member to guess between. `outcome` gets no such default: which of the two
+ * successes happened is a fact about this call, and inventing one would report a
+ * provisioning that may not have happened.
+ */
+function toProspectTracking(raw?: WireProspectTracking | null): ProspectTracking {
+  return {
+    outcome: raw?.outcome ?? "",
+    trackingState: raw?.tracking_state ?? "TRACKING",
+    profileId: raw?.profile_id ?? "",
+    profileUrl: raw?.profile_url ?? "",
+    createdProfile: raw?.created_profile ?? false,
+    createdRelationship: raw?.created_relationship ?? false,
+    signalId: raw?.signal_id ?? null,
+    ingestOutcome: raw?.ingest_outcome ?? null,
+    applyOutcome: raw?.apply_outcome ?? null,
+    stateVersion: raw?.state_version ?? null,
+    nbaMarked: raw?.nba_marked ?? false,
+    observationJobId: raw?.observation_job_id ?? null,
+    observationOutcome: raw?.observation_outcome ?? null,
+  };
+}
+
+function toRelationshipConfirmed(
+  raw?: WireRelationshipConfirmed | null
+): RelationshipConfirmed {
+  return {
+    profileId: raw?.profile_id ?? "",
+    outcome: raw?.outcome ?? "",
+    applied: raw?.applied ?? false,
+    // `UNKNOWN` is the honest floor for a missing value: it is the dimension's own
+    // spelling of "no evidence", so a dropped field reads as unknown rather than as
+    // a connection nobody asserted.
+    relationshipState: raw?.relationship_state ?? "UNKNOWN",
+    priorState: raw?.prior_state ?? null,
+    reason: raw?.reason ?? null,
+    eventId: raw?.event_id ?? null,
   };
 }
 
@@ -3353,6 +3630,99 @@ export const gtmAPI = {
       deduped: raw.deduped ?? false,
       reason: raw.reason ?? null,
     };
+  },
+
+  /**
+   * `POST /gtm/lead/{lead_id}/resolve-identity` — what "Enrich Now" triggers for
+   * LinkedIn identity: find this lead on LinkedIn.
+   *
+   * **No request body, deliberately.** The lead is the path parameter and the
+   * purpose is fixed server-side, so there is nothing a caller could supply.
+   *
+   * The API process navigates nothing: a pending row lands in the execution-job
+   * queue and the LinkedIn VM is the only consumer. So the response's verdict half
+   * is the verdict of the *previous* attempt, not of the one just asked for — the
+   * new one lands later, and the page reads it on its next load.
+   *
+   * `DEDUPED` is not a failure. Idempotent inside the dedupe window: ten clicks
+   * collapse to one search and every one returns the same `jobId`.
+   *
+   * **It starts no tracking.** Resolving an identity says which profile this is; it
+   * provisions nothing and begins observing nobody. Track Prospect is separate.
+   */
+  resolveIdentity: async (brandId: string, leadId: string): Promise<IdentityResolution> => {
+    const raw = await gtmFetch<WireIdentityResolution>(
+      `/lead/${encodeURIComponent(leadId)}/resolve-identity?${gtmQuery(brandId)}`,
+      POST
+    );
+    return toIdentityResolution(raw);
+  },
+
+  /**
+   * `POST /gtm/prospect/{lead_id}/track` — turn a verified prospect into a tracked
+   * one. The explicit operator action, and the only thing that provisions the GTM
+   * rows.
+   *
+   * **No request body**, for the same reason `resolveIdentity` has none: the lead is
+   * the path parameter and everything else is the server's own decision.
+   *
+   * Refused with `409` unless the lead is `VERIFIED` and carries a resolved url, and
+   * the server's `detail` distinguishes the cases — nobody has tried, an attempt ran
+   * and did not settle the identity, or a verdict with no address. `gtmFetch` turns
+   * that `detail` into the `Error` message, so a caller can show what the backend
+   * actually said. A screen should not reach this call at all unless the verdict on
+   * `ProspectProfile` already reads `"VERIFIED"`.
+   *
+   * **This route ranks nothing.** `nbaMarked` is a recompute mark; the prospect
+   * enters the queue when the worker claims it, or when the caller asks for a channel
+   * recommendation.
+   */
+  trackProspect: async (brandId: string, leadId: string): Promise<ProspectTracking> => {
+    const raw = await gtmFetch<WireProspectTracking>(
+      `/prospect/${encodeURIComponent(leadId)}/track?${gtmQuery(brandId)}`,
+      POST
+    );
+    return toProspectTracking(raw);
+  },
+
+  /**
+   * `POST /gtm/prospect/{lead_id}/relationship/confirm` — the operator telling us
+   * where the LinkedIn connection actually stands.
+   *
+   * **Why a human is asked at all.** Connection degree is account-relative: the
+   * 1st-degree badge and the pending badge are rendered for whoever is signed in, so
+   * no logged-off reader can see either — not a public-web fetch, not a data vendor.
+   * The operator sent the invitation in their own browser under their own account, so
+   * they are the only witness there is, and their answer is recorded under
+   * `HUMAN_CONFIRMATION` and gated exactly as an observation would be.
+   *
+   * **This is not the connect click.** `requestAction` with `"CONNECT_LINKEDIN"`
+   * records the *intent* and hands back the profile url to open; it deliberately
+   * moves no relationship state, because a click proves somebody asked and proves
+   * nothing about LinkedIn. This call is the separate, later assertion that the
+   * invitation was really sent — or accepted, or declined.
+   *
+   * **Never call it to mean "still waiting".** There is no value for that and there
+   * should not be: nothing was observed, so there is nothing to assert, and
+   * re-stamping the state would refresh a staleness clock that ought to keep running.
+   * How long a connection has been pending is a subtraction over
+   * `state.relationshipState.observedAt`, which the prospect payload already carries.
+   *
+   * **A refusal resolves, it does not throw.** `UNKNOWN` is refused because no
+   * transition targets it, and an illegal move is refused with a reason; both come
+   * back 200 carrying the state that actually holds. Only a malformed call (422) or a
+   * missing prospect record (404) rejects.
+   */
+  confirmRelationship: async (
+    brandId: string,
+    leadId: string,
+    confirmedState: RelationshipState
+  ): Promise<RelationshipConfirmed> => {
+    const raw = await gtmFetch<WireRelationshipConfirmed>(
+      `/prospect/${encodeURIComponent(leadId)}/relationship/confirm?${gtmQuery(brandId)}`,
+      { ...POST, body: JSON.stringify({ confirmed_state: confirmedState }) }
+    );
+    return toRelationshipConfirmed(raw);
   },
 
   /**

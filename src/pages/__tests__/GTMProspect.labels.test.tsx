@@ -75,10 +75,13 @@ import {
   GTM_ACTION_LABELS,
   GTM_ACTION_LABEL_BY_TYPE,
   GTM_EXCLUSION_LABELS,
+  GTM_IDENTITY_LABELS,
   GTM_LIFECYCLE_LABELS,
   GTM_NBA_ACTION_LABELS,
   GTM_PAGE_LABELS,
+  GTM_TRACKING_STATE_LABELS,
   GTM_UI_LABELS,
+  GTM_VERIFICATION_LABELS,
   TIMELINE_LABELS,
 } from "@/components/gtm/labels";
 
@@ -890,6 +893,16 @@ const ADDED_LABEL_TABLES: readonly [string, Record<string, unknown>][] = [
   ["GTM_NBA_ACTION_LABELS", GTM_NBA_ACTION_LABELS],
   ["GTM_LIFECYCLE_LABELS", GTM_LIFECYCLE_LABELS],
   ["GTM_EXCLUSION_LABELS", GTM_EXCLUSION_LABELS],
+  // The identity gate's three tables join the walk rather than getting a scan of their
+  // own. `GTM_IDENTITY_LABELS` carries two control labels — Enrich Now and Track
+  // Prospect — so it is exactly the kind of table R12.2 is about, and the other two are
+  // the copy those controls sit beside: a verdict sentence or a tracking state that
+  // implied Weez had sent something would be the same violation one step removed.
+  // `stringsIn` recurses, so the five `cannotTrack` sentences are covered too, and a
+  // string added to any of them next month is covered by default.
+  ["GTM_VERIFICATION_LABELS", GTM_VERIFICATION_LABELS],
+  ["GTM_TRACKING_STATE_LABELS", GTM_TRACKING_STATE_LABELS],
+  ["GTM_IDENTITY_LABELS", GTM_IDENTITY_LABELS],
 ];
 
 /** Every string in a table, flattened, since two of them nest a `fields` object. */

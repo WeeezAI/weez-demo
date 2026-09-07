@@ -96,6 +96,12 @@ import { ChannelIntelligencePanel, CHANNEL_PANEL_LABELS } from "../ChannelIntell
 import { ChannelRecommendationPanel } from "../ChannelRecommendationPanel";
 import { EngagementTrendPanel, ENGAGEMENT_TREND_PANEL_LABELS } from "../EngagementTrendPanel";
 import { IntentPanel, INTENT_PANEL_LABELS, INTENT_TYPES } from "../IntentPanel";
+import {
+  IdentityPanel,
+  trackRefusal,
+  trackingState,
+  verificationFact,
+} from "../IdentityPanel";
 import { JourneyStateBadge } from "../JourneyStateBadge";
 import { LearningInsightsPanel, LEARNING_PANEL_LABELS } from "../LearningInsightsPanel";
 import { ProspectHeader } from "../ProspectHeader";
@@ -106,10 +112,15 @@ import { StateHistoryPanel, STATE_HISTORY_LABELS } from "../StateHistoryPanel";
 import { TimingPanel, TIMING_PANEL_LABELS } from "../TimingPanel";
 import { UNKNOWN_TEXT } from "../ObservedValue";
 import {
+  CHANNEL_AVAILABILITY_LABEL,
+  CHANNEL_LABEL,
   FIELD_LABEL,
+  GTM_IDENTITY_LABELS,
   GTM_INTENT_LABELS,
   GTM_LIFECYCLE_LABELS,
+  GTM_TRACKING_STATE_LABELS,
   GTM_UI_LABELS,
+  GTM_VERIFICATION_LABELS,
   STATE_LABEL,
   TONE,
 } from "../labels";
@@ -178,6 +189,12 @@ const PROFILE: ProspectProfile = {
   intentSignal: observed("HIGH", { isDerived: true }),
   acvTier: observed("MID", { isDerived: true }),
   leadScore: score(82),
+  // No identity attempt on record, which is the shape the server sends for a lead
+  // nobody has tried to resolve: the three keys are dropped, not sent as nulls, and
+  // `null` here means *nobody has tried* rather than `NO_MATCH`.
+  linkedinVerificationStatus: null,
+  linkedinVerifiedAt: null,
+  linkedinMatchConfidence: null,
 };
 
 const UNOBSERVED_PROFILE: ProspectProfile = {
@@ -1266,9 +1283,24 @@ describe("text alternatives on the state engine's panels", () => {
     expect(screen.getByText(STATE_LABEL.EVALUATING)).toBeInTheDocument();
     expect(screen.getByText(STATE_LABEL.RISING)).toBeInTheDocument();
     expect(screen.getByText(STATE_LABEL.SPIKE)).toBeInTheDocument();
-    ["LinkedIn", "Email", "Phone"].forEach((label) =>
-      expect(screen.getByText(label)).toBeInTheDocument(),
+    //
+    // The headings come from `CHANNEL_AVAILABILITY_LABEL` rather than from three
+    // literals, so the test tracks the table a relabelling would move.
+    [
+      CHANNEL_AVAILABILITY_LABEL.LINKEDIN,
+      CHANNEL_AVAILABILITY_LABEL.EMAIL,
+      CHANNEL_AVAILABILITY_LABEL.PHONE,
+    ].forEach((label) => expect(screen.getByText(label)).toBeInTheDocument());
+
+    // And a channel row names the dimension it reports, never the channel itself:
+    // `ChannelIntelligencePanel` heads a column "LinkedIn" on the same prospect page,
+    // and one string standing for two different facts on one screen is exactly the
+    // collision these headings exist to avoid.
+    const channelHeadings = Array.from(container.querySelectorAll("dt")).map(
+      (node) => node.textContent?.trim() ?? "",
     );
+    expect(channelHeadings).not.toContain(CHANNEL_LABEL.LINKEDIN);
+
     // Two reachable channels and one with no identifier: three separate readings, and
     // the unreachable one is not silently absent from the grid. `UNAVAILABLE` names the
     // absence rather than reading as a verdict on the channel (R6.6).
@@ -1278,6 +1310,56 @@ describe("text alternatives on the state engine's panels", () => {
     // Five original rows plus the confirmation row, plus three added dimensions and
     // three channel rows: every one still a real `<dt>`/`<dd>` pair.
     expect(container.querySelectorAll("dt")).toHaveLength(12);
+  });
+
+  /**
+   * The defect this pins: an unknown observation's timestamp, reattached to a derived
+   * value.
+   *
+   * `provenance.availability` can arrive present *and* unknown — the engine looked,
+   * saw nothing, and the fact still carries the instant it looked. The row then falls
+   * back to the derived availability blend, and it used to carry that instant along
+   * with it: a provenance line reading "Unknown · 9h ago" under a value nobody
+   * observed then, or at all. A fabricated observation time is worse than a missing
+   * one, so a derived row now carries no provenance at all and `ObservedValue`
+   * suppresses the line.
+   *
+   * The branch no other test in this file reaches: `CHANNEL_STATES` gives LinkedIn a
+   * known observed fact and the other two an empty `provenance`, so the fallback is
+   * only ever entered with nothing to borrow.
+   */
+  it("carries no observation time on a derived availability row, even when the unknown fact had one", () => {
+    const probedAt = new Date(Date.now() - 9 * 3600_000).toISOString();
+    const probedNothing: ProspectStateFull = {
+      ...STATE_FULL,
+      channels: [
+        channelState("LINKEDIN", {
+          // A real derived value on the dimension itself...
+          availability: "AVAILABLE",
+          // ...and an observation that found nothing, timestamped all the same.
+          provenance: {
+            availability: observed("AVAILABLE", {
+              value: null,
+              isUnknown: true,
+              observedAt: probedAt,
+            }),
+          },
+        }),
+      ],
+    };
+
+    const { container } = render(<StateDimensionGrid state={STATE} stateFull={probedNothing} />);
+    const row = screen.getByText(CHANNEL_AVAILABILITY_LABEL.LINKEDIN).closest("div")!;
+
+    // The derived blend still reaches the screen, in words and wearing its badge.
+    expect(within(row).getByText(STATE_LABEL.AVAILABLE)).toBeInTheDocument();
+    expect(within(row).getByText("derived")).toBeInTheDocument();
+
+    // And nothing under it claims an observation: no provenance line, no `<time>`, and
+    // the probe's instant nowhere on the panel.
+    expect(row.textContent).not.toContain("Observed on");
+    expect(row.querySelector("time")).toBeNull();
+    expect(container.querySelector(`time[datetime="${probedAt}"]`)).toBeNull();
   });
 
   /**
@@ -1673,6 +1755,179 @@ describe("accessibility", () => {
         <LearningInsightsPanel updates={[]} scope={null} />
       </div>,
     );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IdentityPanel — the three decisions it makes, made in isolation
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// `pages/__tests__/GTMProspect.identity.test.tsx` drives this block through the real
+// page and the real transport, which is where the claims about *behaviour* belong. What
+// is tested here is the part of it that is a pure function of the verdict, because
+// three of the panel's decisions are pure and each of them is a place where a null
+// could quietly become a value:
+//
+//   • `verificationFact` — absence collapses before any label is looked up, and
+//     provenance is claimed only where it exists.
+//   • `trackRefusal` — one branch per 409 the route returns, `null` only where the
+//     route would accept.
+//   • `trackingState` — the server's own rule (the profile row is the flag), not a
+//     second one invented in the browser.
+//
+// Asserted on the functions rather than on rendered text, so a failure points at the
+// decision instead of at a fixture.
+
+describe("IdentityPanel", () => {
+  const NOW = "2025-03-04T09:30:00+00:00";
+
+  /** A profile block carrying only what this panel reads. */
+  function identityProfile(over: Partial<ProspectProfile> = {}): ProspectProfile {
+    return {
+      leadId: "lead-1",
+      profileId: null,
+      profileUrl: null,
+      publicIdentifier: null,
+      name: observed("Ada Lovelace"),
+      headline: UNKNOWN_FACT,
+      company: UNKNOWN_FACT,
+      role: UNKNOWN_FACT,
+      location: UNKNOWN_FACT,
+      seniority: UNKNOWN_FACT,
+      icpMatch: UNKNOWN_FACT,
+      intentSignal: UNKNOWN_FACT,
+      acvTier: UNKNOWN_FACT,
+      leadScore: score(null),
+      linkedinVerificationStatus: null,
+      linkedinVerifiedAt: null,
+      linkedinMatchConfidence: null,
+      ...over,
+    };
+  }
+
+  it("collapses an absent verdict into unknown before any label is looked up", () => {
+    const absent = verificationFact(null, null);
+    expect(absent.isUnknown).toBe(true);
+    // No value at all, so there is no order of operations in which "nobody has tried"
+    // acquires a verdict's wording.
+    expect(absent.value).toBeNull();
+    expect(absent.sourceSurface).toBeNull();
+    expect(absent.observedAt).toBeNull();
+    // And it is not the NO_MATCH label under another name.
+    expect(absent.value).not.toBe(GTM_VERIFICATION_LABELS.NO_MATCH);
+  });
+
+  it("claims a surface and an instant only for a verdict that opened a page", () => {
+    const verified = verificationFact("VERIFIED", NOW);
+    expect(verified.value).toBe(GTM_VERIFICATION_LABELS.VERIFIED);
+    expect(verified.sourceSurface).toBe("LINKEDIN_PROFILE_PAGE");
+    expect(verified.observedAt).toBe(NOW);
+    // A verdict is the resolver's judgement over a search, not a value read off a page.
+    expect(verified.isDerived).toBe(true);
+
+    // `NO_MATCH` opened no page, so claiming one would be a fabricated provenance —
+    // even when a stale `verifiedAt` is passed alongside it.
+    const noMatch = verificationFact("NO_MATCH", NOW);
+    expect(noMatch.value).toBe(GTM_VERIFICATION_LABELS.NO_MATCH);
+    expect(noMatch.sourceSurface).toBeNull();
+    expect(noMatch.observedAt).toBeNull();
+  });
+
+  it("gives each refusal its own reason, and refuses nothing that the route accepts", () => {
+    expect(trackRefusal(null, null)).toBe(GTM_IDENTITY_LABELS.cannotTrack.unresolved);
+    expect(trackRefusal("POSSIBLE_MATCH", "https://x")).toBe(
+      GTM_IDENTITY_LABELS.cannotTrack.possibleMatch,
+    );
+    expect(trackRefusal("NO_MATCH", null)).toBe(GTM_IDENTITY_LABELS.cannotTrack.noMatch);
+    // A verdict this screen does not know is held rather than guessed at.
+    expect(trackRefusal("SOMETHING_NEW", "https://x")).toBe(
+      GTM_IDENTITY_LABELS.cannotTrack.unrecognised,
+    );
+    // Defensive: a verification with no address has no page to observe.
+    expect(trackRefusal("VERIFIED", null)).toBe(GTM_IDENTITY_LABELS.cannotTrack.noAddress);
+    expect(trackRefusal("VERIFIED", "")).toBe(GTM_IDENTITY_LABELS.cannotTrack.noAddress);
+
+    // The one case the route accepts is the one case with nothing to explain.
+    expect(trackRefusal("VERIFIED", "https://www.linkedin.com/in/ada")).toBeNull();
+
+    // A provider's url beside an unresolved verdict is still a refusal: a url is not a
+    // verdict, and this is the branch that proves the two are not confused.
+    expect(trackRefusal(null, "https://www.linkedin.com/in/candidate")).toBe(
+      GTM_IDENTITY_LABELS.cannotTrack.unresolved,
+    );
+  });
+
+  it("reads tracking off row existence, and tells cannot-track apart from not-tracked", () => {
+    // The server's own rule: the profile row *is* the flag.
+    expect(trackingState("VERIFIED", "profile-1")).toBe("TRACKING");
+    expect(trackingState(null, "profile-1")).toBe("TRACKING");
+    // A verified prospect nobody has clicked Track on is a decision waiting to be made.
+    expect(trackingState("VERIFIED", null)).toBe("NOT_TRACKING");
+    // An unresolved one is a precondition that has not been met, which is different.
+    expect(trackingState(null, null)).toBe("UNRESOLVED");
+    expect(trackingState("NO_MATCH", null)).toBe("UNRESOLVED");
+    expect(GTM_TRACKING_STATE_LABELS.NOT_TRACKING).not.toBe(
+      GTM_TRACKING_STATE_LABELS.UNRESOLVED,
+    );
+  });
+
+  it("has no PAUSED and no STOPPED to render", () => {
+    // Neither is expressible: `TrackProspectOut.tracking_state` has one member, derived
+    // from row existence. A label for a state nothing can reach would send an operator
+    // looking for a control that does not exist.
+    expect(GTM_TRACKING_STATE_LABELS.PAUSED).toBeUndefined();
+    expect(GTM_TRACKING_STATE_LABELS.STOPPED).toBeUndefined();
+    expect(Object.keys(GTM_TRACKING_STATE_LABELS).sort()).toEqual([
+      "NOT_TRACKING",
+      "TRACKING",
+      "UNRESOLVED",
+    ]);
+  });
+
+  it("offers the search and not the tracking control when nothing has been resolved", async () => {
+    const { container } = render(
+      <IdentityPanel
+        profile={identityProfile()}
+        onResolveIdentity={() => {}}
+        onTrackProspect={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: GTM_IDENTITY_LABELS.resolve }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: GTM_IDENTITY_LABELS.track }),
+    ).not.toBeInTheDocument();
+    // Absence in the value slot, with the sentence that says which absence it is.
+    expect(screen.getByText(UNKNOWN_TEXT)).toBeInTheDocument();
+    expect(screen.getByText(GTM_VERIFICATION_LABELS.UNRESOLVED)).toBeInTheDocument();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("offers the tracking control on a verified identity, and is clean under axe", async () => {
+    const { container } = render(
+      <IdentityPanel
+        profile={identityProfile({
+          profileId: "profile-1",
+          profileUrl: "https://www.linkedin.com/in/ada",
+          linkedinVerificationStatus: "VERIFIED",
+          linkedinVerifiedAt: NOW,
+          linkedinMatchConfidence: 93,
+        })}
+        onResolveIdentity={() => {}}
+        onTrackProspect={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: GTM_IDENTITY_LABELS.track })).toBeInTheDocument();
+    expect(screen.getByText(GTM_VERIFICATION_LABELS.VERIFIED)).toBeInTheDocument();
+    expect(screen.getByText(GTM_IDENTITY_LABELS.verifiedUrl)).toBeInTheDocument();
+    // The profile row already exists, so the tracking row reads tracked.
+    expect(screen.getByText(GTM_TRACKING_STATE_LABELS.TRACKING)).toBeInTheDocument();
+
     expect(await axe(container)).toHaveNoViolations();
   });
 });

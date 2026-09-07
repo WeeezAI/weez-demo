@@ -48,6 +48,23 @@
 // socket, a missed frame, and every event this page cannot patch (a recomputed
 // score, a new draft).
 //
+// The identity gate
+// -----------------
+// `IdentityPanel` sits between the header and the five sections, because it answers
+// the question all five rest on: is this person identified on LinkedIn, and is Weez
+// watching them. It renders from `detail.profile` — the three `linkedin*` verdict
+// fields the prospect payload now carries — so the gate adds nothing to the load
+// contract. Its two writes are the only new requests on this page and both are
+// operator-initiated: `resolveIdentity` asks for a LinkedIn search, and
+// `trackProspect` provisions the prospect. Neither runs on mount.
+//
+// `Track Prospect` is rendered **only** where the verdict is `VERIFIED` with an
+// address, which is the same gate `POST /gtm/prospect/{lead_id}/track` applies — a
+// control certain to be refused is a control that should not be on screen. Where it is
+// absent the reason is printed in its place, one sentence per 409 the route returns.
+// After a successful track the page calls the existing `recommendChannel`, because the
+// track route sets a recompute mark and scores nothing: only that route may score.
+//
 // The decision hierarchy
 // ----------------------
 // The page is five sections, in the order the operator's questions arrive:
@@ -132,6 +149,7 @@ import gtmAPI, {
   type Action,
   type CandidateAction,
   type FeedbackRecorded,
+  type IdentityResolution,
   type LearningUpdate,
   type Message,
   type NextBestAction,
@@ -139,7 +157,9 @@ import gtmAPI, {
   type ProspectDetail,
   type ProspectState,
   type ProspectStateFull,
+  type ProspectTracking,
   type RecommendationExplanation,
+  type RelationshipState,
   type SourceSurface,
   type TimelineEntry,
 } from "@/services/gtmAPI";
@@ -161,7 +181,16 @@ import { SignalList } from "@/components/gtm/SignalList";
 import { StateDimensionGrid } from "@/components/gtm/StateDimensionGrid";
 import { StateHistoryPanel } from "@/components/gtm/StateHistoryPanel";
 import { TimingPanel } from "@/components/gtm/TimingPanel";
-import { GTM_PAGE_LABELS, GTM_UI_LABELS, TONE } from "@/components/gtm/labels";
+import { IdentityPanel } from "@/components/gtm/IdentityPanel";
+import { ConnectionPanel } from "@/components/gtm/ConnectionPanel";
+import { actionIdempotencyKey } from "@/components/gtm/NextActionPanel";
+import {
+  GTM_CONNECTION_LABELS,
+  GTM_IDENTITY_LABELS,
+  GTM_PAGE_LABELS,
+  GTM_UI_LABELS,
+  TONE,
+} from "@/components/gtm/labels";
 
 // ─── The WebSocket the app already has ────────────────────────────────────────
 
@@ -478,6 +507,35 @@ export default function GTMProspect() {
   const [channelError, setChannelError] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
 
+  // ── The identity gate (R30.7, R3.2) ──
+  //
+  // Both are null on arrival and stay null until the operator presses something, which
+  // is what keeps the identity block a *render* of the payload the page already
+  // fetched rather than a third read in front of the first decision. The verdict on
+  // `detail.profile` is what the block renders from by default; these two hold the
+  // fresher answers the two writes come back with.
+  const [identity, setIdentity] = useState<IdentityResolution | null>(null);
+  const [trackingAck, setTrackingAck] = useState<ProspectTracking | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [starting, setStarting] = useState(false);
+  /** What the last identity control did, or the server's refusal. Never a fabrication. */
+  const [identityNotice, setIdentityNotice] = useState<string | null>(null);
+
+  // ── The connection flow (R3.1, R13.1-R13.2) ──
+  //
+  // `awaitingSendAnswer` is deliberately *not* persisted and deliberately not derived
+  // from any state on the prospect. It means "we opened LinkedIn a moment ago and have
+  // not yet asked whether anything was sent", which is a fact about this page visit and
+  // not about the prospect. Storing it, or reconstructing it from
+  // `execution_state === "ACTION_IN_PROGRESS"`, would turn "we opened a tab" into "an
+  // invitation is outstanding" — the exact inference the click-semantics guard exists
+  // to forbid.
+  const [awaitingSendAnswer, setAwaitingSendAnswer] = useState(false);
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [confirmingRelationship, setConfirmingRelationship] = useState(false);
+  /** What the last connection control did, including a refusal the engine explained. */
+  const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
+
   /** Bumped to make `ProspectTimeline` re-read the ledger. */
   const [timelineKey, setTimelineKey] = useState(0);
 
@@ -643,6 +701,10 @@ export default function GTMProspect() {
     setLearningUpdates(null);
     setLearningOpen(false);
     setLearningError(null);
+    // A verdict about one person must never be shown beside another person's name.
+    setIdentity(null);
+    setTrackingAck(null);
+    setIdentityNotice(null);
     if (stateOpenRef.current) void loadState();
   }, [brandId, leadId, loadState]);
 
@@ -736,6 +798,213 @@ export default function GTMProspect() {
       setEvaluating(false);
     }
   }, [brandId, leadId]);
+
+  /**
+   * Enrich Now: ask for a LinkedIn identity search (R30.7).
+   *
+   * The API process navigates nothing — a job row lands in the queue and the LinkedIn
+   * VM does the search later — so what comes back is an acknowledgement plus the
+   * verdict of the *previous* attempt, if there was one. The notice says exactly that
+   * and nothing more: no verdict is announced here, because none has been reached yet.
+   *
+   * `DEDUPED` is not a failure and is not reported as one. An identical search inside
+   * the dedupe window is the same search, and saying so is more useful than saying
+   * nothing.
+   */
+  const onResolveIdentity = useCallback(async () => {
+    if (!brandId || !leadId) return;
+    setResolving(true);
+    setIdentityNotice(null);
+    try {
+      const resolution = await gtmAPI.resolveIdentity(brandId, leadId);
+      setIdentity(resolution);
+      setIdentityNotice(
+        resolution.deduped
+          ? GTM_IDENTITY_LABELS.resolveDeduped
+          : GTM_IDENTITY_LABELS.resolveQueued,
+      );
+      // The attempt is on the ledger the moment it is queued.
+      setTimelineKey((key) => key + 1);
+    } catch (e) {
+      // The server's own `detail` — which for this route names the reason — rather than
+      // a generic sentence written here.
+      setIdentityNotice(e instanceof Error ? e.message : GTM_IDENTITY_LABELS.resolveFailed);
+      toast.error(GTM_IDENTITY_LABELS.resolveFailed);
+    } finally {
+      setResolving(false);
+    }
+  }, [brandId, leadId]);
+
+  /**
+   * Track Prospect: turn a verified prospect into a tracked one (R3.2, R23.1).
+   *
+   * **The `recommendChannel` call afterwards is deliberate and cannot move to the
+   * server.** Tracking provisions the rows and sets `nba_recompute_requested_at`, and
+   * that mark is all it sets: the route computes no score and writes no
+   * recommendation, so until something scores this prospect they are tracked but
+   * invisible in the ranked queue. Only `recommend_channel` may score — the backend's
+   * `test_only_the_re_evaluation_route_scores` pins scoring to that route alone, and
+   * having the track route do it would be exactly the violation that test exists to
+   * catch. So the client makes the second call, through the re-evaluation wiring the
+   * page already has, and the prospect appears in the queue on the strength of an
+   * evaluation that really ran.
+   *
+   * A refusal is the server's sentence, verbatim. The control is only rendered where
+   * the verdict admits tracking, so reaching a 409 here means the payload on screen is
+   * older than the row — which is worth reading rather than swallowing.
+   */
+  const onTrackProspect = useCallback(async () => {
+    if (!brandId || !leadId) return;
+    setStarting(true);
+    setIdentityNotice(null);
+    try {
+      const ack = await gtmAPI.trackProspect(brandId, leadId);
+      setTrackingAck(ack);
+      setIdentityNotice(
+        ack.createdProfile
+          ? GTM_IDENTITY_LABELS.tracked
+          : GTM_IDENTITY_LABELS.alreadyTracking,
+      );
+      setTimelineKey((key) => key + 1);
+      // Now score, so the prospect is reachable from the queue. See the docblock.
+      await onReevaluate();
+    } catch (e) {
+      setIdentityNotice(e instanceof Error ? e.message : GTM_IDENTITY_LABELS.trackFailed);
+      toast.error(GTM_IDENTITY_LABELS.trackFailed);
+    } finally {
+      setStarting(false);
+    }
+  }, [brandId, leadId, onReevaluate]);
+
+  /**
+   * Send Connection Request: record the intent, open their profile, then ask (R13.1).
+   *
+   * Three steps and the order matters. `requestAction` writes
+   * `execution_state = ACTION_REQUESTED` under `WEEZ_UI_CLICK` and hands back the
+   * profile url — it moves no relationship state, and the backend guarantees that
+   * rather than trusting this page. `markOpened` records that LinkedIn was opened,
+   * which is also only ever a fact about us. Then, and only then, the prompt appears.
+   *
+   * **The prompt is the point.** We never learn whether an invitation was actually
+   * sent — LinkedIn shows that to the operator's own account and to nobody else — so
+   * the flow ends in a question rather than in an assumption. If the window fails to
+   * open we still ask, because the operator may well have gone to LinkedIn by hand.
+   *
+   * `markOpened` failing does not abort anything: it is a timeline nicety, and losing
+   * it must not cost the operator the prompt that carries the real evidence.
+   */
+  const onSendConnectionRequest = useCallback(async () => {
+    if (!brandId || !leadId) return;
+    setSendingRequest(true);
+    setConnectionNotice(null);
+    try {
+      const action = await gtmAPI.requestAction(brandId, leadId, {
+        actionType: "CONNECT",
+        idempotencyKey: actionIdempotencyKey(leadId, "CONNECT", null, null),
+      });
+      const destination = action?.destinationUrl ?? detail?.profile.profileUrl ?? null;
+      if (destination) {
+        window.open(destination, "_blank", "noopener,noreferrer");
+      }
+      if (action?.actionId) {
+        // Best effort. A missing "opened" entry costs a timeline line, not the flow.
+        try {
+          await gtmAPI.markOpened(brandId, action.actionId);
+        } catch {
+          /* ignored on purpose — see the docblock */
+        }
+      }
+      setTimelineKey((key) => key + 1);
+      // Ask. Never assume.
+      setAwaitingSendAnswer(true);
+    } catch (e) {
+      setConnectionNotice(
+        e instanceof Error ? e.message : GTM_CONNECTION_LABELS.sendFailed,
+      );
+      toast.error(GTM_CONNECTION_LABELS.sendFailed);
+    } finally {
+      setSendingRequest(false);
+    }
+  }, [brandId, leadId, detail]);
+
+  /**
+   * Record what the operator told us about the connection (R3.1, R3.4).
+   *
+   * **A refusal is not thrown and is not hidden.** The route answers 200 with the
+   * reconciler's verdict, and `applied === false` means the assertion was declined —
+   * an illegal transition, or `UNKNOWN`, which no transition targets. The notice then
+   * carries the engine's own reason rather than a sentence invented here, and the
+   * dimension on screen is refreshed from the server so it shows what actually holds
+   * instead of what was asked for.
+   *
+   * The refetch is what keeps that promise. `confirmRelationship` returns the
+   * persisted value, but the rest of the page — the warm-up action a confirmed
+   * connection unblocks, the belief, the timeline — is derived from it, so the honest
+   * move is to re-read rather than to patch one field and let the others drift.
+   */
+  const onConfirmRelationship = useCallback(
+    async (confirmed: RelationshipState) => {
+      if (!brandId || !leadId) return;
+      setConfirmingRelationship(true);
+      setConnectionNotice(null);
+      try {
+        const result = await gtmAPI.confirmRelationship(brandId, leadId, confirmed);
+        setAwaitingSendAnswer(false);
+        if (!result.applied) {
+          // The engine declined it. Say so, with its reason, and claim nothing.
+          setConnectionNotice(
+            result.reason
+              ? `${GTM_CONNECTION_LABELS.confirmDeclined}: ${result.reason}`
+              : GTM_CONNECTION_LABELS.confirmDeclined,
+          );
+        } else if (result.relationshipState === "CONNECTED") {
+          setConnectionNotice(GTM_CONNECTION_LABELS.recordedAccepted);
+        } else if (result.relationshipState === "REJECTED") {
+          setConnectionNotice(GTM_CONNECTION_LABELS.recordedDeclined);
+        } else {
+          setConnectionNotice(GTM_CONNECTION_LABELS.recordedPending);
+        }
+        setTimelineKey((key) => key + 1);
+        // Re-read, so every derived thing on the page moves with the dimension.
+        // Silent: the confirmation's own notice is the message that matters, and a
+        // background re-read must not blank the page or replace that notice with a
+        // toast of its own.
+        await load(false, true);
+      } catch (e) {
+        setConnectionNotice(
+          e instanceof Error ? e.message : GTM_CONNECTION_LABELS.confirmFailed,
+        );
+        toast.error(GTM_CONNECTION_LABELS.confirmFailed);
+      } finally {
+        setConfirmingRelationship(false);
+      }
+    },
+    [brandId, leadId, load],
+  );
+
+  /**
+   * "No, not yet" — close the prompt and write nothing.
+   *
+   * There is no call to make. The operator did not send an invitation, so there is no
+   * fact to record, and the intent the click already logged is the honest extent of
+   * what happened.
+   */
+  const onDismissSendPrompt = useCallback(() => {
+    setAwaitingSendAnswer(false);
+    setConnectionNotice(null);
+  }, []);
+
+  /**
+   * "Still awaiting" — acknowledge, and write nothing.
+   *
+   * Nothing was observed. The state is already `CONNECTION_PENDING`, and re-asserting
+   * it would refresh `state_observed_at` — which is precisely the clock the age on
+   * screen is measured from, so a "nothing changed" answer would make the invitation
+   * look newer than it is and reset the very wait the operator is reporting on.
+   */
+  const onStillAwaiting = useCallback(() => {
+    setConnectionNotice(GTM_CONNECTION_LABELS.awaitingAcknowledged);
+  }, []);
 
   /** A fresher action row from the next-action panel, merged without a refetch. */
   const onActionRequested = useCallback((action: Action) => {
@@ -970,6 +1239,58 @@ export default function GTMProspect() {
                   updatedAt={detail.updatedAt}
                   headingAs="h2"
                 />
+
+                {/* ── The identity gate (R30.7, R3.2) ──
+                    Above the five sections because it is the question they all rest
+                    on: a recommendation about somebody nobody has identified is a
+                    recommendation about a stranger. Rendered from `detail.profile` —
+                    the payload the page already fetched — so the gate costs no extra
+                    request on load; `identity` and `trackingAck` are null until the
+                    operator presses something.
+
+                    Carries no heading of its own, like the five sections below it. The
+                    block's subjects are named by the `ObservedValue` labels inside it,
+                    and a heading here would add a ninth `<h2>` to a closed page whose
+                    outline is one `<h2>` per panel. */}
+                <IdentityPanel
+                  profile={detail.profile}
+                  identity={identity}
+                  trackingAck={trackingAck}
+                  onResolveIdentity={() => void onResolveIdentity()}
+                  resolving={resolving}
+                  onTrackProspect={() => void onTrackProspect()}
+                  starting={starting}
+                  notice={identityNotice}
+                />
+
+                {/* ── The connection flow (R3.1, R3.4, R13.1-R13.2) ──
+                    Directly under the identity gate because it is the next question in
+                    the same sequence: identity says who they are, tracking says Weez is
+                    watching, and this says whether the operator can actually talk to
+                    them yet.
+
+                    Rendered only once the prospect is tracked. Before that there is no
+                    `li_gtm_relationships` row, so the confirm route would 404 and the
+                    controls would be certain to fail — the same reasoning that keeps
+                    Track Prospect off screen until the verdict admits it.
+
+                    Reads `detail.state.relationshipState` and writes nothing of its
+                    own: every control here either calls the confirm route or, for the
+                    two honest "nothing happened" answers, calls nothing at all. Carries
+                    no heading, like every block in this column. */}
+                {(trackingAck?.profileId ?? detail.profile.profileId) && (
+                  <ConnectionPanel
+                    relationship={detail.state.relationshipState}
+                    awaitingSendAnswer={awaitingSendAnswer}
+                    onSendRequest={() => void onSendConnectionRequest()}
+                    sending={sendingRequest}
+                    onConfirm={(state) => void onConfirmRelationship(state)}
+                    confirming={confirmingRelationship}
+                    onDismissPrompt={onDismissSendPrompt}
+                    onStillAwaiting={onStillAwaiting}
+                    notice={connectionNotice}
+                  />
+                )}
 
                 {/* ── The decision hierarchy (R18.4, R26.7) ──
                     Five sections, in the order an operator's questions actually
