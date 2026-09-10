@@ -195,6 +195,11 @@ const PROFILE: ProspectProfile = {
   linkedinVerificationStatus: null,
   linkedinVerifiedAt: null,
   linkedinMatchConfidence: null,
+  // No unsettled candidate: these are present only while an identity is waiting on
+  // a human verdict, and null is the same "nobody has tried" as the three above.
+  identityCandidateUrl: null,
+  identityMatchEvidence: null,
+  identityFailureReason: null,
 };
 
 const UNOBSERVED_PROFILE: ProspectProfile = {
@@ -1802,6 +1807,9 @@ describe("IdentityPanel", () => {
       linkedinVerificationStatus: null,
       linkedinVerifiedAt: null,
       linkedinMatchConfidence: null,
+      identityCandidateUrl: null,
+      identityMatchEvidence: null,
+      identityFailureReason: null,
       ...over,
     };
   }

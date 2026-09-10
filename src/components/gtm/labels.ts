@@ -1167,3 +1167,92 @@ export const GTM_CONNECTION_LABELS = {
   pendingLongEnough:
     "This has been pending a while. If they are not going to accept, marking it declined frees the prospect for another channel.",
 } as const;
+
+/**
+ * The identity-confirmation block: one question, and the evidence to answer it.
+ *
+ * **Why a human is asked at all.** `POSSIBLE_MATCH` has always meant "a candidate
+ * worth a look that the scorer will not claim on its own" — a verdict designed to be
+ * settled by a person. The resolver searches, scores candidates on up to five
+ * attributes, picks the strongest, opens the profile, and tries to corroborate what
+ * it sees. When that last step fails the verdict is honest rather than optimistic.
+ *
+ * And the last step fails for reasons that have nothing to do with the person. One
+ * real attempt scored a candidate at 80 with name, company and email-domain all
+ * matching, then returned `PROFILE_IDENTITY_UNREADABLE` — LinkedIn had renamed a CSS
+ * class. The identity was never in question. That is what this block exists for:
+ * a two-second judgement a person makes better than a selector.
+ *
+ * **`confirmHint` is the load-bearing string.** It tells the operator to actually
+ * open the profile before answering. A confirmation button next to a name is a
+ * button people press without looking; a confirmation button next to "open it and
+ * check" is a decision. The whole value of this surface is that a human really
+ * looked, so the copy has to ask for that and not merely imply it.
+ *
+ * **`reject` is not a cancel and does not say "cancel".** It records that somebody
+ * looked and this is a different person — a finding worth keeping, and the only way
+ * that fact ever enters the system. The labels avoid dismissive words for it because
+ * a rejection is as much of an answer as a confirmation.
+ *
+ * **Nothing here promises tracking.** Confirming makes Track Prospect *offerable*.
+ * `confirmed` says the identity is settled and stops there, because provisioning is
+ * a separate explicit decision.
+ */
+export const GTM_IDENTITY_CONFIRM_LABELS = {
+  heading: "Is this the right person?",
+  // Says why a machine is asking rather than telling.
+  why:
+    "We found this profile and matched it on the details below, but couldn't read the page itself to be sure. LinkedIn changes its layout often — the match is probably right, but we won't claim it without you.",
+
+  candidateField: "Candidate profile",
+  confidenceField: "Match confidence",
+  matchedField: "Matched on",
+
+  // Controls. The hint is deliberately an instruction, not reassurance.
+  open: "Open profile in a new tab",
+  confirmHint:
+    "Open the profile and check it's them before answering. Nothing is recorded until you do.",
+  confirm: "Yes, this is them",
+  confirming: "Recording",
+  reject: "No, different person",
+  rejecting: "Recording",
+
+  // What each answer did. Neither claims more than it should.
+  confirmed:
+    "Identity confirmed. You can now track this prospect.",
+  rejected:
+    "Recorded as a different person. This profile won't be offered again.",
+  confirmFailed: "Couldn't record your answer",
+
+  /** One sentence per reason the machine stopped short of verifying. */
+  failureReason: {
+    PROFILE_IDENTITY_UNREADABLE:
+      "The profile page loaded but its layout couldn't be read, so nothing on it could corroborate the match.",
+    BELOW_VERIFY_THRESHOLD:
+      "The candidate matched, but not on enough attributes for us to claim it alone.",
+    NAME_ONLY_NO_CORROBORATION:
+      "Only the name matched. A name on its own is a common coincidence, so we won't call it verified.",
+    RUNNER_UP_WITHIN_MARGIN:
+      "Two candidates scored too closely to separate, so picking one would have been a guess.",
+    PROFILE_NOT_VERIFIED:
+      "The profile was opened but nothing on it confirmed the match.",
+  } as Record<string, string>,
+
+  /** How the resolver describes the way an attribute matched. */
+  matchKind: {
+    exact: "exact",
+    compact: "close",
+    domain: "domain",
+    token: "partial",
+    fuzzy: "approximate",
+  } as Record<string, string>,
+
+  /** Field names as a person would say them. */
+  attribute: {
+    name: "Name",
+    company: "Company",
+    title: "Job title",
+    email_domain: "Email domain",
+    location: "Location",
+  } as Record<string, string>,
+} as const;

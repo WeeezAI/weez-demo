@@ -585,6 +585,30 @@ export interface ProspectProfile {
   linkedinVerifiedAt: string | null;
   /** Absent rather than zero when no candidate was ever scored. */
   linkedinMatchConfidence: number | null;
+
+  /**
+   * The candidate the resolver selected but could not corroborate, present only
+   * while the identity is unsettled.
+   *
+   * `POSSIBLE_MATCH` means "a candidate worth a look that the scorer will not claim
+   * on its own" — a verdict designed for a human to settle. The address to look at
+   * lives on the attempt row, because the resolver promotes it to the lead's own
+   * `linkedin_url` only once verified. These three carry it to the screen.
+   *
+   * All null once the identity is `VERIFIED`: the confirmed address is `profileUrl`
+   * by then, and a lingering candidate would invite a second, meaningless
+   * confirmation.
+   */
+  identityCandidateUrl: string | null;
+  /**
+   * The resolver's own JSON naming which attributes matched and how — e.g.
+   * `{"name":"exact","company":"compact","email_domain":"domain"}`. Kept as the raw
+   * string it is stored as; the panel parses it for display and never reinterprets
+   * what matched.
+   */
+  identityMatchEvidence: string | null;
+  /** Why the machine stopped short — e.g. `PROFILE_IDENTITY_UNREADABLE`. */
+  identityFailureReason: string | null;
 }
 
 /**
@@ -963,6 +987,33 @@ export interface ProspectTracking {
 
   observationJobId: number | null;
   observationOutcome: string | null;
+}
+
+/**
+ * The verdict a human just recorded about a candidate profile.
+ *
+ * `verificationStatus` is what `sales_leads` now holds: `"VERIFIED"` on a
+ * confirmation, `"NO_MATCH"` on a rejection. Rejection records `NO_MATCH` rather
+ * than clearing the field, because "a human looked and it is not him" is a finding
+ * and null means "nobody has tried" — claiming that about work somebody did is the
+ * one direction this layer refuses to lie.
+ *
+ * `linkedinUrl` is the address **this verdict verified**, so it is null on a
+ * rejection even where the lead still carries an unrelated provider url.
+ *
+ * `canTrack` is the track route's own gate, not a second rule — so a screen cannot
+ * offer Track Prospect where the route would refuse it.
+ */
+export interface IdentityConfirmed {
+  leadId: string;
+  confirmed: boolean;
+  verificationStatus: string;
+  verifiedAt: string | null;
+  matchConfidence: number | null;
+  linkedinUrl: string | null;
+  /** The append-only audit row this verdict wrote. Never an edit of the machine's. */
+  attemptId: string;
+  canTrack: boolean;
 }
 
 /**
@@ -1935,6 +1986,11 @@ interface WireProspectProfile {
   linkedin_verification_status?: LinkedInVerificationStatus | null;
   linkedin_verified_at?: string | null;
   linkedin_match_confidence?: number | null;
+  // Same additive contract: dropped from the JSON when the identity is settled or
+  // no attempt has run.
+  identity_candidate_url?: string | null;
+  identity_match_evidence?: string | null;
+  identity_failure_reason?: string | null;
 }
 
 interface WireProspectState {
@@ -2135,6 +2191,17 @@ interface WireProspectTracking {
   nba_marked?: boolean;
   observation_job_id?: number | null;
   observation_outcome?: string | null;
+}
+
+interface WireIdentityConfirmed {
+  lead_id?: string;
+  confirmed?: boolean;
+  verification_status?: string;
+  verified_at?: string | null;
+  match_confidence?: number | null;
+  linkedin_url?: string | null;
+  attempt_id?: string;
+  can_track?: boolean;
 }
 
 interface WireRelationshipConfirmed {
@@ -2630,6 +2697,9 @@ function toProfile(raw?: WireProspectProfile | null): ProspectProfile {
     linkedinVerificationStatus: raw?.linkedin_verification_status ?? null,
     linkedinVerifiedAt: raw?.linkedin_verified_at ?? null,
     linkedinMatchConfidence: raw?.linkedin_match_confidence ?? null,
+    identityCandidateUrl: raw?.identity_candidate_url ?? null,
+    identityMatchEvidence: raw?.identity_match_evidence ?? null,
+    identityFailureReason: raw?.identity_failure_reason ?? null,
   };
 }
 
@@ -2683,6 +2753,21 @@ function toProspectTracking(raw?: WireProspectTracking | null): ProspectTracking
     nbaMarked: raw?.nba_marked ?? false,
     observationJobId: raw?.observation_job_id ?? null,
     observationOutcome: raw?.observation_outcome ?? null,
+  };
+}
+
+function toIdentityConfirmed(raw?: WireIdentityConfirmed | null): IdentityConfirmed {
+  return {
+    leadId: raw?.lead_id ?? "",
+    confirmed: raw?.confirmed ?? false,
+    verificationStatus: raw?.verification_status ?? "",
+    verifiedAt: raw?.verified_at ?? null,
+    matchConfidence: raw?.match_confidence ?? null,
+    linkedinUrl: raw?.linkedin_url ?? null,
+    attemptId: raw?.attempt_id ?? "",
+    // Defaults false: a dropped field must never make Track Prospect appear where
+    // the route would refuse it.
+    canTrack: raw?.can_track ?? false,
   };
 }
 
@@ -3683,6 +3768,39 @@ export const gtmAPI = {
       POST
     );
     return toProspectTracking(raw);
+  },
+
+  /**
+   * `POST /gtm/lead/{lead_id}/identity/confirm` — settle a `POSSIBLE_MATCH` by
+   * having looked at the candidate.
+   *
+   * **The url is not a parameter.** The address written to the lead is the one the
+   * resolver searched for, scored and selected, read from its own attempt row. A
+   * caller-supplied address would let anything be marked `VERIFIED` without ever
+   * having been looked for — which is exactly the "a provider handed us this url"
+   * claim that `linkedinVerificationStatus` exists to distinguish from a checked one.
+   *
+   * `confirmed: false` is a real answer, not a cancel: it records `NO_MATCH` and
+   * clears the rejected address, which is how the same wrong profile stops being
+   * re-offered.
+   *
+   * Rejects with 409 when there is nothing to settle — no attempt has run, the last
+   * one reached no candidate, or the identity is already verified. Each carries its
+   * own sentence, because those need different actions from the operator.
+   *
+   * **It provisions nothing.** Confirming makes Track Prospect *offerable*; it
+   * creates no profile row and begins observing nobody.
+   */
+  confirmIdentity: async (
+    brandId: string,
+    leadId: string,
+    confirmed: boolean
+  ): Promise<IdentityConfirmed> => {
+    const raw = await gtmFetch<WireIdentityConfirmed>(
+      `/lead/${encodeURIComponent(leadId)}/identity/confirm?${gtmQuery(brandId)}`,
+      { ...POST, body: JSON.stringify({ confirmed }) }
+    );
+    return toIdentityConfirmed(raw);
   },
 
   /**

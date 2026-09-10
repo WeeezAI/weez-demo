@@ -182,10 +182,15 @@ import { StateDimensionGrid } from "@/components/gtm/StateDimensionGrid";
 import { StateHistoryPanel } from "@/components/gtm/StateHistoryPanel";
 import { TimingPanel } from "@/components/gtm/TimingPanel";
 import { IdentityPanel } from "@/components/gtm/IdentityPanel";
+import {
+  IdentityConfirmPanel,
+  hasCandidateToSettle,
+} from "@/components/gtm/IdentityConfirmPanel";
 import { ConnectionPanel } from "@/components/gtm/ConnectionPanel";
 import { actionIdempotencyKey } from "@/components/gtm/NextActionPanel";
 import {
   GTM_CONNECTION_LABELS,
+  GTM_IDENTITY_CONFIRM_LABELS,
   GTM_IDENTITY_LABELS,
   GTM_PAGE_LABELS,
   GTM_UI_LABELS,
@@ -530,6 +535,10 @@ export default function GTMProspect() {
   // `execution_state === "ACTION_IN_PROGRESS"`, would turn "we opened a tab" into "an
   // invitation is outstanding" — the exact inference the click-semantics guard exists
   // to forbid.
+  // ── Settling a POSSIBLE_MATCH (R30.7) ──
+  const [confirmingIdentity, setConfirmingIdentity] = useState(false);
+  const [identityConfirmNotice, setIdentityConfirmNotice] = useState<string | null>(null);
+
   const [awaitingSendAnswer, setAwaitingSendAnswer] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [confirmingRelationship, setConfirmingRelationship] = useState(false);
@@ -875,6 +884,47 @@ export default function GTMProspect() {
       setStarting(false);
     }
   }, [brandId, leadId, onReevaluate]);
+
+  /**
+   * Settle the candidate the resolver could not corroborate (R30.7).
+   *
+   * The url is never sent. The server writes the address from its own attempt row,
+   * so this call carries one boolean and cannot verify something nobody searched
+   * for. A rejection is a real answer and records `NO_MATCH`.
+   *
+   * The refetch afterwards is not optional. A confirmation changes the verification
+   * verdict, which is the gate Track Prospect renders on — and the connection panel
+   * appears only once a prospect is tracked. Patching one field would leave the rest
+   * of the page describing a prospect that no longer exists.
+   */
+  const onConfirmIdentity = useCallback(
+    async (confirmed: boolean) => {
+      if (!brandId || !leadId) return;
+      setConfirmingIdentity(true);
+      setIdentityConfirmNotice(null);
+      try {
+        const result = await gtmAPI.confirmIdentity(brandId, leadId, confirmed);
+        setIdentityConfirmNotice(
+          result.confirmed
+            ? GTM_IDENTITY_CONFIRM_LABELS.confirmed
+            : GTM_IDENTITY_CONFIRM_LABELS.rejected,
+        );
+        // The verdict is on the attempt ledger the moment it is recorded.
+        setTimelineKey((key) => key + 1);
+        // Silent: the notice above is the message that matters, and a background
+        // re-read must not replace it with a toast of its own.
+        await load(false, true);
+      } catch (e) {
+        setIdentityConfirmNotice(
+          e instanceof Error ? e.message : GTM_IDENTITY_CONFIRM_LABELS.confirmFailed,
+        );
+        toast.error(GTM_IDENTITY_CONFIRM_LABELS.confirmFailed);
+      } finally {
+        setConfirmingIdentity(false);
+      }
+    },
+    [brandId, leadId, load],
+  );
 
   /**
    * Send Connection Request: record the intent, open their profile, then ask (R13.1).
@@ -1262,6 +1312,27 @@ export default function GTMProspect() {
                   starting={starting}
                   notice={identityNotice}
                 />
+
+                {/* ── Settling a POSSIBLE_MATCH (R30.7) ──
+                    Directly under the identity gate, because it is the thing that
+                    opens it. The resolver found a candidate and scored it but could
+                    not corroborate the page — a verdict `identity_search` always
+                    intended a human to settle, and one that until now had no surface
+                    to be settled on.
+
+                    Rendered from `identityCandidateUrl` alone, which the server sends
+                    only while the identity is unsettled AND a candidate exists. So
+                    visibility is the server's answer rather than a second rule here,
+                    and a `POSSIBLE_MATCH` that reached no candidate correctly shows
+                    nothing to settle instead of an empty prompt. */}
+                {hasCandidateToSettle(detail.profile) && (
+                  <IdentityConfirmPanel
+                    profile={detail.profile}
+                    onConfirm={(decision) => void onConfirmIdentity(decision)}
+                    submitting={confirmingIdentity}
+                    notice={identityConfirmNotice}
+                  />
+                )}
 
                 {/* ── The connection flow (R3.1, R3.4, R13.1-R13.2) ──
                     Directly under the identity gate because it is the next question in
