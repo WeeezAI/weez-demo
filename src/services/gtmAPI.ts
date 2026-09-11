@@ -438,6 +438,44 @@ export type FilterOperator =
 /** The two orderings the cross-prospect action queue supports. */
 export type ActionQueueSort = "priority" | "recency";
 
+/**
+ * Why a recommendation cannot be handed to the outreach route.
+ *
+ * The bridge between the two action vocabularies. `CandidateActionType` is the
+ * thirteen things the ranking *considers*; `ActionType` is the three delivery verbs
+ * the execution route accepts. They are translated between, never merged — a shared
+ * value would let `WAIT` arrive at a route that opens LinkedIn.
+ *
+ *   `ADVISORY`                — WAIT / RESEARCH_MORE / NURTURE / STOP_OUTREACH. They
+ *                               reach no channel; the recommendation *is* the output,
+ *                               and a send control must not be offered for one.
+ *   `NO_EXECUTION_VERB`       — CALL. It reaches PHONE, but none of the three verbs is
+ *                               placing a call.
+ *   `CHANNEL_NOT_IMPLEMENTED` — a verb exists and the channel is real, but no adapter
+ *                               is registered for it yet. EMAIL today.
+ */
+export type UnexecutableReason =
+  | "ADVISORY"
+  | "NO_EXECUTION_VERB"
+  | "CHANNEL_NOT_IMPLEMENTED";
+
+/** What a credit movement was for: the three priced actions, then how credits arrive. */
+export type CreditReason =
+  | "ENRICH"
+  | "CONTACT"
+  | "ACTIVATE"
+  | "INITIAL_GRANT"
+  | "PURCHASE"
+  | "ADJUSTMENT";
+
+/**
+ * What kind of movement a ledger row is.
+ *
+ * Carried rather than inferred from the sign of `delta`: a grant and a refund are both
+ * positive and mean very different things.
+ */
+export type CreditEntryKind = "DEBIT" | "GRANT" | "REFUND";
+
 // ─── The two honesty primitives ───────────────────────────────────────────────
 
 /**
@@ -492,6 +530,100 @@ export interface FactorContribution {
   contributionHundredths: number | null;
   direction: FactorDirection | null;
   unavailableReason: string | null;
+}
+
+// ─── Credits ──────────────────────────────────────────────────────────────────
+//
+// Three actions are priced — Enrich Now 1, Contact Directly 1, Activate Intelligence 2
+// — and message generation is 0. The prices are the server's and travel on the balance
+// response, so the number the screen shows is the number the backend will charge. A
+// client-side copy of the price list is a client that can advertise a price nothing
+// enforces, which is the whole failure the ledger exists to remove.
+//
+// The balance is not a stored column anywhere: it is the sum of the movements. So these
+// shapes project *movements*, and the balance rides beside them as the total they add up
+// to rather than as an independently-stored number that could disagree with them.
+
+/** One priced action and what it costs, as the server prices it. */
+export interface CreditPrice {
+  action: CreditReason;
+  credits: number;
+}
+
+/**
+ * One row of the ledger: one movement of the balance.
+ *
+ * `delta` is signed — negative for a debit, positive for a grant or a refund — so a
+ * history renders without branching on `entryKind`. `balanceAfter` is what the balance
+ * became, so a reader can see where it went.
+ *
+ * `leadId` is which prospect the credits were spent on and is null on a grant: credits
+ * arrive for the workspace, not for a person.
+ */
+export interface CreditMovement {
+  entryId: string;
+  entryKind: CreditEntryKind;
+  reason: CreditReason;
+  delta: number;
+  balanceAfter: number;
+  leadId: string | null;
+  note: string | null;
+  createdAt: string | null;
+}
+
+/**
+ * What the workspace has, what things cost, and where the balance has been.
+ *
+ * `history` is a window, newest first — this feeds a panel, not an accounting export.
+ */
+export interface CreditBalance {
+  brandId: string;
+  balance: number;
+  prices: CreditPrice[];
+  history: CreditMovement[];
+}
+
+/**
+ * What a priced action charged, as it rides on that action's own response.
+ *
+ * `charged` is false on a repeat: the idempotency key had already been billed, this
+ * request moved nothing, and `balanceAfter` is the balance the original charge left. A
+ * client that treated a repeat as a fresh charge would double-count in its own display
+ * even though the ledger was right.
+ *
+ * `credits` is unsigned — the price, as advertised. The signed value lives on
+ * `CreditMovement.delta`, where a ledger reader needs it; "this cost you 2" does not.
+ */
+export interface CreditCharge {
+  reason: CreditReason;
+  credits: number;
+  balanceAfter: number;
+  charged: boolean;
+}
+
+/**
+ * How to reach this prospect, read off the lead row Enrich Now wrote.
+ *
+ * **Not the same claim as `ProspectProfile`'s identity fields, and deliberately not
+ * merged with them.** Those are `ObservedFact`s about a LinkedIn page and read Unknown
+ * until that page has been read; these are assertions Eva made during enrichment, and
+ * they are plain values because that is what they are. Merging the two would make an
+ * assertion indistinguishable from an observation.
+ *
+ * `email` and `linkedinUrl` are the reason the block exists: they are the only contact
+ * facts nothing else on the prospect payload carries, and before this the screen had to
+ * call Eva and join the two systems by hand.
+ *
+ * `linkedinUrl` is the lead's address and is a *candidate* until
+ * `ProspectProfile.linkedinVerificationStatus` says `VERIFIED`. Nothing here is a
+ * verification.
+ */
+export interface ProspectContact {
+  name: string | null;
+  company: string | null;
+  role: string | null;
+  email: string | null;
+  linkedinUrl: string | null;
 }
 
 // ─── Intelligence panels ──────────────────────────────────────────────────────
@@ -721,6 +853,18 @@ export interface Action {
   verifiedAt: string | null;
   outcomeEvidenceId: string | null;
   failureReason: string | null;
+
+  /**
+   * What requesting this action cost, and what is left.
+   *
+   * Populated by `requestAction` — Contact Directly, priced at 1 credit — and **null on
+   * every other route that returns an `Action`**. `markOpened`, `confirmAction` and
+   * `getAction` charge nothing: the credit buys the destination and the payload, and
+   * opening the tab or confirming what happened afterwards is not a second purchase.
+   *
+   * So null means "this response is not about a charge", which is why it is not a zero.
+   */
+  credit: CreditCharge | null;
 }
 
 /**
@@ -809,6 +953,23 @@ export interface ProspectDetail {
   latestMessage: Message | null;
   messageVersions: Message[];
   updatedAt: string | null;
+
+  /**
+   * How to reach this prospect, from the lead row Enrich Now wrote.
+   *
+   * `null` when the workspace holds neither an email nor a LinkedIn url for them —
+   * which is the honest answer for a prospect nobody has enriched, and the reason this
+   * is absent rather than a block of nulls. A name alone does not summon it: every lead
+   * row has a name, so a block keyed on that would appear for every prospect.
+   *
+   * Available *before* any tracking and before any observation, which is the point:
+   * `profile`'s identity fields are `ObservedFact`s and read Unknown until a LinkedIn
+   * page has been read, so this is what lets the decision surface render at the moment
+   * the operator has to choose between contacting the prospect and paying to understand
+   * them. Kept separate from `profile` because an assertion Eva made and an observation
+   * Weez took are different claims.
+   */
+  contact: ProspectContact | null;
 
   // ── The state engine's intelligence, when the server had any to send ──
   //
@@ -987,6 +1148,31 @@ export interface ProspectTracking {
 
   observationJobId: number | null;
   observationOutcome: string | null;
+
+  /**
+   * The activity read, queued at the click alongside the profile read.
+   *
+   * Activation promises two things from two different surfaces: the profile page says who
+   * this person is, and the activity feed is what the evolving state is actually folded
+   * from. Only the profile read used to be queued here, so the first activity observation
+   * waited for a 180-minute staleness sweep — nothing was lost, but the intelligence the
+   * operator had just paid for did not begin when they asked for it.
+   *
+   * `activityOutcome` reads `DEDUPED` on a repeat activation inside the dedupe window,
+   * which is an acknowledgement and not a failure. `activityJobId` is null only when the
+   * prospect has no address an activity feed could be built from.
+   */
+  activityJobId: number | null;
+  activityOutcome: string | null;
+
+  /**
+   * What this activation cost and what is left. Two credits.
+   *
+   * `charged` is false on a repeat activation, which is the same statement `outcome =
+   * ALREADY_TRACKING` makes about the same click — so a screen can read either and they
+   * cannot disagree.
+   */
+  credit: CreditCharge | null;
 }
 
 /**
@@ -1481,6 +1667,24 @@ export interface CandidateAction {
   recommendationId: string;
   actionType: CandidateActionType;
   channel: ChannelKey | null;
+
+  // ── The translation into the outreach vocabulary ──────────────────────────
+  //
+  // `executable` is the only field a "do this now" control should read: it is true when
+  // a delivery verb exists *and* its channel has a registered adapter. `executionVerb`
+  // is what to post to `requestAction` — populated whenever a verb exists, even where
+  // `executable` is false for a channel reason, because `SEND_EMAIL` is a
+  // `SEND_MESSAGE` whether or not an email adapter has been written and blanking it
+  // would make an unfinished channel look like an undecided mapping.
+  //
+  // All three are absent-by-default (`null` / `false` / `null`) rather than required, so
+  // a candidate the server sent before this existed still normalises. That combination
+  // reads as *unanswered*, which is distinguishable from advisory: every genuinely
+  // inexecutable action carries a reason.
+  executionVerb: ActionType | null;
+  executable: boolean;
+  unexecutableReason: UnexecutableReason | null;
+
   rank: number | null;
   isRecommended: boolean;
   actionScore: DerivedScore;
@@ -1578,6 +1782,17 @@ export interface ActionQueueItem {
   relationshipState: ObservedFact;
   actionType: CandidateActionType;
   channel: ChannelKey | null;
+
+  /**
+   * The same translation `CandidateAction` carries, on the surface where it matters
+   * most: a queue card is where "do this" is clicked, and `executable` is what decides
+   * whether that control is offered at all. An `ADVISORY` card is still a card — WAIT
+   * and RESEARCH_MORE are real recommendations — it just is not one with a send button.
+   */
+  executionVerb: ActionType | null;
+  executable: boolean;
+  unexecutableReason: UnexecutableReason | null;
+
   actionScore: DerivedScore;
   actionConfidence: number;
   stateConfidence: number;
@@ -2061,6 +2276,7 @@ interface WireAction {
   verified_at?: string | null;
   outcome_evidence_id?: string | null;
   failure_reason?: string | null;
+  credit?: WireCreditCharge | null;
 }
 
 interface WireNextAction {
@@ -2110,6 +2326,10 @@ interface WireProspectDetail {
   latest_message?: WireMessage | null;
   message_versions?: WireMessage[];
   updated_at?: string | null;
+  // Additive too, and dropped from the body the same way — but driven by the *lead row*
+  // rather than by the belief, so it is present for a prospect nobody has observed and
+  // absent for one the workspace has no way to reach.
+  contact?: WireProspectContact | null;
   // The state engine's six additive fields (R26.7). Optional on the wire in the
   // strongest sense available: `schemas/gtm.py` drops the keys from the serialised
   // body rather than sending them as `null`, so `undefined` here is the normal
@@ -2191,6 +2411,9 @@ interface WireProspectTracking {
   nba_marked?: boolean;
   observation_job_id?: number | null;
   observation_outcome?: string | null;
+  activity_job_id?: number | null;
+  activity_outcome?: string | null;
+  credit?: WireCreditCharge | null;
 }
 
 interface WireIdentityConfirmed {
@@ -2434,10 +2657,51 @@ interface WireRecommendationExplanation {
   versions?: WireVersionQuad | null;
 }
 
+interface WireCreditCharge {
+  reason?: CreditReason;
+  credits?: number;
+  balance_after?: number;
+  charged?: boolean;
+}
+
+interface WireCreditPrice {
+  action?: CreditReason;
+  credits?: number;
+}
+
+interface WireCreditMovement {
+  entry_id?: string;
+  entry_kind?: CreditEntryKind;
+  reason?: CreditReason;
+  delta?: number;
+  balance_after?: number;
+  lead_id?: string | null;
+  note?: string | null;
+  created_at?: string | null;
+}
+
+interface WireCreditBalance {
+  brand_id?: string;
+  balance?: number;
+  prices?: WireCreditPrice[];
+  history?: WireCreditMovement[];
+}
+
+interface WireProspectContact {
+  name?: string | null;
+  company?: string | null;
+  role?: string | null;
+  email?: string | null;
+  linkedin_url?: string | null;
+}
+
 interface WireCandidateAction {
   recommendation_id?: string;
   action_type?: CandidateActionType;
   channel?: ChannelKey | null;
+  execution_verb?: ActionType | null;
+  executable?: boolean;
+  unexecutable_reason?: UnexecutableReason | null;
   rank?: number | null;
   is_recommended?: boolean;
   action_score?: WireDerivedScore;
@@ -2501,6 +2765,9 @@ interface WireActionQueueItem {
   relationship_state?: WireObservedFact;
   action_type?: CandidateActionType;
   channel?: ChannelKey | null;
+  execution_verb?: ActionType | null;
+  executable?: boolean;
+  unexecutable_reason?: UnexecutableReason | null;
   action_score?: WireDerivedScore;
   action_confidence?: number;
   state_confidence?: number;
@@ -2753,6 +3020,11 @@ function toProspectTracking(raw?: WireProspectTracking | null): ProspectTracking
     nbaMarked: raw?.nba_marked ?? false,
     observationJobId: raw?.observation_job_id ?? null,
     observationOutcome: raw?.observation_outcome ?? null,
+    // Null rather than 0: a job id of zero is not a job, and "no activity read was
+    // queued" is a real answer for a prospect with no feed address.
+    activityJobId: raw?.activity_job_id ?? null,
+    activityOutcome: raw?.activity_outcome ?? null,
+    credit: toCreditCharge(raw?.credit),
   };
 }
 
@@ -2865,6 +3137,9 @@ function toAction(raw?: WireAction | null): Action | null {
     verifiedAt: raw.verified_at ?? null,
     outcomeEvidenceId: raw.outcome_evidence_id ?? null,
     failureReason: raw.failure_reason ?? null,
+    // Null on every route but `requestAction`. Not a zero: a charge of zero would say a
+    // price was computed and came out free, and these routes compute no price at all.
+    credit: toCreditCharge(raw.credit),
   };
 }
 
@@ -2923,6 +3198,11 @@ function toProspectDetail(raw: WireProspectDetail): ProspectDetail {
       .map(toMessage)
       .filter((item): item is Message => item !== null),
     updatedAt: raw.updated_at ?? null,
+    // Absent when the workspace has no way to reach this prospect, which the server says
+    // by dropping the key. Normalised to `null` and never to an object of nulls: "we hold
+    // no email and no LinkedIn url" and "we hold an empty email" are different claims and
+    // only the first is one the server ever makes.
+    contact: toProspectContact(raw.contact),
 
     // ── The state engine's six, through the converters the dedicated routes use ──
     //
@@ -3247,11 +3527,90 @@ function toExplanation(
   };
 }
 
+/**
+ * A charge, or `null` when the response is not about one.
+ *
+ * Guarded on the key rather than defaulted, because the distinction matters: `null` is
+ * "this route charged nothing", and a `CreditCharge` with `credits: 0` would be a claim
+ * that a price was computed and came out free. No priced action in this product costs
+ * zero, so that object should never exist.
+ */
+function toCreditCharge(raw?: WireCreditCharge | null): CreditCharge | null {
+  if (!raw) return null;
+  return {
+    reason: raw.reason ?? "ENRICH",
+    credits: raw.credits ?? 0,
+    balanceAfter: raw.balance_after ?? 0,
+    // Defaults **true** — the one place in this module where the optimistic default is the
+    // honest one. The server sends this field on every charge it makes, so an absent key
+    // beside a present charge object means an older build that only ever charged. Reading
+    // it as a repeat would tell the operator they were not billed when they were.
+    charged: raw.charged ?? true,
+  };
+}
+
+function toCreditPrice(raw: WireCreditPrice): CreditPrice {
+  return { action: raw.action ?? "ENRICH", credits: raw.credits ?? 0 };
+}
+
+function toCreditMovement(raw: WireCreditMovement): CreditMovement {
+  return {
+    entryId: raw.entry_id ?? "",
+    entryKind: raw.entry_kind ?? "DEBIT",
+    reason: raw.reason ?? "ADJUSTMENT",
+    // Signed, passed through. A zero delta is a movement that did not move anything and
+    // the ledger's own CHECK forbids one, so a 0 here means the key was dropped.
+    delta: raw.delta ?? 0,
+    balanceAfter: raw.balance_after ?? 0,
+    leadId: raw.lead_id ?? null,
+    note: raw.note ?? null,
+    createdAt: raw.created_at ?? null,
+  };
+}
+
+function toCreditBalance(raw: WireCreditBalance): CreditBalance {
+  return {
+    brandId: raw.brand_id ?? "",
+    // Zero is the server's honest answer for a workspace nobody has granted anything to,
+    // so it is a real value here rather than a stand-in for absence.
+    balance: raw.balance ?? 0,
+    prices: (raw.prices ?? []).map(toCreditPrice),
+    history: (raw.history ?? []).map(toCreditMovement),
+  };
+}
+
+/**
+ * The contact block, or `null` when the server dropped it.
+ *
+ * Every field stays nullable after normalising. A blank column travels as `null` because
+ * "we have no email for this person" and "we have an empty email" are different claims,
+ * and only the first is one the server makes.
+ */
+function toProspectContact(
+  raw?: WireProspectContact | null
+): ProspectContact | null {
+  if (!raw) return null;
+  return {
+    name: raw.name ?? null,
+    company: raw.company ?? null,
+    role: raw.role ?? null,
+    email: raw.email ?? null,
+    linkedinUrl: raw.linkedin_url ?? null,
+  };
+}
+
 function toCandidateAction(raw: WireCandidateAction): CandidateAction {
   return {
     recommendationId: raw.recommendation_id ?? "",
     actionType: raw.action_type ?? "WAIT",
     channel: raw.channel ?? null,
+    // The outreach translation. `executable` defaults false and `executionVerb` null, so a
+    // payload from before this existed reads as *unanswered* rather than as executable —
+    // the safe direction, because guessing wrong here means offering a send control for
+    // `STOP_OUTREACH`.
+    executionVerb: raw.execution_verb ?? null,
+    executable: raw.executable ?? false,
+    unexecutableReason: raw.unexecutable_reason ?? null,
     // An excluded candidate carries no rank, which is absence and not a last place.
     rank: raw.rank ?? null,
     isRecommended: raw.is_recommended ?? false,
@@ -3324,6 +3683,9 @@ function toActionQueueItem(raw: WireActionQueueItem): ActionQueueItem {
     relationshipState: toFact(raw.relationship_state),
     actionType: raw.action_type ?? "WAIT",
     channel: raw.channel ?? null,
+    executionVerb: raw.execution_verb ?? null,
+    executable: raw.executable ?? false,
+    unexecutableReason: raw.unexecutable_reason ?? null,
     actionScore: toScore(raw.action_score),
     actionConfidence: raw.action_confidence ?? 0,
     stateConfidence: raw.state_confidence ?? 0,
@@ -3403,6 +3765,47 @@ function toDebugView(raw: WireDebugView): DebugView {
 // ─── Backend transport ────────────────────────────────────────────────────────
 
 /**
+ * A failed GTM request, with the status it failed on.
+ *
+ * Before this, every non-`ok` response collapsed into a plain `Error` whose message was
+ * the server's `detail`, and the status was discarded. That was fine while every failure
+ * called for the same thing on screen — a red box and a Try again button.
+ *
+ * It stopped being fine when the backend started charging for actions. A `402` is not a
+ * malformed request and not a missing prospect: the operator's next step is to top up, not
+ * to fix their input or reload. Telling them "something went wrong" for a paywall is the
+ * one wrong answer, so the status is carried and `isInsufficientCredits()` is how a page
+ * asks about it.
+ *
+ * Still an `Error` with the same `message`, so every existing `catch` that reads
+ * `err.message` keeps working unchanged.
+ */
+export class GtmApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "GtmApiError";
+    this.status = status;
+    // Needed for `instanceof` to survive the ES5 target's class downleveling.
+    Object.setPrototypeOf(this, GtmApiError.prototype);
+  }
+}
+
+/**
+ * Whether this failure was the workspace being unable to afford the action.
+ *
+ * `402 Payment Required`. Takes `unknown` because that is what a `catch` binding is, so a
+ * page can ask without narrowing first.
+ */
+export function isInsufficientCredits(error: unknown): boolean {
+  return error instanceof GtmApiError && error.status === HTTP_PAYMENT_REQUIRED;
+}
+
+/** The status the backend answers a priced action it cannot charge for. */
+export const HTTP_PAYMENT_REQUIRED = 402;
+
+/**
  * One page of query parameters, `brand_id` first and always.
  *
  * Every GTM route is brand-scoped server-side twice over — ownership is verified
@@ -3426,9 +3829,10 @@ function gtmQuery(brandId: string, extra: Record<string, unknown> = {}): string 
  * header. It is deliberately not a parameter, not a field on any type, and not
  * part of any payload: the only shape it ever takes in this module is this header.
  *
- * A non-`ok` response becomes an `Error` carrying the server's `detail`, so the
+ * A non-`ok` response becomes a `GtmApiError` carrying the server's `detail`, so the
  * page's error state shows what the backend actually said rather than a status
- * code.
+ * code — and carrying the status too, so the one response that calls for different
+ * copy can be told apart. See `GtmApiError`.
  */
 async function gtmFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = sessionStorage.getItem("token");
@@ -3451,7 +3855,7 @@ async function gtmFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     } catch {
       /* non-JSON body — keep the status line */
     }
-    throw new Error(detail);
+    throw new GtmApiError(detail, res.status);
   }
   return (await res.json()) as T;
 }
@@ -4167,6 +4571,26 @@ export const gtmAPI = {
       `/prospect/${encodeURIComponent(leadId)}/debug?${search}`
     );
     return toDebugView(raw);
+  },
+
+  /**
+   * `GET /gtm/credits` — the balance, the price list, and recent movements.
+   *
+   * The prices come from here rather than from a constant in this module on purpose: they
+   * are the same numbers the backend charges, so a screen that renders them cannot
+   * advertise a price nothing enforces.
+   *
+   * **A read never funds.** A brand-new workspace reads `balance: 0` and gets its starting
+   * allowance the moment it first touches a priced route. That is not a bug to paper over
+   * with an optimistic default — until then, nobody has granted it anything.
+   */
+  getCredits: async (
+    brandId: string,
+    query: { historyLimit?: number } = {}
+  ): Promise<CreditBalance> => {
+    const search = gtmQuery(brandId, { history_limit: query.historyLimit });
+    const raw = await gtmFetch<WireCreditBalance>(`/credits?${search}`);
+    return toCreditBalance(raw);
   },
 };
 

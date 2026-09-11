@@ -1,10 +1,33 @@
 // pages/ProspectIntelligence.tsx
 //
-// Prospect Intelligence — the decision-maker view over Eva's qualified leads.
-// It reads the *same* Cosmos-backed workspace Eva does (GET /eva/workspace →
-// eva_leads container) and reshapes it: leads grouped by company, the resolved
-// decision-maker per lead, and a dossier that answers who / why them / why now
-// / what to open with.
+// Prospect Intelligence — the decision-maker view over the prospects that have been
+// **enriched**. It reads the *same* Cosmos-backed workspace Eva does (GET /eva/workspace →
+// eva_leads container) and reshapes it: prospects grouped by company, the resolved
+// decision-maker per lead, and a dossier that answers who / why them / why now / what to
+// open with.
+//
+// ─── What is on this page, and what is not ────────────────────────────────────
+//
+// **Only the leads Enrich Now promoted.** Discovery's full output — every qualified
+// account Eva found — lives on Revenue Intelligence, which is where Enrich Now is pressed.
+// This page is what comes back from it.
+//
+// That split is not presentational. Every control here beyond the dossier belongs to the
+// GTM lifecycle — Activate Intelligence, the ranked next move, Contact Directly — and every
+// one of those routes keys on `sales_leads.id`. Enrich Now is the only thing that creates
+// that row (`lead_promotion.promote()`, from the `/eva/lead/enrich` route and nowhere else),
+// so a lead that has not been enriched has no GTM identity at all. Listing it here would
+// mean rendering a dossier with nothing in it above controls certain to 404.
+//
+// The filter is `evaAPI.isEnrichedProspect`, which reads `gtmLeadId` — the promoted id,
+// written back onto the document. It deliberately does *not* read `enrichment.status` or
+// `handoffState`: the workspace sweep in `core/eva/service.py` sets both of those for any
+// lead that *arrives* carrying a contact email, with no enrichment and no promotion, so
+// either one would put unworkable prospects on this page.
+//
+// `qualifiedLeads` is kept beside `activeLeads` for the empty states, because "discovery
+// has found nothing yet" and "discovery found forty accounts and none is enriched" need
+// different sentences and different next steps.
 //
 // Grounding rule: every number and sentence on this page comes from a field on
 // the workspace payload. Nothing is scored, invented or rotated client-side.
@@ -103,6 +126,12 @@ import { ACTION_CARD_LABELS, PRIORITY_TIER_LABELS } from "@/components/gtm/NextA
 import { INTENT_PANEL_LABELS } from "@/components/gtm/IntentPanel";
 import { UNKNOWN_SR_NOTE, UNKNOWN_TEXT } from "@/components/gtm/ObservedValue";
 import {
+  CreditBalanceBadge,
+  CreditPriceTag,
+} from "@/components/gtm/CreditBalance";
+import { InsufficientCreditsAlert } from "@/components/gtm/InsufficientCreditsAlert";
+import { useCredits } from "@/hooks/useCredits";
+import {
   CHANNEL_LABEL,
   GTM_INTENT_LABELS,
   GTM_JOURNEY_LABELS,
@@ -118,6 +147,8 @@ import gtmAPI, {
 } from "@/services/gtmAPI";
 import {
   evaAPI,
+  isEnrichedProspect,
+  isInsufficientCredits,
   ACTION_META,
   ENRICHMENT_META,
   SIGNAL_META,
@@ -762,10 +793,35 @@ function EmptyPanel({
 
 // ─── Summary header ──────────────────────────────────────────────────────────
 
-function SummaryHeader({ ws, companies }: { ws: EvaWorkspace; companies: CompanyGroup[] }) {
+/**
+ * The six tiles, and which population each one counts.
+ *
+ * Three of them are about **this page's** population — the enriched prospects — and three
+ * are workspace-wide facts that belong to discovery. Mixing the two without saying so is
+ * how a header ends up reading "40 qualified leads" above a list of two, so each tile's
+ * `sub` names its own scope.
+ *
+ * `prospects` is the enriched set the page lists. `qualifiedTotal` is discovery's whole
+ * output, carried so the enriched count can be read as a fraction of it — which is the
+ * number that actually tells the operator how much of their pipeline they have worked.
+ */
+function SummaryHeader({
+  ws,
+  companies,
+  prospects,
+  qualifiedTotal,
+}: {
+  ws: EvaWorkspace;
+  companies: CompanyGroup[];
+  prospects: QualifiedLead[];
+  qualifiedTotal: number;
+}) {
   const m = ws.metrics;
-  const withContact = ws.leads.filter((l) => l.status !== "rejected" && l.contact?.name).length;
-  const verified = ws.leads.filter((l) => l.status !== "rejected" && l.contact?.emailVerified).length;
+  // Counted over the enriched prospects, not the workspace: these three describe the rows
+  // on screen, and a count that included un-enriched leads would describe a different list.
+  const withContact = prospects.filter((l) => l.contact?.name).length;
+  const verified = prospects.filter((l) => l.contact?.emailVerified).length;
+  const withEmail = prospects.filter((l) => l.contact?.email).length;
 
   return (
     <div className="rounded-3xl border border-zinc-200/70 bg-white/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-xl">
@@ -795,16 +851,25 @@ function SummaryHeader({ ws, companies }: { ws: EvaWorkspace; companies: Company
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="Companies" value={companies.length} sub="qualified by Eva" />
+        <StatTile label="Companies" value={companies.length} sub="on this page" />
         <StatTile
-          label="Qualified leads"
-          value={m.qualifiedLeads}
-          sub={`L${m.byTier.low} · M${m.byTier.medium} · H${m.byTier.high}`}
+          label="Enriched prospects"
+          value={prospects.length}
+          sub={`of ${qualifiedTotal} qualified`}
+          tone="text-violet-600"
         />
         <StatTile label="Decision-makers" value={withContact} sub="contact resolved" />
-        <StatTile label="Emails found" value={m.emailsFound} sub={`${verified} verified`} tone="text-emerald-600" />
-        <StatTile label="Signals / wk" value={m.signalsThisWeek} sub={`${m.signalsCaptured} total`} />
-        <StatTile label="Handed to Max" value={m.handedToMax} sub="for outreach" tone="text-violet-600" />
+        <StatTile
+          label="Emails found"
+          value={withEmail}
+          sub={`${verified} verified`}
+          tone="text-emerald-600"
+        />
+        {/* The two workspace-wide facts, labelled as such. They belong to discovery rather
+            than to this page's population, and the `sub` says so rather than leaving a
+            reader to assume they are counting the rows below. */}
+        <StatTile label="Signals / wk" value={m.signalsThisWeek} sub={`${m.signalsCaptured} workspace total`} />
+        <StatTile label="Handed to Max" value={m.handedToMax} sub="workspace total" tone="text-violet-600" />
       </div>
     </div>
   );
@@ -1128,6 +1193,7 @@ function Dossier({
   onShowEmail,
   onOpenMax,
   onOpenRelationshipIntelligence,
+  enrichPrice = null,
 }: {
   lead: QualifiedLead;
   group: CompanyGroup;
@@ -1141,6 +1207,11 @@ function Dossier({
   onOpenMax: () => void;
   /** Open this lead on the LinkedIn GTM execution surface (relationship intelligence). */
   onOpenRelationshipIntelligence: () => void;
+  /**
+   * What Enrich Now costs, from the server's price list. `null` renders no tag — the page
+   * owns the balance read and this dossier is handed the answer rather than making its own.
+   */
+  enrichPrice?: number | null;
 }) {
   const tier = tierMeta(lead.acvTier);
   const action = ACTION_META[lead.recommendedAction];
@@ -1245,6 +1316,13 @@ function Dossier({
               )}
             </div>
 
+            {/* Every prospect on this page has already been through Enrich Now, so the
+                control below looks redundant and is not. An enrichment that *ran* and found
+                nothing still promotes the lead — `enrich_lead_now` answers `no_email` and
+                the `sales_leads` row is created either way — so a prospect can legitimately
+                be here with no address yet, and re-running the waterfall is the thing to do
+                about it. The retry is free: the credit charge is keyed on the lead, so a
+                second click on the same one is not billed. */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {lead.contact?.email ? (
                 <a
@@ -1258,11 +1336,15 @@ function Dossier({
                 <button
                   onClick={revealEmail}
                   disabled={enriching}
-                  title="Find this decision-maker's email (uses one monthly enrichment credit)"
+                  title="Resolve this decision-maker's email. Counts against the monthly enrichment cap and spends one workspace credit."
                   className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[12px] font-semibold text-violet-700 transition-colors hover:bg-violet-100 disabled:opacity-60"
                 >
                   {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                  {enriching ? "Finding email…" : "Show Email"}
+                  {enriching ? "Finding email…" : "Enrich Now"}
+                  {/* The server's price, not a literal. Absent when the balance has not
+                      been read, which is honest: a control that looks free and charges is
+                      worse than one with no tag. */}
+                  <CreditPriceTag credits={enrichPrice} />
                 </button>
               ) : (
                 <span
@@ -1487,7 +1569,11 @@ function PillGroup<T extends string>({
   label: string;
   value: T;
   options: { key: T; label: string }[];
-  onChange: (v: T) => void;
+  // NoInfer keeps `onChange` out of inference for T. React's setState is
+  // `Dispatch<SetStateAction<T>>`, so its parameter is `T | ((prev: T) => T)` —
+  // as an inference candidate that union violates `T extends string` and TS
+  // silently widens T to `string`. Infer T from `value`/`options` only.
+  onChange: (v: NoInfer<T>) => void;
 }) {
   return (
     <div role="group" aria-label={label} className="flex w-fit items-center gap-1 rounded-full bg-zinc-100/80 p-1">
@@ -1542,6 +1628,21 @@ export default function ProspectIntelligence() {
   const reqRef = useRef(0);
   const queueReqRef = useRef(0);
   const intentReqRef = useRef(0);
+
+  // ── Credits ──
+  //
+  // Enrich Now is priced at 1 credit and charged on this page. The balance read is a third
+  // *secondary* call, on the same terms as the two GTM reads above it: its failure lives in
+  // its own state and never touches `ws` / `loading` / `error`. A workspace whose balance
+  // could not be read still renders its prospects — it just renders no price tags, which is
+  // the honest fallback.
+  const {
+    balance: creditBalance,
+    refresh: refreshCredits,
+    priceFor,
+  } = useCredits();
+  const enrichPrice = priceFor("ENRICH");
+  const [paywall, setPaywall] = useState<string | null>(null);
 
   const load = useCallback(
     async (force: boolean, silent = false) => {
@@ -1630,7 +1731,36 @@ export default function ProspectIntelligence() {
     void loadQueue();
   }, [load, loadQueue]);
 
-  const activeLeads = useMemo(() => (ws ? ws.leads.filter((l) => l.status !== "rejected") : []), [ws]);
+  /**
+   * Every qualified lead in the workspace, rejections aside — discovery's whole output.
+   *
+   * Not what this page lists. It is kept because the two counts answer different questions
+   * and the empty states below need both: "discovery has found nothing yet" and "discovery
+   * found accounts and none of them has been enriched" look identical if you only count one.
+   */
+  const qualifiedLeads = useMemo(
+    () => (ws ? ws.leads.filter((l) => l.status !== "rejected") : []),
+    [ws]
+  );
+
+  /**
+   * The prospects this page is about: the ones Enrich Now promoted into the GTM flow.
+   *
+   * **This is the page's subject, not a filter on it.** Prospect Intelligence is the GTM
+   * surface — the dossier, the enriched contact, Activate Intelligence, the ranked next
+   * move — and every one of those keys on `sales_leads.id`. A lead that has not been
+   * enriched has no such row, so listing it here would offer controls that are certain to
+   * 404 and a dossier with nothing in it. Discovery's full output belongs on Revenue
+   * Intelligence, which is where Enrich Now is pressed.
+   *
+   * `isEnrichedProspect` is `evaAPI`'s, stated once there with the reason it reads
+   * `gtmLeadId` rather than the enrichment status — which the workspace sweep also sets, for
+   * leads that arrive carrying an email with no enrichment at all.
+   */
+  const activeLeads = useMemo(
+    () => qualifiedLeads.filter(isEnrichedProspect),
+    [qualifiedLeads]
+  );
 
   // Cold start: Eva publishes a fast-ready (often empty) workspace while it
   // finishes discovery in the background. Silently re-fetch a few times so
@@ -1638,7 +1768,11 @@ export default function ProspectIntelligence() {
   const autoRefreshRef = useRef(0);
   useEffect(() => {
     if (!ws || loading || refreshing) return;
-    if (activeLeads.length > 0) {
+    // Keyed on `qualifiedLeads`, not on this page's enriched subset. The retry exists for
+    // one thing — Eva publishes a fast-ready empty workspace while discovery finishes — and
+    // a workspace full of accounts nobody has enriched is not that. Polling it five times
+    // would spend five reads to re-learn something the operator has to act on.
+    if (qualifiedLeads.length > 0) {
       autoRefreshRef.current = 0; // discovery landed — stop auto-refreshing
       return;
     }
@@ -1648,7 +1782,7 @@ export default function ProspectIntelligence() {
       load(false, true); // silent re-read (no new scan, no loader/toast)
     }, 30000);
     return () => clearTimeout(t);
-  }, [ws, loading, refreshing, activeLeads.length, load]);
+  }, [ws, loading, refreshing, qualifiedLeads.length, load]);
 
   // Which recommendations actually exist in this workspace — never show empty filters.
   const actionOptions = useMemo(() => {
@@ -1753,9 +1887,14 @@ export default function ProspectIntelligence() {
     void evaAPI.leadAction(spaceId, lead.id, action);
   };
 
-  // On-demand enrichment ("Show Email"): resolve the email only when the founder
-  // asks, to conserve enrichment credits. On success the lead is auto-handed to
-  // Max. Enforces the monthly cap and reports remaining credits.
+  // On-demand enrichment ("Enrich Now"): resolve the email only when the founder asks,
+  // because it spends both a provider credit and one of the workspace's own.
+  //
+  // **Two different limits, and they are reported differently on purpose.** `usage` is the
+  // per-brand monthly cap on enrichment *attempts* and the remedy is to wait for the month
+  // to roll over; the credit balance is a purchased thing and the remedy is to top up.
+  // Telling an operator to wait when they should top up — or the reverse — is the failure
+  // this separation exists to prevent.
   const onShowEmail = async (lead: QualifiedLead) => {
     try {
       const res = await evaAPI.enrichLead(spaceId, lead.id);
@@ -1766,10 +1905,16 @@ export default function ProspectIntelligence() {
         return;
       }
       if (res.status === "unresolved_company") {
-        // Refused before any provider was touched, so no credit was spent.
+        // Refused before any provider was touched, so no credit was spent. The backend
+        // charges first and reverses the charge on this path, so the balance is unchanged
+        // rather than merely never debited — but either way there is nothing to re-read.
         toast.info(res.reason || `${lead.company} isn't a confirmed company — no credit spent.`);
         return;
       }
+      // A charge landed, so the badge is stale. Only when something was actually charged:
+      // a repeat click on the same lead comes back `charged: false`, and an email that was
+      // already on file comes back with no `credit` at all.
+      if (res.credit?.charged) void refreshCredits();
       if (res.lead) {
         const updated = res.lead;
         setWs((prev) =>
@@ -1789,6 +1934,13 @@ export default function ProspectIntelligence() {
         toast(`No email found for ${lead.company}. That counts as one enrichment${remaining}.`);
       }
     } catch (e: any) {
+      if (isInsufficientCredits(e)) {
+        // No provider was called and nothing was charged. Said as its own thing rather than
+        // as an error, because the operator's next step is to top up and not to retry.
+        setPaywall(e instanceof Error ? e.message : null);
+        void refreshCredits();
+        return;
+      }
       toast.error(e?.message || "Couldn't enrich this lead right now");
     }
   };
@@ -1817,7 +1969,7 @@ export default function ProspectIntelligence() {
               <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Prospect Intelligence
               </span>
-              <span className="text-sm font-semibold text-zinc-900">ICP decision-makers &amp; dossiers</span>
+              <span className="text-sm font-semibold text-zinc-900">Enriched decision-makers &amp; dossiers</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1827,6 +1979,9 @@ export default function ProspectIntelligence() {
             >
               <SignalIcon className="h-3 w-3" /> Eva → Max
             </Badge>
+            {/* The balance, in chrome. Enrich Now is on every dossier on this page, so the
+                operator can see what they have before they spend it. */}
+            <CreditBalanceBadge balance={creditBalance} className="hidden sm:inline-flex" />
             <Button
               variant="outline"
               size="sm"
@@ -1862,6 +2017,11 @@ export default function ProspectIntelligence() {
               </div>
             ) : ws ? (
               <>
+                {/* The paywall (402). Its own surface, not the error state above: nothing
+                    broke, no provider was called and nothing was charged. */}
+                {paywall !== null && (
+                  <InsufficientCreditsAlert detail={paywall} balance={creditBalance} />
+                )}
                 {refreshing && (
                   <div className="flex items-center gap-2.5 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-2.5 text-[12px] font-medium text-violet-700">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1892,7 +2052,12 @@ export default function ProspectIntelligence() {
                   </div>
                 )}
 
-                <SummaryHeader ws={ws} companies={companies} />
+                <SummaryHeader
+                  ws={ws}
+                  companies={companies}
+                  prospects={activeLeads}
+                  qualifiedTotal={qualifiedLeads.length}
+                />
 
                 {/* filters */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1934,11 +2099,15 @@ export default function ProspectIntelligence() {
                   </span>
                 </div>
 
-                {activeLeads.length === 0 ? (
+                {/* Two different empty states, because they call for two different things.
+                    Collapsing them into "Eva is discovering your accounts" would tell an
+                    operator with forty qualified accounts to wait for discovery — when what
+                    they actually need to do is go and enrich one. */}
+                {qualifiedLeads.length === 0 ? (
                   <EmptyPanel
                     icon={Target}
                     title="Eva is discovering your accounts"
-                    subtitle="Eva is scanning channels for companies that match your ICP and hitting your trigger events. Good-fit accounts appear here automatically as she finds them — this can take a few minutes on a fresh campaign."
+                    subtitle="Eva is scanning channels for companies that match your ICP and hitting your trigger events. Good-fit accounts appear on Market Intelligence as she finds them — this can take a few minutes on a fresh campaign."
                   >
                     <Button
                       variant="outline"
@@ -1947,6 +2116,22 @@ export default function ProspectIntelligence() {
                       onClick={refreshAll}
                     >
                       <RefreshCw className="h-3.5 w-3.5" /> Refresh now
+                    </Button>
+                  </EmptyPanel>
+                ) : activeLeads.length === 0 ? (
+                  <EmptyPanel
+                    icon={Mail}
+                    title="No prospects enriched yet"
+                    subtitle={`Eva has qualified ${qualifiedLeads.length} account${
+                      qualifiedLeads.length === 1 ? "" : "s"
+                    }. This page is the enriched ones — decision-maker resolved, email and LinkedIn on file, and the GTM lifecycle available. Click Enrich Now on Market Intelligence and the prospect appears here.`}
+                  >
+                    <Button
+                      size="sm"
+                      className="mt-1 h-8 gap-1.5 rounded-full text-xs"
+                      onClick={() => navigate(`/eva/${spaceId ?? ""}`)}
+                    >
+                      <SignalIcon className="h-3.5 w-3.5" /> Go to Market Intelligence
                     </Button>
                   </EmptyPanel>
                 ) : companies.length === 0 ? (
@@ -2034,6 +2219,7 @@ export default function ProspectIntelligence() {
                           intent={intent}
                           onAction={onLeadAction}
                           onShowEmail={onShowEmail}
+                          enrichPrice={enrichPrice}
                           onOpenMax={() => navigate(`/sales/${spaceId}`)}
                           onOpenRelationshipIntelligence={() =>
                             navigate(

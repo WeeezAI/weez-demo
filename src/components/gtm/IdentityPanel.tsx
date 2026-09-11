@@ -63,6 +63,7 @@ import type {
   ProspectProfile,
   ProspectTracking,
 } from "@/services/gtmAPI";
+import { CreditPriceTag } from "./CreditBalance";
 import { ObservedValue } from "./ObservedValue";
 import {
   GTM_IDENTITY_LABELS,
@@ -191,6 +192,14 @@ export interface IdentityPanelProps {
   /** Start tracking. Rendered **only** where the verdict is `VERIFIED` with an address. */
   onTrackProspect: () => void;
   starting?: boolean;
+  /**
+   * What Activate Intelligence costs, from the server's price list.
+   *
+   * `null` renders no tag. Activation is the most expensive action in the product, so the
+   * one thing this must not do is make it look free — and an unread price is a reason to
+   * say nothing, not a reason to guess.
+   */
+  activatePrice?: number | null;
   /** The last thing either control did, or the server's refusal. Announced politely. */
   notice?: string | null;
   className?: string;
@@ -204,6 +213,7 @@ export function IdentityPanel({
   resolving = false,
   onTrackProspect,
   starting = false,
+  activatePrice = null,
   notice = null,
   className,
 }: IdentityPanelProps) {
@@ -308,6 +318,7 @@ export function IdentityPanel({
               <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
             )}
             {starting ? GTM_IDENTITY_LABELS.tracking : GTM_IDENTITY_LABELS.track}
+            <CreditPriceTag credits={activatePrice} className="ml-1.5" />
           </Button>
         ) : (
           <Button
@@ -341,6 +352,22 @@ export function IdentityPanel({
       */}
       <p aria-live="polite" className="mt-2 min-h-[1rem] text-[11px] leading-relaxed text-slate-500">
         {notice ?? ""}
+        {/* What activation actually started. Two reads are queued at the click — the
+            profile page for who they are, the activity feed for what the evolving state is
+            folded from — so the intelligence begins when the operator asks rather than at
+            the next 180-minute sweep. That is the whole of what the activation credit buys,
+            and a screen that stays silent about it looks asleep.
+
+            Read off the acknowledgement rather than assumed: `activityJobId` is null when
+            the prospect has no address a feed could be built from, and claiming a read that
+            was never queued would be the one thing this panel must not do. */}
+        {trackingAck !== null ? (
+          <span className="ml-1">
+            {trackingAck.activityJobId !== null && trackingAck.observationJobId !== null
+              ? GTM_IDENTITY_LABELS.observationQueued
+              : GTM_IDENTITY_LABELS.observationNotQueued}
+          </span>
+        ) : null}
       </p>
     </div>
   );

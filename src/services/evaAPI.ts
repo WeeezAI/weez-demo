@@ -128,6 +128,21 @@ export interface QualifiedLead {
   notes: string;
   createdAt: string;
   updatedAt: string;
+
+  /**
+   * The `sales_leads.id` this lead was promoted to, or absent when it never was.
+   *
+   * **The one reliable marker that Enrich Now was clicked.** `lead_promotion.promote()`
+   * runs in exactly one place — the `/eva/lead/enrich` route — and it is the only thing
+   * that creates the SQL row; the id is written back onto this document by
+   * `service.record_gtm_lead_id()`.
+   *
+   * It is also what makes a lead *workable* on the GTM surfaces. Eva's ids are
+   * `lead_<hex>` strings and every GTM route keys on `sales_leads.id`, so a lead without
+   * this has no GTM identity at all: it cannot be tracked, cannot be activated, and
+   * cannot be ranked. See `isEnrichedProspect`.
+   */
+  gtmLeadId?: string | null;
 }
 
 export interface ChannelInfo {
@@ -230,6 +245,31 @@ export interface MaxHandoff {
   reason?: string;
 }
 
+/**
+ * What Enrich Now cost, and what the workspace has left.
+ *
+ * Enrich Now is priced at 1 credit and the charge happens on this route, before the
+ * provider waterfall runs — so a workspace that cannot afford it gets a `402` and no
+ * provider is called.
+ *
+ * **Beside `EnrichmentUsage`, never inside it.** Those are two different limits with two
+ * different remedies: `usage` is the per-brand monthly cap on enrichment *attempts* and
+ * you wait for the month to roll over, while this is a purchased balance and you top up.
+ * Collapsing them would tell the operator to do the wrong thing.
+ *
+ * `charged` is false on a repeat click for the same lead — already billed, nothing moved.
+ *
+ * Note the casing: `balanceAfter` is camelCase here because Eva's router speaks camelCase
+ * throughout (`gtmLeadId`, `maxHandoff`), where the GTM router speaks snake_case. Each
+ * response follows its own router rather than introducing a third convention.
+ */
+export interface EnrichCredit {
+  reason: "ENRICH";
+  credits: number;
+  balanceAfter: number;
+  charged: boolean;
+}
+
 export interface EnrichLeadResult {
   /**
    * ``unresolved_company`` = the record has no confirmed company identity, so the
@@ -242,6 +282,15 @@ export interface EnrichLeadResult {
   email?: string;
   /** True only when a verifier confirmed the address is deliverable. */
   verified?: boolean;
+  /**
+   * Whether an enrichment attempt was actually consumed on this call.
+   *
+   * False on every early return — the lead already had an email on file, the company is
+   * unresolved, the monthly cap is reached — and those are the cases that spend nothing.
+   * It is the same flag the monthly cap counts on and the same flag the credit charge keys
+   * on, so a paid action and a capped action cannot disagree about what an attempt is.
+   */
+  attempted?: boolean;
   /** Per-provider trace, so a miss can be explained rather than guessed at. */
   waterfall?: WaterfallStep[];
   providersTried?: string[];
@@ -249,6 +298,14 @@ export interface EnrichLeadResult {
   maxHandoff?: MaxHandoff | null;
   lead?: QualifiedLead;
   usage?: EnrichmentUsage;
+  /**
+   * What this enrichment cost. `null` when nothing was charged — a refusal, or an email
+   * that was already on file — which is a different statement from a charge of zero and is
+   * why it is not one.
+   */
+  credit?: EnrichCredit | null;
+  /** The `sales_leads.id` the promotion landed on: the id every GTM route keys on. */
+  gtmLeadId?: string | null;
 }
 
 export interface EvaWorkspace {
@@ -315,6 +372,32 @@ export const UNKNOWN_TIER_META = { label: "—", range: "ACV unknown", tone: "zi
  */
 export function tierMeta(tier?: ACVTierOrUnknown | null): { label: string; range: string; tone: string } {
   return (tier && TIER_META[tier as ACVTier]) || UNKNOWN_TIER_META;
+}
+
+/**
+ * Whether this lead has been through Enrich Now, and therefore belongs on the GTM
+ * surfaces.
+ *
+ * **Why `gtmLeadId` and not `enrichment.status`.** The status field looks like the obvious
+ * answer and is not: `service.py`'s workspace sweep sets it to `"enriched"` for any lead
+ * that *arrives* carrying a contact email — from the LinkedIn VM or the research engine —
+ * with no Enrich Now click and no promotion. Filtering on it would put leads on Prospect
+ * Intelligence that have no `sales_leads` row, where every control would 404.
+ *
+ * `handoffState` fails for the same reason: the same sweep moves it to `"handed_to_max"`.
+ *
+ * `gtmLeadId` is written by exactly one code path, and it is the id every GTM route needs.
+ * So this predicate answers both questions at once — "did the operator enrich this" and
+ * "can this prospect actually be worked on here" — and they have the same answer by
+ * construction.
+ *
+ * One known gap, worth knowing rather than working around: `record_gtm_lead_id()` is
+ * best-effort, so a Cosmos hiccup can leave a promoted lead without its back-reference and
+ * it would not appear. Re-clicking Enrich Now repairs it and costs nothing — the credit
+ * charge is keyed on the lead, so a second click is not billed.
+ */
+export function isEnrichedProspect(lead: QualifiedLead): boolean {
+  return typeof lead.gtmLeadId === "string" && lead.gtmLeadId.trim().length > 0;
 }
 
 export const ENRICHMENT_META: Record<EnrichmentStatus, { label: string; tone: string }> = {
@@ -428,6 +511,13 @@ function buildDemoWorkspace(): EvaWorkspace {
       },
       enrichment: { website: sig.website!, status: s.enrich },
       handoffState: s.handoff, status: s.handoff === "handed_to_max" ? "handed" : "qualified",
+      // A promoted id for the seeds that carry an email, so the demo workspace shows the
+      // same split a live one does: Prospect Intelligence lists the enriched prospects and
+      // Revenue Intelligence lists everything discovered. Without this the demo would show
+      // an empty Prospect Intelligence, which is *truthful* about the fixture and useless
+      // as a demo — the seeds that have an email are standing in for leads somebody
+      // enriched, so they carry the id an enrichment would have written.
+      gtmLeadId: s.contact.email ? `demo-gtm-${i}` : null,
       notes: "", createdAt: isoDaysAgo(i % 5), updatedAt: isoDaysAgo(0),
     });
   });
@@ -532,6 +622,33 @@ function buildDemoWorkspace(): EvaWorkspace {
 const isRealBrandId = (id?: string): id is string =>
   !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+/**
+ * A failed Eva request, with the status it failed on.
+ *
+ * The counterpart of `gtmAPI`'s `GtmApiError`, and here for the same reason: Enrich Now is
+ * a priced action, so this router can answer `402 Payment Required`, and a paywall must not
+ * render as "something went wrong". The operator's next step is to top up, not to retry.
+ *
+ * Still an `Error` with the same `message`, so every existing `catch` that reads
+ * `err.message` is unaffected.
+ */
+export class EvaApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "EvaApiError";
+    this.status = status;
+    // Needed for `instanceof` to survive the ES5 target's class downleveling.
+    Object.setPrototypeOf(this, EvaApiError.prototype);
+  }
+}
+
+/** Whether this failure was the workspace being unable to afford the action (402). */
+export function isInsufficientCredits(error: unknown): boolean {
+  return error instanceof EvaApiError && error.status === 402;
+}
+
 async function evaFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = sessionStorage.getItem("token");
   const res = await fetch(`${EVA_BASE_URL}${path}`, {
@@ -551,7 +668,7 @@ async function evaFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     } catch {
       /* non-JSON */
     }
-    throw new Error(detail);
+    throw new EvaApiError(detail, res.status);
   }
   return (await res.json()) as T;
 }

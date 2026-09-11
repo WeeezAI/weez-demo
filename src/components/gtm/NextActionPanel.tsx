@@ -54,8 +54,10 @@ import gtmAPI, {
   type NextBestAction,
   type PriorityTier,
   type TimelineEntry,
+  type UnexecutableReason,
 } from "@/services/gtmAPI";
 import { ConfirmationStatusBadge } from "./ConfirmationStatusBadge";
+import { CreditPriceTag } from "./CreditBalance";
 import { DerivedScore } from "./DerivedScore";
 import { MessageComposer } from "./MessageComposer";
 import {
@@ -110,6 +112,8 @@ export interface NextActionPanelProps {
   onEditReasoning?: (action: CandidateAction) => void;
   /** A message row the server rewrote (a saved edit, a new version). */
   onMessagePersisted?: (message: Message) => void;
+  /** What Contact Directly costs, passed through to the card's open-channel control. */
+  contactPrice?: number | null;
   className?: string;
 }
 
@@ -231,26 +235,39 @@ export function actionCardTestId(recommendationId: string): string {
 }
 
 /**
- * Which of the three requestable actions a Candidate_Action maps onto.
+ * Why a recommendation offers no open-channel control, in the operator's words.
  *
- * `ActionType` stays the three things an operator can be asked to do in a browser,
- * and `action/request` — the only route that may record `CLICKED` — accepts only
- * those three. The seven candidate types absent from this table are absent for two
- * different reasons: `WAIT`, `RESEARCH_MORE`, `NURTURE` and `STOP_OUTREACH` touch no
- * channel at all and *should* offer no open-channel control, while `SEND_EMAIL`,
- * `SEND_EMAIL_FOLLOWUP` and `CALL` touch a channel this route does not model yet.
+ * **This used to be a mapping table, and deleting it was the point.** A
+ * `Partial<Record<CandidateActionType, ActionType>>` lived here translating the
+ * thirteen candidate types onto the three delivery verbs — the backend's domain,
+ * restated in a component, where nothing tested it and where it silently collapsed
+ * two very different reasons into one absent control. The server now answers the
+ * question itself on every candidate: `executable` says whether the outreach layer
+ * can carry the recommendation out, `executionVerb` says what to post, and
+ * `unexecutableReason` says which of the three cases applies when it cannot.
  *
- * Either way the control is not rendered, because rendering it would mean opening a
- * destination with no way to record the click — and half of R27.2 is worse than
- * neither half.
+ * So the card reads the answer instead of deriving it, and these strings are the only
+ * thing left — the *rendering* of a reason, which is genuinely this layer's job.
+ *
+ *   `ADVISORY`                — WAIT / RESEARCH_MORE / NURTURE / STOP_OUTREACH. The
+ *                               recommendation *is* the output; there is nothing to
+ *                               open, and offering a send control would record an
+ *                               approach the engine had just advised against.
+ *   `NO_EXECUTION_VERB`       — CALL. A human can genuinely place it; none of the
+ *                               three verbs *is* placing a call, so there is nothing
+ *                               to file the click against.
+ *   `CHANNEL_NOT_IMPLEMENTED` — SEND_EMAIL / SEND_EMAIL_FOLLOWUP today. The verb
+ *                               exists and the channel is real, but no adapter is
+ *                               registered, so the destination would go nowhere.
+ *
+ * Saying which one applies matters because they call for different things from the
+ * operator: nothing, a phone, or waiting for us to build it.
  */
-const REQUEST_ACTION_TYPE: Partial<Record<CandidateActionType, ActionType>> = {
-  CONNECT_LINKEDIN: "CONNECT",
-  SEND_LINKEDIN_WARMUP: "SEND_MESSAGE",
-  SEND_LINKEDIN_FOLLOWUP: "SEND_MESSAGE",
-  CHANGE_MESSAGE_ANGLE: "SEND_MESSAGE",
-  ASK_DISCOVERY_QUESTION: "SEND_MESSAGE",
-  REQUEST_MEETING: "MEETING_REQUEST",
+export const UNEXECUTABLE_REASON_LABELS: Record<UnexecutableReason, string> = {
+  ADVISORY: "No outreach to open — this is a decision, not a message.",
+  NO_EXECUTION_VERB: "Weez cannot record a phone call yet, so there is nothing to open.",
+  CHANNEL_NOT_IMPLEMENTED:
+    "This channel has no delivery adapter yet, so Weez cannot open it for you.",
 };
 
 /** The scoring term that carries the expected outcome, per `ActionTermKey`. */
@@ -294,6 +311,15 @@ export interface ActionCardProps {
   onFeedbackRecorded?: (recorded: FeedbackRecorded) => void;
   /** Handed the candidate when the operator opens its reasoning to edit it. */
   onEditReasoning?: (action: CandidateAction) => void;
+  /**
+   * What Contact Directly costs, from the server's price list, rendered on the
+   * open-channel control.
+   *
+   * `null` — the default — renders no tag. That is deliberate for a component whose
+   * callers include a queue that may not have read the balance: a control with no price
+   * tag is honest, and one that looks free while charging a credit is not.
+   */
+  contactPrice?: number | null;
   className?: string;
 }
 
@@ -304,6 +330,7 @@ export function ActionCard({
   position = null,
   priorityTier = null,
   destinationUrl = null,
+  contactPrice = null,
   expectedSuccessProbability = null,
   onActionRequested,
   onLifecycleRecorded,
@@ -319,7 +346,11 @@ export function ActionCard({
   const [busy, setBusy] = useState<null | "open" | "dismiss" | "feedback">(null);
 
   const { recommendationId, actionType, channel } = action;
-  const requestActionType = REQUEST_ACTION_TYPE[actionType];
+  // The server's answer, not ours. `executable` is the conjunction — a verb exists *and*
+  // its channel has a registered adapter — and it is the only field this control should
+  // read. `executionVerb` is what gets posted; both come off the candidate, so a card and
+  // a queue row cannot disagree about whether the same recommendation can be acted on.
+  const requestActionType = action.executable ? action.executionVerb : null;
   const title = GTM_NBA_ACTION_LABELS[actionType] ?? actionType;
   const messageId = action.explanation?.whyThisMessage?.messageId ?? null;
   const whyNow = action.explanation?.whyNow ?? [];
@@ -579,7 +610,7 @@ export function ActionCard({
         </p>
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {requestActionType && (
+          {requestActionType ? (
             <Button type="button" size="sm" onClick={() => void onOpenChannel()} disabled={locked}>
               {busy === "open" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -587,7 +618,24 @@ export function ActionCard({
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {title}
+              {/* What the click will cost, from the server's price list. Absent when the
+                  price has not been read — a control that looks free and is not is worse
+                  than one with no tag. */}
+              <CreditPriceTag credits={contactPrice} className="ml-1.5" />
             </Button>
+          ) : (
+            /* The control is absent, and the reason is said out loud. Silence here reads
+               as a broken card: an operator looking at a recommendation with no way to act
+               on it needs to know whether that is the recommendation's nature (advisory) or
+               a gap in what Weez can do yet. */
+            action.unexecutableReason && (
+              <p
+                className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] text-slate-600"
+                data-testid="gtm-action-unexecutable"
+              >
+                {UNEXECUTABLE_REASON_LABELS[action.unexecutableReason]}
+              </p>
+            )
           )}
 
           <Button
@@ -677,6 +725,7 @@ export function NextActionPanel({
   onFeedbackRecorded,
   onEditReasoning,
   onMessagePersisted,
+  contactPrice = null,
   className,
 }: NextActionPanelProps) {
   const [activeMessage, setActiveMessage] = useState<Message | null>(null);
@@ -809,6 +858,7 @@ export function NextActionPanel({
           action={recommended}
           position={cardPosition}
           destinationUrl={nextAction?.destinationUrl ?? null}
+          contactPrice={contactPrice}
           onActionRequested={onActionRequested}
           onLifecycleRecorded={onLifecycleRecorded}
           onFeedbackRecorded={onFeedbackRecorded}

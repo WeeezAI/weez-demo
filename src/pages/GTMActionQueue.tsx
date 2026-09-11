@@ -71,6 +71,8 @@ import type {
 } from "@/services/gtmAPI";
 import gtmAPI from "@/services/gtmAPI";
 
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 import { JourneyStateBadge } from "@/components/gtm/JourneyStateBadge";
 import {
   ACTION_CARD_LABELS,
@@ -236,6 +238,13 @@ export function queueItemToCandidateAction(item: ActionQueueItem): CandidateActi
     recommendationId: item.recommendationId ?? "",
     actionType: item.actionType,
     channel: item.channel,
+    // The outreach translation crosses as it is, like every other carried field: both
+    // payloads project the same `gtm_action_recommendations` row and the server answers
+    // this question identically on each, so re-deriving it here would be a second opinion
+    // about which verb an action takes.
+    executionVerb: item.executionVerb,
+    executable: item.executable,
+    unexecutableReason: item.unexecutableReason,
     rank: null,
     isRecommended: true,
     actionScore: item.actionScore,
@@ -263,6 +272,8 @@ export function queueItemToCandidateAction(item: ActionQueueItem): CandidateActi
 export interface ActionQueueRowProps {
   brandId: string;
   item: ActionQueueItem;
+  /** What Contact Directly costs, from the server's price list. */
+  contactPrice?: number | null;
   /** Opens the prospect's own page, which is where the full ranking lives. */
   onOpenProspect: (leadId: string) => void;
 }
@@ -275,7 +286,12 @@ export interface ActionQueueRowProps {
  * rather than showing a lead id or an empty slot. The journey badge sits beside it as
  * the projection it is, carrying its own display-only note.
  */
-function ActionQueueRow({ brandId, item, onOpenProspect }: ActionQueueRowProps) {
+function ActionQueueRow({
+  brandId,
+  item,
+  contactPrice = null,
+  onOpenProspect,
+}: ActionQueueRowProps) {
   const action = useMemo(() => queueItemToCandidateAction(item), [item]);
 
   return (
@@ -408,6 +424,7 @@ function ActionQueueRow({ brandId, item, onOpenProspect }: ActionQueueRowProps) 
             priorityTier={item.priorityTier}
             destinationUrl={item.profileUrl}
             expectedSuccessProbability={item.expectedSuccessProbability}
+            contactPrice={contactPrice}
             onEditReasoning={() => onOpenProspect(item.leadId)}
           />
           <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
@@ -461,6 +478,12 @@ export default function GTMActionQueue() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The balance, read once. This page charges nothing itself — the cards do, through
+  // `requestAction` — so there is nothing to refresh it after; a card that spends a credit
+  // navigates the operator to the prospect page, which reads its own.
+  const { balance, priceFor } = useCredits();
+  const contactPrice = priceFor("CONTACT");
   const [moreError, setMoreError] = useState<string | null>(null);
 
   /**
@@ -642,6 +665,9 @@ export default function GTMActionQueue() {
               )}
               {statusText}
             </p>
+            {/* The balance, in chrome. Every card on this page carries a control that
+                spends it, so the operator can see what they have before pressing one. */}
+            <CreditBalanceBadge balance={balance} className="hidden sm:inline-flex" />
             <Button
               type="button"
               variant="outline"
@@ -791,6 +817,7 @@ export default function GTMActionQueue() {
                           key={item.recommendationId ?? item.leadId}
                           brandId={brandId}
                           item={item}
+                          contactPrice={contactPrice}
                           onOpenProspect={onOpenProspect}
                         />
                       ))}

@@ -332,6 +332,14 @@ function wireCandidate(over: Record<string, unknown> = {}) {
     recommendation_id: "reco-1",
     action_type: "SEND_LINKEDIN_WARMUP",
     channel: "LINKEDIN",
+    // The outreach translation, as the server sends it. A LinkedIn warm-up is a
+    // `SEND_MESSAGE` and the LinkedIn adapter is registered, so it is executable — which is
+    // what puts the open-channel control on the card. Omitting these would normalise to
+    // `executable: false` and the control would correctly disappear, so they belong in
+    // every fixture that stands for a real recommendation.
+    execution_verb: "SEND_MESSAGE",
+    executable: true,
+    unexecutable_reason: null,
     rank: 1,
     is_recommended: true,
     action_score: wireScore(77),

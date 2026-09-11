@@ -1061,6 +1061,13 @@ export const GTM_IDENTITY_LABELS = {
   resolveFailed: "Couldn't ask for an identity search",
   tracked: "Weez is tracking this prospect.",
   alreadyTracking: "Already tracking this prospect — nothing changed.",
+  // Activation queues two reads at the click — the profile page and the activity feed —
+  // rather than leaving the first activity observation to a 180-minute staleness sweep.
+  // Saying so matters: the operator has just paid for intelligence, and "we have started
+  // looking" is the difference between a product that feels asleep and one that does not.
+  observationQueued: "Reading their profile and recent activity now.",
+  observationNotQueued:
+    "Tracking started, but no read could be queued yet — the next sweep will pick them up.",
   trackFailed: "Couldn't start tracking this prospect",
 
   // The url, and the two very different things it can be.

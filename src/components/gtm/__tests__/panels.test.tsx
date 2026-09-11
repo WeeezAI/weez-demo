@@ -1690,6 +1690,11 @@ describe("no bare integers", () => {
 });
 
 describe("accessibility", () => {
+  // An explicit budget, not vitest's 5s default. This case mounts every panel at once and
+  // runs axe over the whole tree, which genuinely takes seconds — and the default is a
+  // default rather than a considered budget for it, so under a loaded machine it was
+  // timing out on the axe pass and reporting as a violation it had not found. The
+  // assertion below is unchanged: still zero violations, over the same tree.
   it("is clean on a fully populated set of panels", async () => {
     const { container } = render(
       <div>
@@ -1727,7 +1732,7 @@ describe("accessibility", () => {
     await screen.findByRole("list", { name: STATE_HISTORY_LABELS.list });
 
     expect(await axe(container)).toHaveNoViolations();
-  });
+  }, 20_000);
 
   it("is clean on an unknown-heavy payload", async () => {
     const { container } = render(
@@ -1761,7 +1766,7 @@ describe("accessibility", () => {
       </div>,
     );
     expect(await axe(container)).toHaveNoViolations();
-  });
+  }, 20_000);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

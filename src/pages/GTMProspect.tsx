@@ -146,6 +146,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import CONFIG from "@/services/config";
 import gtmAPI, {
+  isInsufficientCredits,
   type Action,
   type CandidateAction,
   type FeedbackRecorded,
@@ -182,6 +183,13 @@ import { StateDimensionGrid } from "@/components/gtm/StateDimensionGrid";
 import { StateHistoryPanel } from "@/components/gtm/StateHistoryPanel";
 import { TimingPanel } from "@/components/gtm/TimingPanel";
 import { IdentityPanel } from "@/components/gtm/IdentityPanel";
+import { ContactPanel } from "@/components/gtm/ContactPanel";
+import {
+  CreditBalanceBadge,
+  CreditPriceTag,
+} from "@/components/gtm/CreditBalance";
+import { InsufficientCreditsAlert } from "@/components/gtm/InsufficientCreditsAlert";
+import { useCredits } from "@/hooks/useCredits";
 import {
   IdentityConfirmPanel,
   hasCandidateToSettle,
@@ -521,6 +529,23 @@ export default function GTMProspect() {
   // fresher answers the two writes come back with.
   const [identity, setIdentity] = useState<IdentityResolution | null>(null);
   const [trackingAck, setTrackingAck] = useState<ProspectTracking | null>(null);
+
+  // ── Credits ──
+  //
+  // Two of the three priced actions are on this page: Activate Intelligence (2) and
+  // Contact Directly (1). The balance is read once and refreshed after each charge, never
+  // polled — the backend has no other writer, so the action that spent it is the only
+  // honest refresh trigger.
+  //
+  // `paywall` is kept apart from `identityNotice` and from `error` on purpose. A 402 is not
+  // a fault and not a stale payload: nothing went wrong, nothing was done, and retrying
+  // will fail identically. Folding it into the page's error slot would render it in the
+  // destructive styling this screen reserves for "a thing broke", which is the wrong thing
+  // to say in the one channel that reaches a reader before any text does.
+  const { balance, refresh: refreshCredits, priceFor } = useCredits();
+  const [paywall, setPaywall] = useState<string | null>(null);
+  const activatePrice = priceFor("ACTIVATE");
+  const contactPrice = priceFor("CONTACT");
   const [resolving, setResolving] = useState(false);
   const [starting, setStarting] = useState(false);
   /** What the last identity control did, or the server's refusal. Never a fabrication. */
@@ -866,6 +891,7 @@ export default function GTMProspect() {
     if (!brandId || !leadId) return;
     setStarting(true);
     setIdentityNotice(null);
+    setPaywall(null);
     try {
       const ack = await gtmAPI.trackProspect(brandId, leadId);
       setTrackingAck(ack);
@@ -875,15 +901,27 @@ export default function GTMProspect() {
           : GTM_IDENTITY_LABELS.alreadyTracking,
       );
       setTimelineKey((key) => key + 1);
+      // The balance moved, so re-read it. Only when something was actually charged: a
+      // repeat activation comes back `charged: false` and the balance is unchanged, and a
+      // needless read would make the badge flicker for no reason.
+      if (ack.credit?.charged) void refreshCredits();
       // Now score, so the prospect is reachable from the queue. See the docblock.
       await onReevaluate();
     } catch (e) {
-      setIdentityNotice(e instanceof Error ? e.message : GTM_IDENTITY_LABELS.trackFailed);
-      toast.error(GTM_IDENTITY_LABELS.trackFailed);
+      if (isInsufficientCredits(e)) {
+        // Nothing was provisioned and nothing was charged — the backend charges before it
+        // acts. Say that, rather than "tracking failed", which would leave the operator
+        // wondering what state their prospect is in.
+        setPaywall(e instanceof Error ? e.message : null);
+        void refreshCredits();
+      } else {
+        setIdentityNotice(e instanceof Error ? e.message : GTM_IDENTITY_LABELS.trackFailed);
+        toast.error(GTM_IDENTITY_LABELS.trackFailed);
+      }
     } finally {
       setStarting(false);
     }
-  }, [brandId, leadId, onReevaluate]);
+  }, [brandId, leadId, onReevaluate, refreshCredits]);
 
   /**
    * Settle the candidate the resolver could not corroborate (R30.7).
@@ -947,11 +985,16 @@ export default function GTMProspect() {
     if (!brandId || !leadId) return;
     setSendingRequest(true);
     setConnectionNotice(null);
+    setPaywall(null);
     try {
       const action = await gtmAPI.requestAction(brandId, leadId, {
         actionType: "CONNECT",
         idempotencyKey: actionIdempotencyKey(leadId, "CONNECT", null, null),
       });
+      // Contact Directly is priced at 1 credit and the charge rides on this response. Only
+      // re-read the balance when it actually moved: the charge shares this request's own
+      // idempotency key, so a repeat comes back `charged: false` and changed nothing.
+      if (action?.credit?.charged) void refreshCredits();
       const destination = action?.destinationUrl ?? detail?.profile.profileUrl ?? null;
       if (destination) {
         window.open(destination, "_blank", "noopener,noreferrer");
@@ -968,14 +1011,21 @@ export default function GTMProspect() {
       // Ask. Never assume.
       setAwaitingSendAnswer(true);
     } catch (e) {
-      setConnectionNotice(
-        e instanceof Error ? e.message : GTM_CONNECTION_LABELS.sendFailed,
-      );
-      toast.error(GTM_CONNECTION_LABELS.sendFailed);
+      if (isInsufficientCredits(e)) {
+        // No action was filed and nothing was charged. The operator has not half-sent an
+        // invitation, and the prompt must not appear as though they had.
+        setPaywall(e instanceof Error ? e.message : null);
+        void refreshCredits();
+      } else {
+        setConnectionNotice(
+          e instanceof Error ? e.message : GTM_CONNECTION_LABELS.sendFailed,
+        );
+        toast.error(GTM_CONNECTION_LABELS.sendFailed);
+      }
     } finally {
       setSendingRequest(false);
     }
-  }, [brandId, leadId, detail]);
+  }, [brandId, leadId, detail, refreshCredits]);
 
   /**
    * Record what the operator told us about the connection (R3.1, R3.4).
@@ -1223,6 +1273,12 @@ export default function GTMProspect() {
               )}
               {statusText}
             </p>
+            {/* The balance, in chrome, because two of the controls on this page spend it
+                and the operator should not have to leave to find out whether they can
+                afford the next one. Renders nothing until the balance has been read — a
+                zero shown for an unread balance would tell someone with credits that they
+                had none. */}
+            <CreditBalanceBadge balance={balance} className="hidden sm:inline-flex" />
             <Button
               variant="outline"
               size="sm"
@@ -1302,6 +1358,31 @@ export default function GTMProspect() {
                     block's subjects are named by the `ObservedValue` labels inside it,
                     and a heading here would add a ninth `<h2>` to a closed page whose
                     outline is one `<h2>` per panel. */}
+                {/* ── The paywall (402) ──
+                    Above the controls that trigger it, and deliberately *not* in the
+                    error slot above: nothing broke, nothing was charged and nothing was
+                    done. The destructive styling this page uses for failures would say
+                    the opposite in the one channel that reaches a reader first. */}
+                {paywall !== null && (
+                  <InsufficientCreditsAlert detail={paywall} balance={balance} />
+                )}
+
+                {/* ── How to reach them ──
+                    Above the identity gate because it is readable *first*: every field on
+                    `detail.profile` is an `ObservedFact` and reads Unknown until a LinkedIn
+                    page has been read, while this is what Eva asserted during enrichment.
+                    Without it the screen at that moment would be empty, and the operator
+                    would be asked to choose between contacting somebody and paying to
+                    understand them while being shown nothing about them.
+                    Kept as its own panel rather than merged into the header: an assertion
+                    and an observation are different claims, and a screen that renders them
+                    identically is a screen that says Weez observed something nobody
+                    looked at. */}
+                <ContactPanel
+                  contact={detail.contact}
+                  verificationStatus={detail.profile.linkedinVerificationStatus}
+                />
+
                 <IdentityPanel
                   profile={detail.profile}
                   identity={identity}
@@ -1311,6 +1392,7 @@ export default function GTMProspect() {
                   onTrackProspect={() => void onTrackProspect()}
                   starting={starting}
                   notice={identityNotice}
+                  activatePrice={activatePrice}
                 />
 
                 {/* ── Settling a POSSIBLE_MATCH (R30.7) ──
@@ -1406,6 +1488,7 @@ export default function GTMProspect() {
                     onFeedbackRecorded={onFeedbackRecorded}
                     onEditReasoning={onEditReasoning}
                     onMessagePersisted={onMessagePersisted}
+                    contactPrice={contactPrice}
                   />
                   {/* A null explanation is a real answer — nothing has been argued for
                       this prospect yet — and the panel says so itself. */}

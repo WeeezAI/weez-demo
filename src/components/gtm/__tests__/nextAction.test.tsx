@@ -96,6 +96,9 @@ function action(overrides: Partial<Action> = {}): Action {
     verifiedAt: null,
     outcomeEvidenceId: null,
     failureReason: null,
+    // Null by default because this fixture stands for an action *read back*, and only
+    // `requestAction` charges. A test about the charge overrides it.
+    credit: null,
     ...overrides,
   };
 }

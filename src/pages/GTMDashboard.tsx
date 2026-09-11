@@ -68,6 +68,13 @@ import type {
   FilterOperator,
 } from "@/services/gtmAPI";
 import gtmAPI from "@/services/gtmAPI";
+import {
+  CREDIT_LABELS,
+  CreditBalanceBadge,
+  CreditLedgerPanel,
+  CreditPriceList,
+} from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 
 import {
   GTM_PAGE_LABELS,
@@ -589,6 +596,11 @@ export default function GTMDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The credit ledger, as a second read whose failure is its own. This page charges
+  // nothing, so there is nothing to refresh it after — the balance only moves when the
+  // operator spends on another surface, and that surface re-reads its own.
+  const { credits, balance } = useCredits();
+
   /**
    * The monotonic request counter from `GTMProspect.tsx` and `GTMActionQueue.tsx`.
    * Every read takes a ticket and a response holding a superseded one is dropped, so a
@@ -878,6 +890,39 @@ export default function GTMDashboard() {
                   )}
                 </>
               )}
+            </section>
+
+            {/* ── Credits ──
+                On this page because it is the one surface whose subject is the workspace
+                rather than a prospect: what the loop learned, and what the workspace spent
+                learning it. The seven statements above answer "is Weez getting better";
+                this answers "what has that cost", and the two belong on one screen.
+
+                The price list and the ledger are the server's — no total is computed here.
+                A client that summed a page of history would disagree with the balance the
+                moment the window stopped covering every movement. */}
+            <section className="mt-6 space-y-4" aria-labelledby="credits-heading">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2
+                  id="credits-heading"
+                  className="text-[13px] font-semibold text-zinc-900"
+                >
+                  {CREDIT_LABELS.balance}
+                </h2>
+                <CreditBalanceBadge balance={balance} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-border/40 p-4">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    {CREDIT_LABELS.prices}
+                  </h3>
+                  <CreditPriceList prices={credits?.prices ?? []} className="mt-2" />
+                </div>
+                <CreditLedgerPanel
+                  credits={credits}
+                  className="rounded-lg border border-border/40 p-4"
+                />
+              </div>
             </section>
           </div>
         </main>

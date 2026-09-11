@@ -44,6 +44,34 @@ const ConversationSidebar = ({
   // Action Queue sits under Prospect Intelligence because it is the same population
   // ranked by what to do next, and Learning sits under Meetings because it is what
   // the booked-or-not outcomes taught the ranking. Ninna stays the landing page.
+  //
+  // The order is the lifecycle, and the `role` subtitles say which stage each surface
+  // owns:
+  //
+  //   Dashboard             where to start
+  //   Market Intelligence   discovery and qualification — accounts, the leads on them, and
+  //                         the Enrich Now that promotes one into the GTM flow
+  //   Prospect Intelligence the enriched prospects only: the decision-maker, their contact,
+  //                         and the decision to activate
+  //   Action Queue          what the state engine ranked, across prospects
+  //   Outreach              performing it
+  //   Meetings              what it booked
+  //   Learning              what the outcomes taught the ranking, and what it all cost
+  //
+  // Two corrections here, both about pointing at the right surface.
+  //
+  // The Eva item used to read "Revenue Intelligence / Signals & scoring". Both halves were
+  // wrong. Signals, the evolving state and the scoring live on Prospect Intelligence and the
+  // Action Queue, not here — an operator following that subtitle went looking for scores and
+  // found a lead list. And "Revenue Intelligence" contradicted the product's own naming:
+  // `pages/Landing.tsx` and `components/HeroAITeam.tsx` both give Eva the role "Market
+  // Intelligence", which is also what it is — discovery, qualification, and the Enrich Now
+  // that promotes a lead into the GTM flow.
+  //
+  // The distinction matters more now than it did, because the two pages hold different
+  // populations: this one lists everything discovery qualified, and Prospect Intelligence
+  // lists only what has been enriched. A label that made them sound like the same view of
+  // the same list would make the second one look broken.
   const navItems = [
     {
       label: "Dashboard",
@@ -54,8 +82,8 @@ const ConversationSidebar = ({
       tint: "bg-indigo-500/10",
     },
     {
-      label: "Revenue Intelligence",
-      role: "Signals & scoring",
+      label: "Market Intelligence",
+      role: "Discover, qualify & enrich",
       path: `/eva/${spaceId}`,
       icon: SignalIcon,
       color: "text-emerald-500",
@@ -63,7 +91,7 @@ const ConversationSidebar = ({
     },
     {
       label: "Prospect Intelligence",
-      role: "ICP decision makers",
+      role: "Enriched decision makers",
       path: `/prospect-intelligence/${spaceId}`,
       icon: Users,
       color: "text-violet-500",
@@ -95,7 +123,7 @@ const ConversationSidebar = ({
     },
     {
       label: "Learning",
-      role: "Outcomes & accuracy",
+      role: "Outcomes, accuracy & credits",
       path: `/gtm-dashboard/${spaceId}`,
       icon: GraduationCap,
       color: "text-cyan-500",

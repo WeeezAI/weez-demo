@@ -65,6 +65,13 @@ import {
   type WaterfallStep,
   type ScanStage,
 } from "@/services/evaAPI";
+import { isInsufficientCredits } from "@/services/evaAPI";
+import {
+  CreditBalanceBadge,
+  CreditPriceTag,
+} from "@/components/gtm/CreditBalance";
+import { InsufficientCreditsAlert } from "@/components/gtm/InsufficientCreditsAlert";
+import { useCredits } from "@/hooks/useCredits";
 
 // ─── Tone → tailwind chip classes ────────────────────────────────────────────────
 
@@ -485,9 +492,15 @@ type EnrichState = "idle" | "working" | "none" | "limit" | "unresolved" | "faile
 function EmailCell({
   lead,
   onEnrich,
+  enrichPrice = null,
 }: {
   lead: QualifiedLead;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+  /**
+   * What Enrich Now costs, from the server's price list. `null` renders no tag: the page
+   * owns the balance and hands the answer down rather than each cell reading its own.
+   */
+  enrichPrice?: number | null;
 }) {
   const [state, setState] = useState<EnrichState>("idle");
   const [trace, setTrace] = useState<WaterfallStep[]>([]);
@@ -579,7 +592,10 @@ function EmailCell({
         )}
       >
         <Sparkles className="h-3 w-3 shrink-0" />
-        {notFound || failed ? "Try again" : "Enrich now"}
+        {notFound || failed ? "Try again" : "Enrich Now"}
+        {/* What it will cost, from the server's price list. Absent when the balance has not
+            been read — a control that looks free and charges is worse than an untagged one. */}
+        <CreditPriceTag credits={enrichPrice} />
       </button>
       {notFound && (
         <HoverCard openDelay={80}>
@@ -625,10 +641,11 @@ function EmailCell({
   );
 }
 
-function LeadRow({ lead, onAction, onEnrich }: {
+function LeadRow({ lead, onAction, onEnrich, enrichPrice = null }: {
   lead: QualifiedLead;
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+  enrichPrice?: number | null;
 }) {
   const tier = tierMeta(lead.acvTier);
   const handed = lead.handoffState === "handed_to_max";
@@ -670,7 +687,7 @@ function LeadRow({ lead, onAction, onEnrich }: {
 
       {/* Email — on-demand: nothing is resolved until the founder asks for it */}
       <td className="px-4 py-3">
-        <EmailCell lead={lead} onEnrich={onEnrich} />
+        <EmailCell lead={lead} onEnrich={onEnrich} enrichPrice={enrichPrice} />
       </td>
 
       {/* Sources (capped + info hover) */}
@@ -704,10 +721,11 @@ function LeadRow({ lead, onAction, onEnrich }: {
   );
 }
 
-function LeadsTable({ leads, onAction, onEnrich }: {
+function LeadsTable({ leads, onAction, onEnrich, enrichPrice = null }: {
   leads: QualifiedLead[];
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+  enrichPrice?: number | null;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
@@ -733,7 +751,15 @@ function LeadsTable({ leads, onAction, onEnrich }: {
             </tr>
           </thead>
           <tbody>
-            {leads.map((l) => <LeadRow key={l.id} lead={l} onAction={onAction} onEnrich={onEnrich} />)}
+            {leads.map((l) => (
+              <LeadRow
+                key={l.id}
+                lead={l}
+                onAction={onAction}
+                onEnrich={onEnrich}
+                enrichPrice={enrichPrice}
+              />
+            ))}
           </tbody>
         </table>
       </div>
@@ -1013,6 +1039,13 @@ export default function Eva() {
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
   const [enrichUsage, setEnrichUsage] = useState<EnrichmentUsage | null>(null);
+
+  // Enrich Now is priced at 1 credit and this is the page it is pressed on. The balance
+  // comes from the workspace-level provider, so this page adds no read for it.
+  const { balance: creditBalance, refresh: refreshCredits, priceFor } = useCredits();
+  const enrichPrice = priceFor("ENRICH");
+  const [paywall, setPaywall] = useState<string | null>(null);
+
   const reqRef = useRef(0);
 
   const load = useCallback(async (force: boolean, isScan: boolean, silent = false) => {
@@ -1111,14 +1144,21 @@ export default function Eva() {
   // Live count after a click, falling back to whatever the workspace reported.
   const usage = enrichUsage || ws?.enrichmentUsage || null;
 
-  // "Enrich now" — resolve ONE lead's email on demand and patch the row in place
-  // so the address appears without a page refresh. The backend also hands a
-  // successfully-enriched lead to Max, so we take its returned lead verbatim
-  // rather than guessing the new state.
+  // "Enrich Now" — resolve ONE lead's email on demand and patch the row in place so the
+  // address appears without a page refresh. The backend also promotes the lead into the GTM
+  // flow and hands it to Max, so we take its returned lead verbatim rather than guessing.
+  //
+  // **This is the doorway to Prospect Intelligence.** The promotion is what creates the
+  // `sales_leads` row every GTM route keys on, and Prospect Intelligence lists exactly the
+  // leads that have one — so a successful enrichment is the moment a prospect becomes
+  // workable, and the toast says so rather than leaving the operator to discover it.
   const onEnrichLead = useCallback(async (lead: QualifiedLead): Promise<EnrichLeadResult | null> => {
     try {
       const res = await evaAPI.enrichLead(spaceId, lead.id);
       if (res.usage) setEnrichUsage(res.usage);
+      // A charge landed, so the badge is stale. Only when something was actually charged: a
+      // repeat click on the same lead comes back `charged: false`.
+      if (res.credit?.charged) void refreshCredits();
       const updated = res.lead;
       if (updated) {
         setWs((prev) => prev ? { ...prev, leads: prev.leads.map((l) => l.id === lead.id ? updated : l) } : prev);
@@ -1128,7 +1168,19 @@ export default function Eva() {
         toast.success(
           res.maxHandoff?.status === "curating"
             ? `${lead.company}: ${addr} — Max is writing the outreach now`
-            : `${lead.company}: ${addr}`
+            : `${lead.company}: ${addr}`,
+          // Where the prospect went. `gtmLeadId` is the promoted row, so it is also the
+          // proof the prospect is now on Prospect Intelligence — offered only when the
+          // server actually returned one rather than on a hopeful assumption.
+          res.gtmLeadId
+            ? {
+                description: "Now on Prospect Intelligence, with the GTM lifecycle available.",
+                action: {
+                  label: "Open",
+                  onClick: () => navigate(`/prospect-intelligence/${spaceId ?? ""}`),
+                },
+              }
+            : undefined
         );
       } else if (res.status === "limit_reached") {
         toast.error("This month's enrichment credits are used up.");
@@ -1140,7 +1192,18 @@ export default function Eva() {
       }
       return res;
     } catch (e) {
+      // A paywall is not a failure to log and swallow. Before this every error here went to
+      // `console.warn` and the operator saw *nothing at all* — they pressed Enrich Now and
+      // the button simply stopped. That was tolerable while the only failures were provider
+      // hiccups; it is not now that the action is priced, because the one thing they need to
+      // know is that they cannot afford it and nothing was charged.
+      if (isInsufficientCredits(e)) {
+        setPaywall(e instanceof Error ? e.message : null);
+        void refreshCredits();
+        return null;
+      }
       console.warn("[eva] enrichment failed", e);
+      toast.error(e instanceof Error ? e.message : `Couldn't enrich ${lead.company}`);
       return null;
     }
   }, [spaceId]);
@@ -1216,6 +1279,12 @@ export default function Eva() {
                   </div>
                 )}
 
+                {/* The paywall (402). Its own surface, above the pipeline: nothing broke,
+                    no provider was called and nothing was charged, so the operator's next
+                    step is to top up rather than to retry. */}
+                {paywall !== null && (
+                  <InsufficientCreditsAlert detail={paywall} balance={creditBalance} />
+                )}
                 {searchDegraded && (
                   <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-[12px] text-amber-700">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1280,17 +1349,21 @@ export default function Eva() {
                     ))}
                   </div>
                   <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-400">
-                    {/* Emails cost paid provider credits, so show what's left —
-                        "Enrich now" is deliberate spend, not a free action. */}
+                    {/* Two limits, side by side and never merged. The monthly cap is on
+                        enrichment *attempts* and the remedy is to wait for the month to roll
+                        over; the credit balance is purchased and the remedy is to top up.
+                        Showing one number for both would tell the operator to do the wrong
+                        thing about whichever one they had actually hit. */}
                     {usage && (
                       <span
                         className="rounded-full border border-zinc-200 bg-white px-2 py-0.5"
-                        title={`${usage.used} of ${usage.limit} enrichments used this month`}
+                        title={`${usage.used} of ${usage.limit} enrichment attempts used this month`}
                       >
                         <Mail className="mr-1 inline h-3 w-3" />
-                        {usage.remaining} enrichments left
+                        {usage.remaining} attempts left this month
                       </span>
                     )}
+                    <CreditBalanceBadge balance={creditBalance} />
                     <span>{leads.length} shown</span>
                   </span>
                 </div>
@@ -1302,7 +1375,12 @@ export default function Eva() {
                     <p className="text-sm font-medium">No leads match these filters.</p>
                   </div>
                 ) : (
-                  <LeadsTable leads={leads} onAction={onLeadAction} onEnrich={onEnrichLead} />
+                  <LeadsTable
+                    leads={leads}
+                    onAction={onLeadAction}
+                    onEnrich={onEnrichLead}
+                    enrichPrice={enrichPrice}
+                  />
                 )}
 
                 {/* The rest of Eva's pipeline: tracked companies still working

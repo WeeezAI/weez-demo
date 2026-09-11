@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useSearchParams, Navigate, useParams } from "react-router-dom";
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { CreditsProvider } from "@/hooks/useCredits";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import { TutorialSpotlight } from "./components/tutorial/TutorialSpotlight";
 import { TutorialTooltip } from "./components/tutorial/TutorialTooltip";
@@ -105,6 +106,12 @@ const AppContent = () => {
 
   return (
     <>
+      {/* The credit balance, read once per workspace rather than once per page.
+          Inside `BrowserRouter` because it derives the workspace from the path, and above
+          `Routes` because it is workspace-level chrome: four surfaces price their controls
+          from it, and making each of them fetch it would add a request to every page for a
+          number that does not change between them. */}
+      <CreditsProvider>
       <TutorialProvider>
         <TutorialSpotlight />
         <TutorialTooltip />
@@ -190,6 +197,7 @@ const AppContent = () => {
               <Route path="*" element={<NotFound />} />
         </Routes>
       </TutorialProvider>
+      </CreditsProvider>
     </>
   );
 };
