@@ -91,18 +91,32 @@ const ConversationSidebar = ({
   //
   // `role` is the subtitle, and each says which stage its surface owns rather than
   // describing its contents.
+  // Each journey item carries a `step` and a `role` written for a sales rep rather than for
+  // whoever built the layer behind it.
+  //
+  // **The numbers are the teaching.** A rep opening this product for the first time has no
+  // idea which of these to click, and four nouns ending in "Intelligence" do not tell them:
+  // "Market Intelligence" and "Prospect Intelligence" sound like two views of the same
+  // list. Numbering them makes the sidebar the shortest explanation of the product in the
+  // whole app — read it top to bottom and you have understood Weez.
+  //
+  // The `role` lines are verbs and outcomes, not features. "Enriched decision makers" (what
+  // one of these used to say) describes a data structure. "Decide who to contact" describes
+  // what the rep does when they get there.
   const journeyItems = [
     {
+      step: 1,
       label: "Market Intelligence",
-      role: "Discover, qualify & enrich",
+      role: "Find who's worth it",
       path: `/eva/${spaceId}`,
       icon: SignalIcon,
       color: "text-emerald-500",
       tint: "bg-emerald-500/10",
     },
     {
+      step: 2,
       label: "Prospect Intelligence",
-      role: "Decide & activate",
+      role: "Decide who to contact",
       path: `/prospect-intelligence/${spaceId}`,
       icon: Users,
       color: "text-violet-500",
@@ -115,16 +129,18 @@ const ConversationSidebar = ({
       alsoActiveFor: [`/relationship-intelligence/${spaceId}`],
     },
     {
+      step: 3,
       label: "Action Queue",
-      role: "Ranked next moves",
+      role: "Know what to do today",
       path: `/action-queue/${spaceId}`,
       icon: ListChecks,
       color: "text-sky-500",
       tint: "bg-sky-500/10",
     },
     {
+      step: 4,
       label: "Learning",
-      role: "Outcomes, accuracy & credits",
+      role: "See what's working",
       path: `/gtm-dashboard/${spaceId}`,
       icon: GraduationCap,
       color: "text-cyan-500",
@@ -193,6 +209,8 @@ const ConversationSidebar = ({
    * active styling they will adjust one of them.
    */
   const renderNavItem = (item: {
+    /** Present on the four journey steps, absent on the workspace items. */
+    step?: number;
     label: string;
     role: string;
     path: string;
@@ -242,10 +260,26 @@ const ConversationSidebar = ({
         <span className="flex flex-col items-start leading-tight min-w-0">
           <span
             className={cn(
-              "text-[13px] font-bold tracking-tight transition-colors",
+              "flex items-center gap-1.5 text-[13px] font-bold tracking-tight transition-colors",
               isActive ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
             )}
           >
+            {/* The step number. `aria-hidden` because the order is already carried by the
+                list itself, and a screen reader announcing "1 Market Intelligence" would be
+                reading the ordinal twice. */}
+            {item.step !== undefined && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-black tabular-nums",
+                  isActive
+                    ? "bg-primary/15 text-primary"
+                    : "bg-secondary/60 text-muted-foreground/70"
+                )}
+              >
+                {item.step}
+              </span>
+            )}
             {item.label}
           </span>
           <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
@@ -278,9 +312,29 @@ const ConversationSidebar = ({
             {/* The journey, in order. `aria-current="page"` on the active item rather
                 than colour alone, so the highlight is available to a screen reader and
                 not only to somebody who can see the accent bar. */}
+            {/* ── What Weez is, in one contrast ──
+                The differentiation, stated where every rep will see it on every page rather
+                than only on the Activate Intelligence card — which a rep who never reaches an
+                enriched prospect would never read.
+                
+                Written as a contrast because that is what makes it land. "We monitor prospect
+                signals and evolve state to recommend actions" describes the machinery; "most
+                tools help you send more, Weez tells you who to contact and why now" tells a
+                rep what is different about their day. Two lines, no illustration, no dismiss
+                button: it is orientation, not an announcement, so it does not need to be
+                cleared and should not compete with the navigation under it. */}
+            <div className="mx-1 rounded-2xl border border-primary/10 bg-primary/[0.03] px-3 py-2.5">
+              <p className="text-[10.5px] font-semibold leading-snug text-foreground/80">
+                Most tools help you send more.
+              </p>
+              <p className="mt-0.5 text-[10.5px] font-bold leading-snug text-primary">
+                Weez tells you who to contact, how, and why now.
+              </p>
+            </div>
+
             <nav aria-label="Go-to-market journey" className="space-y-1.5">
               <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
-                Go-to-Market
+                How it works
               </p>
               {journeyItems.map((item) => renderNavItem(item))}
             </nav>

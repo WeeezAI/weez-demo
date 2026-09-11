@@ -41,7 +41,14 @@ import {
   UNEXECUTABLE_REASON_LABELS,
   PRIORITY_TIER_LABELS,
 } from "./NextActionPanel";
-import { GTM_NBA_ACTION_LABELS, CHANNEL_LABEL, TONE } from "./labels";
+import {
+  GTM_NBA_ACTION_LABELS,
+  GTM_SIGNAL_TYPE_LABELS,
+  CHANNEL_LABEL,
+  TONE,
+  absTime,
+  relTime,
+} from "./labels";
 
 export const NEXT_BEST_ACTION_CARD_LABELS = {
   eyebrow: "Next best action",
@@ -57,6 +64,14 @@ export const NEXT_BEST_ACTION_CARD_LABELS = {
    * this card inventing the reasoning it exists to report.
    */
   noReasoning: "No timing reasoning was recorded for this recommendation.",
+  /**
+   * A timing bullet whose signal type was not recorded.
+   *
+   * Rare and not the same as `noReasoning`: something *was* observed and contributed to the
+   * score, and what kind of thing it was did not travel. Saying "something we observed" is
+   * true; naming a type would not be.
+   */
+  somethingObserved: "Something we observed",
 } as const;
 
 export interface NextBestActionCardProps {
@@ -124,7 +139,19 @@ export function NextBestActionCard({
         {channel && <span className="text-zinc-400"> · {channel}</span>}
       </h2>
 
-      {/* Why now, one bullet. The rest is behind the disclosure. */}
+      {/* ── Why now, as a sentence ──
+          The most important line on the card, so it is written for a rep rather than for
+          somebody auditing a score.
+
+          `WhyNowList` — the shared component — renders a bullet as
+          `POST_ENGAGEMENT · 4 days ago · Effective strength: 68 · [Timing fit]`, which is
+          exactly right in the expanded evidence below and wrong here: a rep has to translate
+          three of those four before they can decide anything. So the summary composes the
+          two parts that carry the decision — what happened, and when — and the full bullet
+          with its strength and term is one click away, unchanged.
+
+          Both come from persisted fields. Nothing is generated: the event name is a lookup
+          on the signal type the evaluation recorded, and the time is its own timestamp. */}
       <div className="mt-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400">
           {NEXT_BEST_ACTION_CARD_LABELS.whyNow}
@@ -135,7 +162,33 @@ export function NextBestActionCard({
               {NEXT_BEST_ACTION_CARD_LABELS.noReasoning}
             </p>
           ) : (
-            <WhyNowList bullets={leading} />
+            <ul className="space-y-1">
+              {leading.map((bullet, index) => (
+                <li
+                  key={`${bullet.signalId ?? "signal"}-${index}`}
+                  className="text-[13.5px] leading-snug text-zinc-800"
+                  data-signal-type={bullet.signalType ?? undefined}
+                >
+                  <span className="font-semibold">
+                    {bullet.signalType
+                      ? GTM_SIGNAL_TYPE_LABELS[bullet.signalType] ?? bullet.signalType
+                      : NEXT_BEST_ACTION_CARD_LABELS.somethingObserved}
+                  </span>
+                  {bullet.eventTimestamp && (
+                    <>
+                      {" "}
+                      <time
+                        dateTime={bullet.eventTimestamp}
+                        title={absTime(bullet.eventTimestamp)}
+                        className="text-zinc-500"
+                      >
+                        {relTime(bullet.eventTimestamp)}
+                      </time>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

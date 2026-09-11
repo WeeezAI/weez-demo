@@ -74,6 +74,7 @@ import gtmAPI from "@/services/gtmAPI";
 import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
 import { useCredits } from "@/hooks/useCredits";
 import { JourneyStateBadge } from "@/components/gtm/JourneyStateBadge";
+import { MEASURE_MEANINGS, measureParts } from "@/components/gtm/measure";
 import {
   ACTION_CARD_LABELS,
   ActionCard,
@@ -341,40 +342,65 @@ function ActionQueueRow({
 
           {/* Four of the six banding inputs, plus the state confidence the ranking
               trusted — a different claim from the Action_Confidence on the card, and
-              never folded into it. The other two inputs are on the card. */}
+              never folded into it. The other two inputs are on the card.
+
+              Each reads "High · 68" rather than "68". Four bare numbers in a row is the
+              visual language of a monitoring console: a rep cannot tell whether 68 is
+              urgent, and side-by-side integers imply a precision nobody should act on. The
+              band is the reading, the number is the audit trail, and the label carries one
+              plain sentence saying what the measure is about — see `measure.ts` for why the
+              banding is the UI's own and why the number is never replaced. */}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
-                {ACTION_QUEUE_LABELS.urgency}
-              </dt>
-              <dd className="mt-0.5 text-[13px] font-semibold text-zinc-900">
-                {formatNumber(item.urgency)}
-              </dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
-                {ACTION_QUEUE_LABELS.businessValue}
-              </dt>
-              <dd className="mt-0.5 text-[13px] font-semibold text-zinc-900">
-                {formatNumber(item.businessValue)}
-              </dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
-                {ACTION_QUEUE_LABELS.signalFreshness}
-              </dt>
-              <dd className="mt-0.5 text-[13px] font-semibold text-zinc-900">
-                {formatNumber(item.signalFreshness)}
-              </dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
-                {ACTION_QUEUE_LABELS.stateConfidence}
-              </dt>
-              <dd className="mt-0.5 text-[13px] font-semibold text-zinc-900">
-                {formatNumber(item.stateConfidence)}
-              </dd>
-            </div>
+            {(
+              [
+                ["urgency", ACTION_QUEUE_LABELS.urgency, item.urgency],
+                ["business_value", ACTION_QUEUE_LABELS.businessValue, item.businessValue],
+                [
+                  "signal_freshness",
+                  ACTION_QUEUE_LABELS.signalFreshness,
+                  item.signalFreshness,
+                ],
+                [
+                  "state_confidence",
+                  ACTION_QUEUE_LABELS.stateConfidence,
+                  item.stateConfidence,
+                ],
+              ] as const
+            ).map(([key, label, raw]) => {
+              const measure = measureParts(raw);
+              return (
+                <div key={key} className="min-w-0">
+                  <dt
+                    title={MEASURE_MEANINGS[key]}
+                    className="cursor-help text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400"
+                  >
+                    {label}
+                  </dt>
+                  <dd className="mt-0.5 flex items-baseline gap-1.5">
+                    {measure.label === null ? (
+                      // Never a zero for an unread measure.
+                      <span className="text-[12px] text-slate-500">
+                        {GTM_UI_LABELS.unavailableHeading}
+                      </span>
+                    ) : (
+                      <>
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-semibold",
+                            TONE[measure.tone] ?? TONE.zinc
+                          )}
+                        >
+                          {measure.label}
+                        </span>
+                        <span className="text-[11px] tabular-nums text-slate-500">
+                          {measure.value}
+                        </span>
+                      </>
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
             {/* The sixth input, and the only one of them that is an observed fact
                 rather than a measure — so it renders through `ObservedValue` with its
                 provenance rather than as a bare value. */}

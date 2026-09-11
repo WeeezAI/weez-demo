@@ -22,11 +22,11 @@
 //
 //   ENRICHING    `busy === "enriching"` — a request this page has in flight. The only
 //                stage that is about the page rather than about the prospect.
-//   RESOLVING    `busy === "resolving"`, or a verification verdict that is unsettled
-//                after an attempt. `resolve-identity` navigates nothing itself: it queues
-//                a job and the verdict lands on a later read, which is why waiting for an
-//                identity is a stage and not a spinner.
-//   ENRICHED     a confirmed identity and no `profileId`. The decision point.
+//   RESOLVING    `busy === "resolving"` — an identity search this page just asked for.
+//                Transient only. `resolve-identity` navigates nothing itself: it queues a
+//                job and the verdict lands on a later read.
+//   ENRICHED     no `profileId`. **The decision point, whatever the identity verdict says**
+//                — see the long note at the bottom of `prospectStageOf`.
 //   ACTIVATING   `busy === "activating"` — the track request is in flight.
 //   WAITING      `profileId` exists — intelligence is active — and `stateVersion === 0`.
 //                That zero is exact, not a heuristic: activation opens the fifteen belief
@@ -49,19 +49,6 @@
 // promise the product cannot keep — an operator seeing "Paused" would look for the
 // control that resumes it, and there is none.
 
-/** The verification verdict spelling the GTM layer uses for a settled identity. */
-const VERIFIED = "VERIFIED";
-
-/**
- * Verdicts that mean an attempt ran and did not settle who this person is.
- *
- * `POSSIBLE_MATCH` is a candidate nobody corroborated and `NO_MATCH` is a search that
- * found nobody. Both are *answers*, which is why neither reads as `RESOLVING`: there is
- * nothing in flight, and the operator's next step is to settle or correct rather than to
- * wait.
- */
-const SETTLED_UNVERIFIED = new Set(["POSSIBLE_MATCH", "NO_MATCH"]);
-
 export type ProspectStage =
   | "ENRICHING"
   | "RESOLVING"
@@ -75,11 +62,6 @@ export type ProspectStage =
 export type ProspectBusy = "enriching" | "resolving" | "activating" | null;
 
 export interface ProspectStageInput {
-  /**
-   * `linkedin_verification_status` from the prospect payload, or null when nobody has
-   * looked. Null and `"NO_MATCH"` are different facts and are not collapsed.
-   */
-  verificationStatus?: string | null;
   /**
    * `profile.profileId` — the `li_gtm_profiles` row. **This is the activation flag.**
    * There is no tracking-state column in the schema; the row's existence is what
@@ -110,7 +92,6 @@ export interface ProspectStageInput {
  */
 export function prospectStageOf(input: ProspectStageInput): ProspectStage {
   const {
-    verificationStatus = null,
     profileId = null,
     stateVersion = null,
     hasRecommendation = false,
@@ -125,28 +106,31 @@ export function prospectStageOf(input: ProspectStageInput): ProspectStage {
   const activated = typeof profileId === "string" && profileId.trim().length > 0;
 
   // 2. Activated: the only question left is how much has been observed.
-  //
-  // Checked before the identity verdict on purpose. An activated prospect is past that
-  // gate by definition — the route refuses anything unverified — so re-testing it here
-  // would only be able to *contradict* a row that already exists.
   if (activated) {
     if (hasRecommendation) return "RECOMMENDED";
     if (typeof stateVersion === "number" && stateVersion > 0) return "ACTIVE";
     return "WAITING";
   }
 
-  // 3. Not activated. Can they be?
-  if (verificationStatus === VERIFIED) return "ENRICHED";
-
-  // An attempt that ran and settled on "not them" is not a wait. It needs the operator,
-  // and `GTM_IDENTITY_LABELS.cannotTrack` says which case it is beside the control.
-  if (verificationStatus != null && SETTLED_UNVERIFIED.has(verificationStatus)) {
-    return "ENRICHED";
-  }
-
-  // Nobody has looked yet, or an unrecognised verdict. Either way the next thing that
-  // happens is an identity search.
-  return "RESOLVING";
+  // 3. Not activated — and that is the whole test.
+  //
+  // **The identity verdict is deliberately not consulted here, and reading it was a real
+  // bug.** An earlier version returned `ENRICHED` only for a `VERIFIED` identity and fell
+  // through to `RESOLVING` otherwise, which meant a prospect nobody had searched for on
+  // LinkedIn showed *no decision at all* — neither Contact Directly nor Activate
+  // Intelligence — because `showsDecision()` admits only `ENRICHED`. That is exactly
+  // backwards. A confirmed LinkedIn identity is a precondition of **activation**, because
+  // the track route refuses anything unverified and observing an unconfirmed profile would
+  // attach a belief to the wrong person. It is not a precondition of the operator *having a
+  // choice to make*: they have a name, a role, a company and an email from enrichment, and
+  // deciding whether to reach out on that is entirely reasonable.
+  //
+  // So every prospect that reaches this surface and is not yet activated is at the decision
+  // point. Which of the two cards can actually be pressed is decided beside each control —
+  // activation by `trackRefusal()`, which is the same rule the route applies, and contact by
+  // its own availability condition. A control that would be refused is not rendered, and the
+  // reason appears in its place with the search that would change the answer next to it.
+  return "ENRICHED";
 }
 
 /** Whether intelligence is active for this prospect — i.e. the profile row exists. */
@@ -157,11 +141,17 @@ export function isIntelligenceActive(stage: ProspectStage): boolean {
 /**
  * Whether the two-way decision belongs on screen.
  *
- * Only at `ENRICHED`. Before that there is nothing to decide about — no confirmed
- * identity — and after activation the decision has been made, which is the whole reason
- * the dossier transforms rather than keeping a pair of buttons around that no longer mean
- * anything.
+ * Every stage before activation, which today is `ENRICHED` and the two transient ones that
+ * resolve back into it. After activation the decision has been made, which is the whole
+ * reason the dossier transforms rather than keeping a pair of buttons around that no longer
+ * mean anything.
+ *
+ * `RESOLVING` and `ENRICHING` are included deliberately. They are things *this page is
+ * doing*, not answers about the prospect, and an in-flight identity search is a poor reason
+ * to take the operator's choice off the screen — they may well want to press Contact
+ * Directly while it runs. The controls carry their own busy state; the stage banner says
+ * what is happening.
  */
 export function showsDecision(stage: ProspectStage): boolean {
-  return stage === "ENRICHED";
+  return stage === "ENRICHED" || stage === "RESOLVING" || stage === "ENRICHING";
 }

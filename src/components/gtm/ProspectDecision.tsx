@@ -35,7 +35,7 @@
 // day the backend supports pre-activation contact, the caller passes `null` and this card
 // becomes live with no redesign.
 
-import { ArrowRight, Brain, Loader2, Send } from "lucide-react";
+import { ArrowRight, Brain, Loader2, Radar, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CreditPriceTag } from "./CreditBalance";
@@ -65,6 +65,18 @@ export interface ProspectDecisionProps {
   activateUnavailableReason?: string | null;
   /** What Activate Intelligence costs, from the server's price list. */
   activatePrice?: number | null;
+  /**
+   * Ask for a LinkedIn identity search, when that is what activation is waiting on.
+   *
+   * Offered *beside* `activateUnavailableReason` rather than instead of it. Every refusal
+   * the track route returns is about the identity, and all but one of them are answered by
+   * running a search — so a card that stated the problem and offered nothing left the
+   * operator reading a dead end. This is the control that changes the answer.
+   */
+  onResolveIdentity?: () => void;
+  resolving?: boolean;
+  /** The label for that control, from the identity block's own table. */
+  resolveLabel?: string;
 
   className?: string;
 }
@@ -77,6 +89,9 @@ export function ProspectDecision({
   activating = false,
   activateUnavailableReason = null,
   activatePrice = null,
+  onResolveIdentity,
+  resolving = false,
+  resolveLabel,
   className,
 }: ProspectDecisionProps) {
   return (
@@ -190,9 +205,30 @@ export function ProspectDecision({
               <CreditPriceTag credits={activatePrice} className="ml-0.5" />
             </Button>
           ) : (
-            <p className="text-[11.5px] leading-relaxed text-slate-500">
-              {activateUnavailableReason}
-            </p>
+            // The reason, and the thing that resolves it. Never a dead end: activation is
+            // refused only ever because of the identity, and a search is what settles that.
+            <div className="space-y-2">
+              <p className="text-[11.5px] leading-relaxed text-slate-500">
+                {activateUnavailableReason}
+              </p>
+              {onResolveIdentity && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full justify-center gap-1.5 rounded-full border-violet-300 bg-white text-xs text-violet-800 hover:bg-violet-100"
+                  onClick={onResolveIdentity}
+                  disabled={resolving}
+                >
+                  {resolving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Radar className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {resolveLabel}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

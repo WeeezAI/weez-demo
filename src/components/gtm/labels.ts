@@ -1102,8 +1102,17 @@ export const GTM_IDENTITY_LABELS = {
    * a countdown nothing counts.
    */
   trackHeadline: "Find out Who, How, and Why Now before reaching out.",
+  /**
+   * What activation does, in a rep's words.
+   *
+   * An earlier version read "continuously monitors this prospect's signals, evolves their
+   * prospect state, and recommends the next best action" — three engine nouns in one
+   * sentence. A rep does not know what a signal or a prospect state is, and does not need
+   * to: what they need to know is that Weez keeps watching so they don't have to guess when
+   * to reach out.
+   */
   trackBody:
-    "Weez continuously monitors this prospect's signals, evolves their prospect state, and recommends the next best action.",
+    "Weez keeps watching this person — what they post, when they change role, when they show interest — and tells you the moment there's a good reason to reach out, and what to say.",
 
   // What each control actually did. Neither claims more than a queued job.
   resolveQueued: "Looking for their LinkedIn profile. The result lands on the next read.",
@@ -1187,33 +1196,36 @@ export const GTM_IDENTITY_LABELS = {
  */
 export const PROSPECT_STAGE_LABELS: Record<string, { label: string; body: string }> = {
   ENRICHING: {
-    label: "Enriching",
-    body: "Finding this person's contact details and confirming who they are.",
+    label: "Finding their details",
+    body: "Looking up this person's contact details and confirming who they are.",
   },
   RESOLVING: {
-    label: "Resolving identity",
-    body: "Searching LinkedIn for this person. The verdict lands on the next read.",
+    label: "Looking them up on LinkedIn",
+    body:
+      "Searching for this person's profile. It can take a moment — you can still contact them while it runs.",
   },
   ENRICHED: {
-    label: "Enriched",
-    body: "We know who this is and how to reach them. Choose how you want to proceed.",
+    label: "Ready to decide",
+    body:
+      "You know who this is and how to reach them. Reach out now, or let Weez watch them and tell you when the moment is right.",
   },
   ACTIVATING: {
-    label: "Activating intelligence",
-    body: "Provisioning this prospect and queueing the first reads.",
+    label: "Turning on intelligence",
+    body: "Setting this prospect up and taking a first look at their profile and activity.",
   },
   WAITING: {
-    label: "Waiting for signals",
+    label: "Watching for activity",
     body:
-      "Intelligence is active and the first reads are queued. Observation is asynchronous, so their state and recommendation appear here as signals arrive.",
+      "Weez has started watching this prospect. Nothing has happened yet — as soon as they post, change role or show interest, it appears here with a recommended move.",
   },
   ACTIVE: {
-    label: "Intelligence active",
-    body: "We're building this prospect's evolving state. No action is recommended yet.",
+    label: "Watching · nothing to do yet",
+    body:
+      "Weez is picking up activity and building a picture of this prospect. There's no move worth making right now — you'll see one here when there is.",
   },
   RECOMMENDED: {
-    label: "Action recommended",
-    body: "Weez has a next best action for this prospect.",
+    label: "Ready to act",
+    body: "Weez has a recommended move for this prospect, and the reason for it.",
   },
 };
 
@@ -1524,17 +1536,17 @@ export const PROSPECT_INTELLIGENCE_SECTIONS = {
   state: "Current state",
   stateNote: "Where this prospect stands, on the evidence.",
 
-  stateHistory: "Why did the state change?",
+  stateHistory: "What changed, and why",
   stateHistoryNote:
-    "Each recorded change, the evidence behind it, and the belief as it stood at any instant.",
+    "Every time Weez changed its mind about this prospect, and what it saw that made it.",
 
-  signals: "Supporting signals",
+  signals: "What Weez has seen",
   signalsNote:
-    "The observed facts the state was folded from, newest first. An expired signal is still shown — it is retained, and only its influence decays.",
+    "The things Weez observed about this person, newest first. Older ones stay on the list but count for less.",
 
-  timeline: "Activity timeline",
+  timeline: "Everything that happened",
   timelineNote:
-    "The append-only record for this prospect: state changes, drafts, requested actions and recorded outcomes.",
+    "The full record for this prospect: changes, drafts, the actions you took and how they turned out.",
 
   /**
    * The heading over the whole region.
@@ -1543,6 +1555,67 @@ export const PROSPECT_INTELLIGENCE_SECTIONS = {
    * I believe the recommendation above", and calling them details would suggest they are
    * optional trivia rather than the argument.
    */
-  regionHeading: "Deeper intelligence",
-  regionNote: "The evidence behind the recommendation. Open what you want to check.",
+  regionHeading: "Why Weez thinks this",
+  regionNote: "Open any of these if you want to check the reasoning. You don't need to.",
 } as const;
+
+// ─── Signal types, in a rep's words ───────────────────────────────────────────
+//
+// The twenty-nine `signals.SignalType` values, as the thing that actually happened.
+//
+// **Why this table did not exist before.** `ActionExplanation.WhyNowList` carries a note
+// saying "`signalType` renders raw — `labels.ts` carries no table for the 29 values and the
+// convention on a miss is the raw value", and that was a reasonable call while the only
+// reader of a why-now bullet was somebody auditing a score. It stopped being reasonable
+// once "Why now?" became the most important sentence on the Next Best Action card. A rep
+// reading `POST_ENGAGEMENT` or `TECH_STACK_CHANGE` has to translate before they can decide,
+// and the whole promise of the card is that they don't have to.
+//
+// Written as **what happened**, in the past tense, so a bullet reads as an event rather
+// than as a category: "Changed jobs", not "Job change". That is what makes a list of these
+// scan as a story about a person.
+//
+// `Record<string, string>` and the raw value on a miss, which is this file's convention
+// throughout: a thirtieth type added server-side renders as itself rather than as blank.
+export const GTM_SIGNAL_TYPE_LABELS: Record<string, string> = {
+  // What they did on LinkedIn.
+  LINKEDIN_POST: "Posted on LinkedIn",
+  LINKEDIN_COMMENT: "Commented on a post",
+  LINKEDIN_REACTION: "Reacted to a post",
+  LINKEDIN_SHARE: "Shared a post",
+  PROFILE_VIEWED_US: "Viewed your profile",
+
+  // What changed about them or their company.
+  JOB_CHANGE: "Changed jobs",
+  PROMOTION: "Was promoted",
+  COMPANY_GROWTH: "Their company is growing",
+  FUNDING_ROUND: "Their company raised funding",
+  PRODUCT_LAUNCH: "Their company launched something",
+  HIRING_SIGNAL: "Their company is hiring",
+  TECH_STACK_CHANGE: "Their company changed tools",
+  COMPETITOR_MENTION: "Mentioned a competitor",
+  PAIN_STATEMENT: "Described a problem you solve",
+
+  // Where the relationship stands.
+  CONNECTION_REQUESTED: "You sent a connection request",
+  CONNECTION_ACCEPTED: "Accepted your connection request",
+  CONNECTION_REJECTED: "Didn't accept your connection request",
+
+  // What came back.
+  INBOUND_REPLY: "Replied to you",
+  POSITIVE_REPLY: "Replied — interested",
+  NEGATIVE_REPLY: "Replied — not interested",
+  OBJECTION: "Raised an objection",
+  MEETING_REQUESTED: "Asked for a meeting",
+  MEETING_BOOKED: "Booked a meeting",
+
+  // Reasons to stop, and things that went wrong.
+  OPTED_OUT: "Asked not to be contacted",
+  WRONG_PERSON: "Said they're the wrong person",
+  EMAIL_BOUNCED: "Their email bounced",
+
+  // Ours, not theirs.
+  ACTION_EXECUTED: "You took an action",
+  HUMAN_NOTE: "You recorded a note",
+  UNCLASSIFIED: "Something we couldn't classify",
+};

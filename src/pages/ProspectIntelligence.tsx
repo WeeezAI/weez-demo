@@ -1372,6 +1372,9 @@ function Dossier({
     recommended: CandidateAction | null;
     /** Go and perform the recommended action, on the surface that owns execution. */
     onTakeAction: () => void;
+    /** Ask for an identity search — the way out of every activation refusal. */
+    onResolveIdentity: () => void;
+    resolvingIdentity: boolean;
     /**
      * The ranking read failed, so the absence of a recommendation is not an answer.
      *
@@ -1648,6 +1651,9 @@ function Dossier({
           activating={decision.activating}
           activateUnavailableReason={decision.activateUnavailableReason}
           activatePrice={decision.activatePrice}
+          onResolveIdentity={decision.onResolveIdentity}
+          resolving={decision.resolvingIdentity}
+          resolveLabel={GTM_IDENTITY_LABELS.resolve}
         />
       )}
 
@@ -2077,6 +2083,8 @@ export default function ProspectIntelligence() {
   const [activating, setActivating] = useState(false);
   const [activationAck, setActivationAck] = useState<ProspectTracking | null>(null);
   const [activationNotice, setActivationNotice] = useState<string | null>(null);
+  /** An identity search this page asked for, so activation can become available. */
+  const [resolvingIdentity, setResolvingIdentity] = useState(false);
 
   /**
    * Bumped to make the three fetching intelligence panels re-read their collections.
@@ -2432,14 +2440,26 @@ export default function ProspectIntelligence() {
   const prospectStage = useMemo(
     () =>
       prospectStageOf({
-        verificationStatus: selected.detail?.profile.linkedinVerificationStatus ?? null,
+        // The identity verdict is deliberately not an input. It gates the *activate
+        // control*, beside that control, and not whether the operator gets a choice.
         profileId:
           activationAck?.profileId ?? selected.detail?.profile.profileId ?? null,
         stateVersion: selected.state?.stateVersion ?? null,
         hasRecommendation: (selected.ranking?.recommended ?? null) !== null,
-        busy: activating ? "activating" : null,
+        busy: activating
+          ? "activating"
+          : resolvingIdentity
+            ? "resolving"
+            : null,
       }),
-    [selected.detail, selected.state, selected.ranking, activationAck, activating]
+    [
+      selected.detail,
+      selected.state,
+      selected.ranking,
+      activationAck,
+      activating,
+      resolvingIdentity,
+    ]
   );
 
   /**
@@ -2503,6 +2523,37 @@ export default function ProspectIntelligence() {
       setActivating(false);
     }
   }, [spaceId, selectedGtmLeadId, refreshCredits, loadSelected, loadQueue]);
+
+  /**
+   * Ask for a LinkedIn identity search, so Activate Intelligence can be offered.
+   *
+   * The way out of every activation refusal. The route queues a job and navigates nothing
+   * itself, so the *verdict* lands on a later read — which is why the notice says a search
+   * is under way rather than reporting a result, and why this does not optimistically move
+   * the stage. A silent re-read picks the verdict up when it arrives.
+   */
+  const onResolveIdentity = useCallback(async () => {
+    const brandId = spaceId ?? "";
+    if (!brandId || !selectedGtmLeadId) return;
+    setResolvingIdentity(true);
+    setActivationNotice(null);
+    try {
+      const resolution = await gtmAPI.resolveIdentity(brandId, selectedGtmLeadId);
+      setActivationNotice(
+        resolution.deduped
+          ? GTM_IDENTITY_LABELS.resolveDeduped
+          : GTM_IDENTITY_LABELS.resolveQueued
+      );
+      await loadSelected(true);
+    } catch (e) {
+      setActivationNotice(
+        e instanceof Error ? e.message : GTM_IDENTITY_LABELS.resolveFailed
+      );
+      toast.error(GTM_IDENTITY_LABELS.resolveFailed);
+    } finally {
+      setResolvingIdentity(false);
+    }
+  }, [spaceId, selectedGtmLeadId, loadSelected]);
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) =>
@@ -2909,6 +2960,8 @@ export default function ProspectIntelligence() {
                             recommended: selected.ranking?.recommended ?? null,
                             onTakeAction: onTakeAction,
                             rankingFailed: selected.rankingFailed,
+                            onResolveIdentity: () => void onResolveIdentity(),
+                            resolvingIdentity,
                           }}
                           intelligence={{
                             brandId: spaceId ?? "",
