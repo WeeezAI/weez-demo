@@ -52,7 +52,18 @@ export const CREDIT_LABELS = {
   prices: "What things cost",
   ledger: "Recent credit activity",
   ledgerEmpty: "No credit activity yet.",
-  free: "Included",
+  /**
+   * A priced-at-zero action. "Free" rather than "Included" because the operator is
+   * reading it beside a control they are about to press, and "Free" answers "what will
+   * this cost me" in one word.
+   *
+   * Message generation is the only action this applies to, and it is free because it is
+   * part of the Contact Directly credit. Note the backend does **not** serve this price:
+   * `credits.PRICES` carries ENRICH, CONTACT and ACTIVATE only, so `priceFor` returns null
+   * for generation and a caller that wants this tag has to pass a literal `0`. That is a
+   * product statement, and the one place in the credit UI that is not read off the wire.
+   */
+  free: "Free",
   /** The empty balance. Not an error — nobody has granted this workspace anything yet. */
   none: "No credits",
   spent: "spent",

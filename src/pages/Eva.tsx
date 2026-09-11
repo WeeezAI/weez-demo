@@ -65,7 +65,7 @@ import {
   type WaterfallStep,
   type ScanStage,
 } from "@/services/evaAPI";
-import { isInsufficientCredits } from "@/services/evaAPI";
+import { isInsufficientCredits, isEnrichedProspect } from "@/services/evaAPI";
 import {
   CreditBalanceBadge,
   CreditPriceTag,
@@ -641,16 +641,23 @@ function EmailCell({
   );
 }
 
-function LeadRow({ lead, onAction, onEnrich, enrichPrice = null }: {
+function LeadRow({ lead, onAction, onEnrich, onOpenProspect, enrichPrice = null }: {
   lead: QualifiedLead;
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+  /** Follow this lead into Prospect Intelligence, where the decision is made. */
+  onOpenProspect: (lead: QualifiedLead) => void;
   enrichPrice?: number | null;
 }) {
   const tier = tierMeta(lead.acvTier);
   const handed = lead.handoffState === "handed_to_max";
   const sources = leadSources(lead);
   const siteHost = lead.website?.replace(/^https?:\/\//, "") || lead.domain;
+  // Whether Enrich Now has actually promoted this lead. `gtmLeadId` and nothing else:
+  // the workspace sweep sets `enrichment.status` and `handoffState` for any lead that
+  // merely *arrives* with an email, so either of those would offer the next step on a
+  // prospect that has no GTM record and would 404 the moment it was opened.
+  const enriched = isEnrichedProspect(lead);
 
   return (
     <tr className={cn("border-t border-zinc-100 transition-colors hover:bg-zinc-50/70", handed && "bg-violet-50/25")}>
@@ -699,20 +706,69 @@ function LeadRow({ lead, onAction, onEnrich, enrichPrice = null }: {
         </div>
       </td>
 
-      {/* Action */}
+      {/* Action
+          ──────
+          This page has exactly one primary CTA per row, and which one it is depends on
+          whether the lead has been enriched yet. That is the whole point of the column:
+          discovery has one next step at a time.
+
+          Before enrichment the primary is **Enrich Now**, and it lives in the Email cell
+          because that is the gap it fills. So nothing here is styled as primary — a
+          violet "Hand to Max" used to sit in this slot and it competed directly with
+          Enrich Now, offering an operator a way to push an unenriched lead into outreach
+          with no contact, no confirmed identity and no GTM record behind it.
+
+          After enrichment the primary is **Open in Prospect Intelligence**, because that
+          is where the real decision is made — contact them now, or activate intelligence.
+          Enrichment is the bridge between the two surfaces and this is the crossing.
+
+          Hand to Max is kept, demoted to an icon. It is a live Eva-side handoff and
+          removing it would take away working behaviour; it is simply not the step the
+          journey is asking for here. */}
       <td className="px-3 py-3">
         <div className="flex items-center justify-end gap-1">
-          {handed ? (
+          {enriched ? (
             <>
-              <span className="hidden items-center gap-1 text-[11px] font-semibold text-violet-600 xl:flex"><CheckCheck className="h-3.5 w-3.5" /> With Max</span>
-              <button title="Pull back from Max" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
+              {handed ? (
+                <button
+                  title="Pull back from Max"
+                  onClick={() => onAction(lead, "reject")}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-violet-500 hover:bg-red-50 hover:text-red-600"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <button
+                  title="Hand to Max for outreach"
+                  onClick={() => onAction(lead, "hand_to_max")}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-violet-50 hover:text-violet-600"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <Button
+                size="sm"
+                className="h-7 shrink-0 gap-1 whitespace-nowrap bg-violet-600 px-2.5 text-[11px] font-semibold hover:bg-violet-700"
+                onClick={() => onOpenProspect(lead)}
+              >
+                Open <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
             </>
           ) : (
             <>
-              <button title="Not a fit" onClick={() => onAction(lead, "reject")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"><Ban className="h-3.5 w-3.5" /></button>
-              <Button size="sm" className="h-7 shrink-0 gap-1 whitespace-nowrap bg-violet-600 px-2.5 text-[11px] font-semibold hover:bg-violet-700" onClick={() => onAction(lead, "hand_to_max")}>
-                Hand to Max <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
+              <button
+                title="Not a fit"
+                onClick={() => onAction(lead, "reject")}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"
+              >
+                <Ban className="h-3.5 w-3.5" />
+              </button>
+              {/* Where the one primary CTA for this row actually is, so the column is not
+                  simply empty. Not a second button: two controls that both start
+                  enrichment is two things to decide between for one action. */}
+              <span className="hidden whitespace-nowrap text-[10.5px] font-medium text-zinc-400 xl:inline">
+                Enrich to continue
+              </span>
             </>
           )}
         </div>
@@ -721,10 +777,11 @@ function LeadRow({ lead, onAction, onEnrich, enrichPrice = null }: {
   );
 }
 
-function LeadsTable({ leads, onAction, onEnrich, enrichPrice = null }: {
+function LeadsTable({ leads, onAction, onEnrich, onOpenProspect, enrichPrice = null }: {
   leads: QualifiedLead[];
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onEnrich: (lead: QualifiedLead) => Promise<EnrichLeadResult | null>;
+  onOpenProspect: (lead: QualifiedLead) => void;
   enrichPrice?: number | null;
 }) {
   return (
@@ -757,6 +814,7 @@ function LeadsTable({ leads, onAction, onEnrich, enrichPrice = null }: {
                 lead={l}
                 onAction={onAction}
                 onEnrich={onEnrich}
+                onOpenProspect={onOpenProspect}
                 enrichPrice={enrichPrice}
               />
             ))}
@@ -1172,12 +1230,22 @@ export default function Eva() {
           // Where the prospect went. `gtmLeadId` is the promoted row, so it is also the
           // proof the prospect is now on Prospect Intelligence — offered only when the
           // server actually returned one rather than on a hopeful assumption.
+          // Where the prospect went, and a way to follow it there *landing on this
+          // prospect* rather than on whatever the destination happens to select first.
+          // `res.gtmLeadId` is the promoted row the toast is reporting, so it is also
+          // the id the destination selects by.
           res.gtmLeadId
             ? {
-                description: "Now on Prospect Intelligence, with the GTM lifecycle available.",
+                description:
+                  "Now on Prospect Intelligence — decide whether to contact them or activate intelligence.",
                 action: {
                   label: "Open",
-                  onClick: () => navigate(`/prospect-intelligence/${spaceId ?? ""}`),
+                  onClick: () =>
+                    navigate(
+                      `/prospect-intelligence/${spaceId ?? ""}?lead_id=${encodeURIComponent(
+                        res.gtmLeadId as string
+                      )}`
+                    ),
                 },
               }
             : undefined
@@ -1207,6 +1275,29 @@ export default function Eva() {
       return null;
     }
   }, [spaceId]);
+
+  /**
+   * Follow an enriched lead into Prospect Intelligence, landing on that prospect.
+   *
+   * `gtmLeadId` and not `lead.id`: the destination selects by the promoted `sales_leads.id`,
+   * which is what every GTM route keys on, and Eva's own `lead_<hex>` document id would
+   * match nothing there. Guarded rather than assumed — the control that calls this is only
+   * rendered for a lead `isEnrichedProspect` accepts, so an absent id here would be a
+   * contradiction, and navigating without one would land on an arbitrary prospect.
+   */
+  const onOpenProspect = useCallback(
+    (lead: QualifiedLead) => {
+      const gtmLeadId = (lead.gtmLeadId ?? "").trim();
+      if (!gtmLeadId) {
+        toast.info(`${lead.company} hasn't been enriched yet — run Enrich Now first.`);
+        return;
+      }
+      navigate(
+        `/prospect-intelligence/${spaceId ?? ""}?lead_id=${encodeURIComponent(gtmLeadId)}`
+      );
+    },
+    [navigate, spaceId]
+  );
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) => prev ? {
@@ -1379,6 +1470,7 @@ export default function Eva() {
                     leads={leads}
                     onAction={onLeadAction}
                     onEnrich={onEnrichLead}
+                    onOpenProspect={onOpenProspect}
                     enrichPrice={enrichPrice}
                   />
                 )}

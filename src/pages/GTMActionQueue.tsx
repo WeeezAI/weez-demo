@@ -150,14 +150,24 @@ export const ACTION_QUEUE_LABELS = {
   statusRefreshing: "Refreshing the action queue",
   countSuffix: "actions in the queue",
 
-  empty: "No live recommendations. Nothing is ranked for this brand yet.",
+  /**
+   * Nothing needs attention, and what would put something here.
+   *
+   * The first sentence was already true and already precise — this queue holds live
+   * recommendations, and an empty one means nothing is ranked. What it did not say is where
+   * ranked prospects come from, which is the operator's actual next step: only a prospect
+   * with intelligence active is ever evaluated, so an empty queue on a workspace full of
+   * enriched prospects is a workspace that has not activated any of them.
+   */
+  empty:
+    "No actions need your attention right now. This queue fills with prospects whose intelligence is active — activate one in Prospect Intelligence and its recommendation appears here.",
   emptyFiltered: "No live recommendations match this filter.",
   loadFailedTitle: "Couldn't load the action queue",
   refreshedToast: "Action queue refreshed",
   refreshFailedToast: "Couldn't refresh the action queue",
 
   /** Where the row's reasoning actually lives, since the queue row does not carry it. */
-  reasoningElsewhere: "The scoring terms are on the prospect's relationship intelligence page.",
+  reasoningElsewhere: "The full scoring terms are on the prospect's own page.",
 } as const;
 
 /** The default page size — the server's own default for this collection. */

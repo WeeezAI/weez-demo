@@ -184,6 +184,7 @@ import { StateHistoryPanel } from "@/components/gtm/StateHistoryPanel";
 import { TimingPanel } from "@/components/gtm/TimingPanel";
 import { IdentityPanel } from "@/components/gtm/IdentityPanel";
 import { ContactPanel } from "@/components/gtm/ContactPanel";
+import { ContactDirectlyPanel } from "@/components/gtm/ContactDirectlyPanel";
 import {
   CreditBalanceBadge,
   CreditPriceTag,
@@ -509,6 +510,20 @@ export default function GTMProspect() {
 
   const brandId = spaceId ?? "";
   const leadId = search.get("lead_id") ?? "";
+
+  /**
+   * Why the operator came here, from the entry link.
+   *
+   * `contact` is Contact Directly — they have already decided to reach out and want a draft
+   * and a way to go and send it. `act` is the recommended action from the Next Best Action
+   * card. Anything else (including absent) is the ordinary full view.
+   *
+   * This is presentation only: it decides what is *first* on the page, never what is
+   * available. Every panel below stays where it is, so a link with no intent, or an intent
+   * this build does not know, renders exactly the page it always did.
+   */
+  const entryIntent = search.get("intent");
+  const contactFirst = entryIntent === "contact";
 
   const [detail, setDetail] = useState<ProspectDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1382,6 +1397,39 @@ export default function GTMProspect() {
                   contact={detail.contact}
                   verificationStatus={detail.profile.linkedinVerificationStatus}
                 />
+
+                {/* ── Contact Directly, when that is what the operator came for ──
+                    Immediately under the contact details and above everything else,
+                    because an operator who followed the Contact Directly link has already
+                    made the decision the rest of this page exists to inform. Putting the
+                    draft first is the difference between an execution path and a detour
+                    through the intelligence.
+
+                    Additive and presentation-only: it appears when the entry link says
+                    `intent=contact` and changes nothing else on the page. Every panel below
+                    keeps its position, so the default view — and the two tests that pin its
+                    composition and its keyboard order — are untouched. */}
+                {contactFirst && (
+                  <ContactDirectlyPanel
+                    brandId={brandId}
+                    leadId={detail.leadId}
+                    versions={detail.messageVersions}
+                    contactEmail={detail.contact?.email ?? null}
+                    profileUrl={detail.profile.profileUrl}
+                    onMessagePersisted={onMessagePersisted}
+                    // The draft, the action and the timeline all moved, so re-read rather
+                    // than patching one of the three and letting the others drift.
+                    onContactRecorded={() => {
+                      setTimelineKey((key) => key + 1);
+                      void load(false, true);
+                    }}
+                    contactPrice={contactPrice}
+                    // The isolated gate. This page is only reachable for a prospect with a
+                    // GTM record, so the path is available here — the condition lives on
+                    // Prospect Intelligence, where the decision is offered.
+                    unavailableReason={null}
+                  />
+                )}
 
                 <IdentityPanel
                   profile={detail.profile}

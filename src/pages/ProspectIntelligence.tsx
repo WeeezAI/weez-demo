@@ -82,7 +82,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -138,13 +138,38 @@ import {
   GTM_NBA_ACTION_LABELS,
   GTM_PAGE_LABELS,
   GTM_UI_LABELS,
+  GTM_IDENTITY_LABELS,
+  PROSPECT_STAGE_LABELS,
+  PROSPECT_INTELLIGENCE_SECTIONS,
+  CONTACT_DIRECTLY_LABELS,
   TONE as GTM_TONE,
 } from "@/components/gtm/labels";
+// `trackRefusal` lives with the identity block that owns the gate, not in the label table.
+import { trackRefusal } from "@/components/gtm/IdentityPanel";
 import gtmAPI, {
   type ActionQueueItem,
+  type CandidateAction,
   type Intent,
+  type NextBestAction,
+  type ProspectDetail,
+  type ProspectState,
   type ProspectStateFull,
+  type ProspectTracking,
 } from "@/services/gtmAPI";
+import { ProspectDecision } from "@/components/gtm/ProspectDecision";
+import { NextBestActionCard } from "@/components/gtm/NextBestActionCard";
+// The four intelligence panels, reused as they are. This restructure is composition and
+// hierarchy: not one of them is reimplemented, subclassed or wrapped.
+import { StateDimensionGrid } from "@/components/gtm/StateDimensionGrid";
+import { StateHistoryPanel } from "@/components/gtm/StateHistoryPanel";
+import { SignalList } from "@/components/gtm/SignalList";
+import { ProspectTimeline } from "@/components/gtm/ProspectTimeline";
+import {
+  isIntelligenceActive,
+  prospectStageOf,
+  showsDecision,
+  type ProspectStage,
+} from "@/components/gtm/prospectStage";
 import {
   evaAPI,
   isEnrichedProspect,
@@ -341,7 +366,7 @@ export const PROSPECT_GTM_LABELS = {
 
   /** What the tier is banded from, so the badge reads as re-derivable and not as a verdict. */
   tierNote:
-    "Banded from urgency, expected outcome, business value, signal freshness, action confidence and relationship state. The full ranking is on the relationship intelligence page.",
+    "Banded from urgency, expected outcome, business value, signal freshness, action confidence and relationship state. The full ranking is on the prospect's own page.",
 
   /** The three absences, kept apart. */
   noRecommendation: "No live recommendation — nothing is ranked for this prospect",
@@ -403,6 +428,84 @@ export type OverlayState =
  * `failed` wins over everything: when the read did not land we say so rather than
  * reporting an empty map as an absence of recommendations.
  */
+/**
+ * One collapsed intelligence section, whose contents are built only once opened.
+ *
+ * **The gate is about reads, not visibility.** `<details>` already handles showing and
+ * hiding; what this adds is that `children` is a *function*, so the panel inside is not
+ * constructed until the operator asks for it. `SignalList`, `StateHistoryPanel` and
+ * `ProspectTimeline` each fetch a collection on mount, so rendering them closed would put
+ * three requests behind every prospect selection for panels nobody opened — which is the
+ * cost this page has always refused to pay, and the same reasoning that keeps the queue to
+ * one read for the whole page rather than one per row.
+ *
+ * A native `<summary>` rather than a button: focusable and Enter/Space operable as it
+ * stands, with no `aria-expanded` of ours to keep in sync with the element's own `open`.
+ */
+function IntelligenceSection({
+  summary,
+  note,
+  children,
+}: {
+  summary: string;
+  note: string;
+  /** Built on first open. Deliberately a function — see the docblock. */
+  children: () => ReactNode;
+}) {
+  const [opened, setOpened] = useState(false);
+
+  return (
+    <details
+      className="group rounded-2xl border border-zinc-200/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+      // Latched rather than tracking `open`: closing a section must not throw away a
+      // collection the operator already paid a request for, so re-opening it is free.
+      onToggle={(event) => {
+        if (event.currentTarget.open) setOpened(true);
+      }}
+    >
+      <summary className="flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <ArrowRight
+          className="h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform group-open:rotate-90"
+          aria-hidden="true"
+        />
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-semibold text-zinc-900">{summary}</span>
+          <span className="block text-[11px] leading-relaxed text-zinc-400">{note}</span>
+        </span>
+      </summary>
+      <div className="border-t border-zinc-100 p-4">{opened ? children() : null}</div>
+    </details>
+  );
+}
+
+/**
+ * The `sales_leads.id` for a lead on this page — the only id the GTM layer answers to.
+ *
+ * **Eva's `lead.id` is not it, and using it was a real bug.** Eva mints `lead_<hex>`
+ * document ids; `gtmLeadId` is the SQL row `lead_promotion.promote()` created during
+ * Enrich Now, and `evaAPI`'s own docblock says every GTM route keys on that one. Three
+ * call sites on this page were passing `lead.id`:
+ *
+ *   - `getProspectState()` for the intent summary, which 404'd every time and rendered
+ *     as "Couldn't read the intent records for this prospect" — reported as a failed
+ *     read, which it was, for a reason that had nothing to do with the prospect.
+ *   - `overlayFor()`, which joins against `ActionQueueItem.leadId`. A `lead_<hex>` never
+ *     matches a `sales_leads.id`, so the journey badge and the priority tier were
+ *     silently absent for every row on the page, indistinguishable from a prospect with
+ *     no live recommendation.
+ *   - the entry into the per-prospect execution surface, which handed the Eva id
+ *     straight to `GTMProspect` as its `lead_id` — so every read on the destination page
+ *     404'd too.
+ *
+ * Safe to return a bare string because this page's subject is `activeLeads`, which is
+ * filtered by `isEnrichedProspect` — a lead without a `gtmLeadId` is not on screen. The
+ * empty-string fallback is for the type, not for a case that reaches a request: the two
+ * call sites that fetch both guard on a falsy id before they call.
+ */
+export function gtmLeadIdOf(lead: QualifiedLead): string {
+  return (lead.gtmLeadId ?? "").trim();
+}
+
 export function overlayFor(
   leadId: string,
   overlay: QueueOverlay | null,
@@ -1052,6 +1155,33 @@ function SignalTimeline({ signals }: { signals: ChannelSignal[] }) {
   );
 }
 
+/**
+ * The three per-prospect GTM reads, and which of them failed.
+ *
+ * A flag per read rather than one shared `failed`, because they are three independent
+ * routes and collapsing them would make a page that could not read the ranking claim it
+ * could not read the belief either.
+ */
+export interface SelectedProspectRead {
+  loading: boolean;
+  detail: ProspectDetail | null;
+  detailFailed: boolean;
+  state: ProspectStateFull | null;
+  stateFailed: boolean;
+  ranking: NextBestAction | null;
+  rankingFailed: boolean;
+}
+
+export const EMPTY_SELECTED_READ: SelectedProspectRead = {
+  loading: false,
+  detail: null,
+  detailFailed: false,
+  state: null,
+  stateFailed: false,
+  ranking: null,
+  rankingFailed: false,
+};
+
 /** What the dossier knows about the selected lead's intent records, and how it knows. */
 export interface IntentReadState {
   loading: boolean;
@@ -1194,6 +1324,8 @@ function Dossier({
   onOpenMax,
   onOpenRelationshipIntelligence,
   enrichPrice = null,
+  decision,
+  intelligence,
 }: {
   lead: QualifiedLead;
   group: CompanyGroup;
@@ -1202,6 +1334,74 @@ function Dossier({
   overlay: OverlayState;
   /** The selected lead's intent records, or the reason there are none to show. */
   intent: IntentReadState;
+  /**
+   * The lifecycle stage and the two-way choice that belongs to it.
+   *
+   * One object rather than eight loose props, because they are one thing: what stage this
+   * prospect is in and what the operator can do about it. The dossier renders it; the page
+   * decides it.
+   */
+  decision: {
+    stage: ProspectStage;
+    onContactDirectly: () => void;
+    contactUnavailableReason: string | null;
+    contactPrice: number | null;
+    onActivate: () => void;
+    activating: boolean;
+    activateUnavailableReason: string | null;
+    activatePrice: number | null;
+    /** What the last activation did, or the server's refusal. Never a fabrication. */
+    notice: string | null;
+    /**
+     * The prospect read failed, so no stage can be claimed.
+     *
+     * Kept apart from the stage rather than folded into it, because a failed read and a
+     * prospect nobody has looked for are different facts that happen to look the same from
+     * here: with no payload, `verificationStatus` and `profileId` are both null and the
+     * stage machine would land on `RESOLVING` — telling the operator an identity search is
+     * under way when actually a request errored. Absence is not a stage.
+     */
+    readFailed: boolean;
+    /**
+     * The recommended candidate, or null when no evaluation has produced one.
+     *
+     * Null is a real answer rather than a gap to fill: the backend refuses to fabricate a
+     * `WAIT` for a prospect nothing has scored, so the card is simply absent and the stage
+     * banner is what says why.
+     */
+    recommended: CandidateAction | null;
+    /** Go and perform the recommended action, on the surface that owns execution. */
+    onTakeAction: () => void;
+    /**
+     * The ranking read failed, so the absence of a recommendation is not an answer.
+     *
+     * The same absent-versus-failed distinction `readFailed` draws, one level down. Without
+     * this the card is simply missing, which is indistinguishable from "nothing is
+     * recommended for this prospect" — and those call for different things from the
+     * operator: one is a retry, the other is patience.
+     */
+    rankingFailed: boolean;
+  };
+  /**
+   * What the deeper intelligence sections need: the ids they fetch with, and the state
+   * payload the one non-fetching panel renders.
+   *
+   * Separate from `decision` because it is a different concern. `decision` is what the
+   * operator can *do*; this is the evidence for why they should. Keeping them apart is what
+   * stops the dossier's prop list from becoming a bag of unrelated flags.
+   */
+  intelligence: {
+    /** The brand. Every GTM route is brand-scoped. */
+    brandId: string;
+    /** `sales_leads.id`. Empty suppresses the whole region rather than fetching with "". */
+    gtmLeadId: string;
+    /** `ProspectDetail.state` — the four dimensions. Null when the prospect read failed. */
+    state: ProspectState | null;
+    /** The engine's full read, which adds the extended dimensions and confidences. */
+    stateFull: ProspectStateFull | null;
+    /** Bumped to make the three fetching panels re-read their collections. */
+    refreshKey: number;
+  };
   onAction: (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => void;
   onShowEmail: (lead: QualifiedLead) => Promise<void> | void;
   onOpenMax: () => void;
@@ -1376,8 +1576,193 @@ function Dossier({
         </div>
       </div>
 
-      {/* Journey, priority and intent — the GTM state overlay for this prospect. */}
-      <JourneyPriorityIntentPanel overlay={overlay} intent={intent} />
+      {/* ── Where this prospect stands ──
+          One line, always present, naming the stage and what it means. This is what makes
+          the page's transformation legible: the same dossier says "Enriched — choose how to
+          proceed", then "Activating intelligence", then "Waiting for signals", then
+          "Action recommended", and the operator can see which of those they are looking at
+          without inferring it from which panels happen to be populated.
+
+          The `WAITING` sentence is the load-bearing one. Bright Data observation is
+          asynchronous, so an activated prospect legitimately shows empty state and NBA
+          panels for a while — and without this line that reads as a broken product rather
+          than as a working one that has not been told anything yet. */}
+      {decision.readFailed ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+          <p className="text-[11.5px] leading-relaxed text-amber-800">
+            Couldn't read this prospect's GTM record, so its stage and the actions
+            available on it aren't known. Eva's dossier below is unaffected.
+          </p>
+        </div>
+      ) : (() => {
+        const meta = PROSPECT_STAGE_LABELS[decision.stage];
+        if (!meta) return null;
+        const active = isIntelligenceActive(decision.stage);
+        return (
+          <div
+            data-gtm-stage={decision.stage}
+            className={cn(
+              "rounded-2xl border px-4 py-3",
+              active
+                ? "border-violet-200 bg-violet-50/50"
+                : "border-zinc-200/70 bg-white"
+            )}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Chip tone={active ? "violet" : "zinc"}>
+                {decision.activating && (
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                )}
+                {meta.label}
+              </Chip>
+              <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-zinc-500">
+                {meta.body}
+              </p>
+            </div>
+            {/* What activation actually did, read off the acknowledgement rather than
+                assumed. Announced politely so the transition is spoken. */}
+            {decision.notice && (
+              <p
+                aria-live="polite"
+                className="mt-1.5 text-[11.5px] leading-relaxed text-violet-800"
+              >
+                {decision.notice}
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── The decision, at the one stage it means anything ──
+          Rendered only at `ENRICHED`, and never on a failed read: offering a paid choice
+          about a prospect whose record could not be read would be guessing with the
+          operator's credits. Before `ENRICHED` there is no confirmed identity to act on;
+          after activation the choice has been made, and leaving the pair on screen would be
+          offering a decision that no longer exists. */}
+      {!decision.readFailed && showsDecision(decision.stage) && (
+        <ProspectDecision
+          onContactDirectly={decision.onContactDirectly}
+          contactUnavailableReason={decision.contactUnavailableReason}
+          contactPrice={decision.contactPrice}
+          onActivate={decision.onActivate}
+          activating={decision.activating}
+          activateUnavailableReason={decision.activateUnavailableReason}
+          activatePrice={decision.activatePrice}
+        />
+      )}
+
+      {/* ── The primary element of an activated prospect: what to do, and why now ──
+          Above the state, the signals and the timeline, deliberately. The operator's first
+          question is "what should I do with this person", not "what has Weez observed" —
+          the observations are the *argument* for the answer, and they sit behind the card's
+          own disclosure and in the sections below it.
+
+          Rendered only when there is a real recommendation. A prospect at `WAITING` or
+          `ACTIVE` has none, and the stage banner above already says why in words; a card
+          reading "no action recommended" would add a second, emptier statement of the same
+          fact. */}
+      {/* A ranking that could not be read. One line, not an alert: the dossier around it is
+          intact and the operator's next move is to refresh, not to worry. */}
+      {isIntelligenceActive(decision.stage) &&
+        decision.rankingFailed &&
+        !decision.recommended && (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-[11.5px] leading-relaxed text-amber-800">
+            Couldn't read the next best action for this prospect, so there may be a
+            recommendation we aren't showing.
+          </p>
+        )}
+
+      {decision.recommended && (
+        <NextBestActionCard
+          action={decision.recommended}
+          // `"row"` is the one kind that carries an item. The other three are absences —
+          // and a tier is never defaulted from one, because `LATER` is a real band and
+          // "we didn't read the queue" is not a claim that this prospect is in it.
+          priorityTier={overlay.kind === "row" ? overlay.item.priorityTier : null}
+          onTakeAction={decision.onTakeAction}
+        />
+      )}
+
+      {/* Journey, priority and intent — the GTM state overlay for this prospect.
+          Only once intelligence is active: before activation there is no belief and no
+          ranking, so this panel could only ever report absences, and three "nothing
+          observed" rows above the decision would bury the decision. */}
+      {isIntelligenceActive(decision.stage) && (
+        <JourneyPriorityIntentPanel overlay={overlay} intent={intent} />
+      )}
+
+      {/* ── Deeper intelligence ──
+          The argument for the recommendation above, and nothing an operator has to read to
+          act. Four sections in the order the questions arrive: where do they stand, what
+          moved them, what did we read, what happened when.
+
+          Every panel here is the existing component, unmodified. `StateDimensionGrid` reads
+          no route so it renders open; the other three each own a collection and a pager, so
+          they sit behind `IntelligenceSection` and are not built until asked for — the
+          selection stays at three requests however many sections exist. */}
+      {isIntelligenceActive(decision.stage) && intelligence.gtmLeadId && (
+        <div className="space-y-2.5">
+          <div className="flex items-baseline gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+              {PROSPECT_INTELLIGENCE_SECTIONS.regionHeading}
+            </p>
+            <p className="min-w-0 text-[11px] text-zinc-400">
+              {PROSPECT_INTELLIGENCE_SECTIONS.regionNote}
+            </p>
+          </div>
+
+          {/* Current state. Rendered from the payload the page already holds, so it costs
+              nothing and needs no disclosure. Absent only when the prospect read failed —
+              and then the amber line above has already said so. */}
+          {intelligence.state && (
+            <div className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+              <StateDimensionGrid
+                state={intelligence.state}
+                stateFull={intelligence.stateFull}
+              />
+            </div>
+          )}
+
+          <IntelligenceSection
+            summary={PROSPECT_INTELLIGENCE_SECTIONS.stateHistory}
+            note={PROSPECT_INTELLIGENCE_SECTIONS.stateHistoryNote}
+          >
+            {() => (
+              <StateHistoryPanel
+                brandId={intelligence.brandId}
+                leadId={intelligence.gtmLeadId}
+                refreshKey={intelligence.refreshKey}
+              />
+            )}
+          </IntelligenceSection>
+
+          <IntelligenceSection
+            summary={PROSPECT_INTELLIGENCE_SECTIONS.signals}
+            note={PROSPECT_INTELLIGENCE_SECTIONS.signalsNote}
+          >
+            {() => (
+              <SignalList
+                brandId={intelligence.brandId}
+                leadId={intelligence.gtmLeadId}
+                refreshKey={intelligence.refreshKey}
+              />
+            )}
+          </IntelligenceSection>
+
+          <IntelligenceSection
+            summary={PROSPECT_INTELLIGENCE_SECTIONS.timeline}
+            note={PROSPECT_INTELLIGENCE_SECTIONS.timelineNote}
+          >
+            {() => (
+              <ProspectTimeline
+                brandId={intelligence.brandId}
+                leadId={intelligence.gtmLeadId}
+                refreshKey={intelligence.refreshKey}
+              />
+            )}
+          </IntelligenceSection>
+        </div>
+      )}
 
       {/* Why this prospect */}
       <div className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
@@ -1615,15 +2000,51 @@ export default function ProspectIntelligence() {
   const [companyKey, setCompanyKey] = useState<string>("");
   const [leadId, setLeadId] = useState<string>("");
 
+  /**
+   * The prospect a deep link asked for, by `sales_leads.id`.
+   *
+   * Enrich Now is pressed on Market Intelligence and the prospect becomes workable
+   * *here*, so that handoff has to be able to name which one. Without this the link
+   * landed on the page and selected whatever sorted first, which made the most important
+   * transition in the product feel like it had lost the prospect.
+   *
+   * Applied once per requested id, in an effect below, rather than used directly as the
+   * selection: the operator must be able to click a different prospect afterwards
+   * without the URL dragging them back. It is read as the GTM id because that is what
+   * every other id on this page now is (see `gtmLeadIdOf`).
+   */
+  // `urlParams`, not `search`: this page already has a `search` state holding the
+  // search-box text.
+  const [urlParams] = useSearchParams();
+  const requestedGtmLeadId = (urlParams.get("lead_id") ?? "").trim();
+  const appliedDeepLinkRef = useRef<string>("");
+
   // The GTM state overlay. Held apart from `ws` / `loading` / `error` on purpose:
   // these are secondary reads and neither one is allowed to take the dossier down.
   const [queue, setQueue] = useState<QueueOverlay | null>(null);
   const [queueFailed, setQueueFailed] = useState(false);
-  const [intent, setIntent] = useState<IntentReadState>({
-    loading: false,
-    failed: false,
-    state: null,
-  });
+  /**
+   * The three GTM reads for the *selected* prospect, held together.
+   *
+   * One read per selection rather than per row, which is the same argument this page
+   * already made for the intent summary: the dossier shows one prospect at a time, and
+   * that is what makes a per-prospect read affordable here at all. Firing these per row
+   * would be three requests per decision-maker on mount.
+   *
+   * `Promise.allSettled`, and a failure flag per read. They are three routes with three
+   * failure modes: a ranking that could not be read must not take the belief down with
+   * it, and neither may touch `ws` / `loading` / `error` — Eva's rows and the dossier
+   * render whether or not the GTM layer answers.
+   *
+   *   `detail`   `getProspect` — the profile row (the activation flag), the identity
+   *              verdict (the activation gate), and the asserted contact.
+   *   `state`    `getProspectState` — the belief. Carries `stateVersion`, which is how
+   *              "activated and nothing observed yet" is told from "intelligence
+   *              working", and the eleven intent records the dossier summarises.
+   *   `ranking`  `getNextBestAction` — whether there is a recommendation, and the
+   *              explanation behind it.
+   */
+  const [selected, setSelected] = useState<SelectedProspectRead>(EMPTY_SELECTED_READ);
 
   const reqRef = useRef(0);
   const queueReqRef = useRef(0);
@@ -1642,7 +2063,29 @@ export default function ProspectIntelligence() {
     priceFor,
   } = useCredits();
   const enrichPrice = priceFor("ENRICH");
+  const activatePrice = priceFor("ACTIVATE");
+  const contactPrice = priceFor("CONTACT");
   const [paywall, setPaywall] = useState<string | null>(null);
+
+  // ── Activate Intelligence ──
+  //
+  // The one write this page makes against the GTM layer. `activationAck` holds the
+  // acknowledgement so the dossier can report what activation actually started — two
+  // queued reads, or none — instead of claiming something nobody queued. `activating` is
+  // what makes the transition visible: it drives the `ACTIVATING` stage, so the operator
+  // watches the prospect change rather than receiving a toast that says "Activated".
+  const [activating, setActivating] = useState(false);
+  const [activationAck, setActivationAck] = useState<ProspectTracking | null>(null);
+  const [activationNotice, setActivationNotice] = useState<string | null>(null);
+
+  /**
+   * Bumped to make the three fetching intelligence panels re-read their collections.
+   *
+   * Bumped on activation and on a selection change, not on a timer: those are the two
+   * moments the ledgers behind them can have gained a row that this page knows about.
+   * Polling them would be three requests a cycle for panels that are usually closed.
+   */
+  const [intelligenceKey, setIntelligenceKey] = useState(0);
 
   const load = useCallback(
     async (force: boolean, silent = false) => {
@@ -1813,6 +2256,40 @@ export default function ProspectIntelligence() {
 
   const companies = useMemo(() => groupByCompany(filteredLeads), [filteredLeads]);
 
+  /**
+   * Honour `?lead_id=` once, then get out of the way.
+   *
+   * Enrich Now happens on Market Intelligence and the prospect becomes workable here, so
+   * that handoff names the prospect it just created. This selects it.
+   *
+   * **Once**, keyed on the requested id in a ref. The selection is ordinary local state
+   * afterwards, so an operator who clicks a different prospect stays there instead of
+   * being dragged back by a URL that has not changed. Re-running on every render would
+   * make the rest of the list unclickable.
+   *
+   * It does nothing while the workspace is still loading, and nothing if the requested
+   * prospect is not in the current view — a filter can hide it, and silently widening the
+   * operator's filters to reveal one row would be a surprising thing for a link to do.
+   * The ref is only stamped once the prospect is actually found, so a link that arrives
+   * before the workspace does still applies when it lands.
+   */
+  useEffect(() => {
+    if (!requestedGtmLeadId) return;
+    if (appliedDeepLinkRef.current === requestedGtmLeadId) return;
+    if (companies.length === 0) return;
+    const group = companies.find((c) =>
+      c.leads.some((l) => gtmLeadIdOf(l) === requestedGtmLeadId)
+    );
+    const lead = group?.leads.find((l) => gtmLeadIdOf(l) === requestedGtmLeadId);
+    if (!group || !lead) return;
+    appliedDeepLinkRef.current = requestedGtmLeadId;
+    setCompanyKey(group.key);
+    // Eva's document id: `leadId` is this page's *local* selection key and is compared
+    // against `lead.id` throughout. Only the GTM-bound calls translate through
+    // `gtmLeadIdOf`.
+    setLeadId(lead.id);
+  }, [companies, requestedGtmLeadId]);
+
   const selectedCompany = useMemo(
     () => companies.find((c) => c.key === companyKey) || companies[0] || null,
     [companies, companyKey]
@@ -1825,7 +2302,8 @@ export default function ProspectIntelligence() {
     [prospects, leadId]
   );
 
-  const selectedLeadId = selectedLead?.id ?? "";
+  // The GTM id, not Eva's. See `gtmLeadIdOf`.
+  const selectedGtmLeadId = selectedLead ? gtmLeadIdOf(selectedLead) : "";
 
   /**
    * The intent records for the *selected* lead, and only for it.
@@ -1838,25 +2316,193 @@ export default function ProspectIntelligence() {
    * Same ticket idiom, same isolation — a failure lands in `intent.failed` and the
    * dossier renders around it.
    */
-  useEffect(() => {
-    const brandId = spaceId ?? "";
-    if (!brandId || !selectedLeadId) {
-      setIntent({ loading: false, failed: false, state: null });
-      return;
-    }
-    const my = ++intentReqRef.current;
-    setIntent({ loading: true, failed: false, state: null });
-    void (async () => {
-      try {
-        const full = await gtmAPI.getProspectState(brandId, selectedLeadId);
-        if (my !== intentReqRef.current) return;
-        setIntent({ loading: false, failed: false, state: full });
-      } catch {
-        if (my !== intentReqRef.current) return;
-        setIntent({ loading: false, failed: true, state: null });
+  const loadSelected = useCallback(
+    async (silent = false) => {
+      const brandId = spaceId ?? "";
+      if (!brandId || !selectedGtmLeadId) {
+        setSelected(EMPTY_SELECTED_READ);
+        return;
       }
-    })();
-  }, [spaceId, selectedLeadId]);
+      const my = ++intentReqRef.current;
+      // A silent re-read keeps whatever is held on screen. Blanking it would make the
+      // dossier flicker back to "nothing observed" every time a write refreshed it.
+      if (!silent) setSelected({ ...EMPTY_SELECTED_READ, loading: true });
+      const [detail, state, ranking] = await Promise.allSettled([
+        gtmAPI.getProspect(brandId, selectedGtmLeadId),
+        gtmAPI.getProspectState(brandId, selectedGtmLeadId),
+        gtmAPI.getNextBestAction(brandId, selectedGtmLeadId),
+      ]);
+      if (my !== intentReqRef.current) return;
+      setSelected({
+        loading: false,
+        detail: detail.status === "fulfilled" ? detail.value : null,
+        detailFailed: detail.status === "rejected",
+        state: state.status === "fulfilled" ? state.value : null,
+        stateFailed: state.status === "rejected",
+        ranking: ranking.status === "fulfilled" ? ranking.value : null,
+        rankingFailed: ranking.status === "rejected",
+      });
+    },
+    [spaceId, selectedGtmLeadId]
+  );
+
+  useEffect(() => {
+    void loadSelected();
+  }, [loadSelected]);
+
+  /**
+   * A different prospect is a different decision: nothing from the last one may survive.
+   *
+   * An activation acknowledgement or notice left behind would be a claim about one person
+   * rendered beside another person's name, which is the one mistake this surface must not
+   * make.
+   */
+  useEffect(() => {
+    setActivationAck(null);
+    setActivationNotice(null);
+    setPaywall(null);
+    // A different prospect is a different ledger. The panels are keyed on this, so
+    // bumping it is what stops an open section from showing the previous person's
+    // signals while its own request is in flight.
+    setIntelligenceKey((key) => key + 1);
+  }, [selectedGtmLeadId]);
+
+  /**
+   * Enter the Contact Directly path.
+   *
+   * A distinct execution path, not part of the intelligence dashboard: pick a channel,
+   * draft, review, copy, open. It lives on the per-prospect execution surface, which is
+   * where the composer and the open-channel control already are — this is the entry to it
+   * rather than a second copy of it.
+   */
+  const onContactDirectly = useCallback(() => {
+    if (!selectedGtmLeadId) return;
+    navigate(
+      `/relationship-intelligence/${spaceId ?? ""}?lead_id=${encodeURIComponent(
+        selectedGtmLeadId
+      )}&intent=contact`
+    );
+  }, [navigate, spaceId, selectedGtmLeadId]);
+
+  /**
+   * Perform the recommended action.
+   *
+   * The same destination as Contact Directly, and that is not an accident: executing a
+   * recommendation and reaching out on your own judgement are the same mechanical act —
+   * draft, review, open the channel, copy — and the surface that owns the composer and the
+   * open-channel control is the one place it should live. What differs is how the operator
+   * arrived, which is why the two carry different `intent` values rather than being one
+   * handler.
+   */
+  const onTakeAction = useCallback(() => {
+    if (!selectedGtmLeadId) return;
+    navigate(
+      `/relationship-intelligence/${spaceId ?? ""}?lead_id=${encodeURIComponent(
+        selectedGtmLeadId
+      )}&intent=act`
+    );
+  }, [navigate, spaceId, selectedGtmLeadId]);
+
+  /**
+   * The intent slice, in the shape the dossier already takes.
+   *
+   * Derived rather than held separately so there is one read and one source of truth. The
+   * dossier's own signature is untouched: the intent summary was always a projection of
+   * the belief, and now the belief is fetched beside two other things.
+   */
+  const intent: IntentReadState = useMemo(
+    () => ({
+      loading: selected.loading,
+      failed: selected.stateFailed,
+      state: selected.state,
+    }),
+    [selected.loading, selected.stateFailed, selected.state]
+  );
+
+  /**
+   * Where this prospect stands, and therefore what the dossier renders.
+   *
+   * Every input is a persisted field or an in-flight write of this page's — see
+   * `prospectStageOf` for which field each stage is read from. `busy` is what makes the
+   * transition legible: activation is a state change, and the operator watches it happen
+   * rather than being handed a toast.
+   */
+  // `prospectStage`, not `stage`: this page already has a `stage` holding Eva's scan
+  // progress, which is a fact about a sweep and not about a prospect.
+  const prospectStage = useMemo(
+    () =>
+      prospectStageOf({
+        verificationStatus: selected.detail?.profile.linkedinVerificationStatus ?? null,
+        profileId:
+          activationAck?.profileId ?? selected.detail?.profile.profileId ?? null,
+        stateVersion: selected.state?.stateVersion ?? null,
+        hasRecommendation: (selected.ranking?.recommended ?? null) !== null,
+        busy: activating ? "activating" : null,
+      }),
+    [selected.detail, selected.state, selected.ranking, activationAck, activating]
+  );
+
+  /**
+   * Activate Intelligence for the selected prospect.
+   *
+   * **The `recommendChannel` call afterwards is deliberate and cannot move to the server.**
+   * The track route provisions the rows and sets `nba_recompute_requested_at`, and that
+   * mark is all it sets — it computes no score and writes no recommendation. Only
+   * `recommend-channel` may score, which the backend's own
+   * `test_only_the_re_evaluation_route_scores` pins. So without this second call the
+   * prospect is activated but invisible to the ranked queue until a worker happens to pick
+   * them up. `GTMProspect` has always done exactly this, and the sequence is asserted by
+   * `GTMProspect.identity.test.tsx`.
+   *
+   * A 402 is not a failure and is kept out of the page's error slot: the backend charges
+   * before it acts, so nothing was provisioned and nothing was billed. Saying "activation
+   * failed" would leave the operator wondering what state their prospect is in.
+   */
+  const onActivateIntelligence = useCallback(async () => {
+    const brandId = spaceId ?? "";
+    if (!brandId || !selectedGtmLeadId) return;
+    setActivating(true);
+    setActivationNotice(null);
+    setPaywall(null);
+    try {
+      const ack = await gtmAPI.trackProspect(brandId, selectedGtmLeadId);
+      setActivationAck(ack);
+      setActivationNotice(
+        ack.createdProfile
+          ? GTM_IDENTITY_LABELS.tracked
+          : GTM_IDENTITY_LABELS.alreadyTracking
+      );
+      // Only when something actually moved: a repeat activation comes back
+      // `charged: false` and a needless read makes the badge flicker for nothing.
+      if (ack.credit?.charged) void refreshCredits();
+      // Score, so the prospect can reach the Action Queue. See the docblock.
+      try {
+        await gtmAPI.recommendChannel(brandId, selectedGtmLeadId);
+      } catch {
+        // The prospect is activated either way. A ranking that could not be computed
+        // yet is what the WAITING stage already says, so this is not worth an error.
+      }
+      // Re-read silently: the notice above is the message that matters, and the stage
+      // should move on the strength of the rows rather than on this page's optimism.
+      await loadSelected(true);
+      void loadQueue();
+      // Activation wrote a genesis signal and opened the belief rows, so any open
+      // intelligence section is now describing a prospect one row out of date.
+      setIntelligenceKey((key) => key + 1);
+    } catch (e) {
+      if (isInsufficientCredits(e)) {
+        setPaywall(e instanceof Error ? e.message : null);
+        void refreshCredits();
+      } else {
+        setActivationNotice(
+          e instanceof Error ? e.message : GTM_IDENTITY_LABELS.trackFailed
+        );
+        toast.error(GTM_IDENTITY_LABELS.trackFailed);
+      }
+    } finally {
+      setActivating(false);
+    }
+  }, [spaceId, selectedGtmLeadId, refreshCredits, loadSelected, loadQueue]);
 
   const onLeadAction = (lead: QualifiedLead, action: "hand_to_max" | "reject" | "reset") => {
     setWs((prev) =>
@@ -2199,7 +2845,7 @@ export default function ProspectIntelligence() {
                               key={p.id}
                               lead={p}
                               active={p.id === selectedLead?.id}
-                              overlay={overlayFor(p.id, queue, queueFailed)}
+                              overlay={overlayFor(gtmLeadIdOf(p), queue, queueFailed)}
                               onSelect={() => setLeadId(p.id)}
                             />
                           ))
@@ -2215,16 +2861,70 @@ export default function ProspectIntelligence() {
                           lead={selectedLead}
                           group={selectedCompany}
                           icp={ws.icp}
-                          overlay={overlayFor(selectedLead.id, queue, queueFailed)}
+                          overlay={overlayFor(gtmLeadIdOf(selectedLead), queue, queueFailed)}
                           intent={intent}
                           onAction={onLeadAction}
                           onShowEmail={onShowEmail}
                           enrichPrice={enrichPrice}
+                          decision={{
+                            stage: prospectStage,
+                            onContactDirectly: onContactDirectly,
+                            // ── THE ONE ISOLATED CONDITION ──
+                            //
+                            // Contact Directly is a distinct execution path and the product
+                            // intends it to be available on an *enriched* prospect, without
+                            // paying for intelligence first. The backend does not support
+                            // that yet: `request_prospect_action` requires a
+                            // `li_gtm_profiles` row (`_require_profile`) and
+                            // `generate_message` requires that plus an observed conversation
+                            // (`_require_conversation`) — and only the activation route
+                            // creates the profile row. So both 404 on an enriched-but-not-
+                            // activated prospect, and rendering the control would be
+                            // offering something certain to fail.
+                            //
+                            // This expression is the whole of that gate, deliberately. When
+                            // the backend provisions the record on the contact path, this
+                            // becomes `null` and the path goes live — no redesign, no other
+                            // file touched.
+                            contactUnavailableReason: isIntelligenceActive(prospectStage)
+                              ? null
+                              : CONTACT_DIRECTLY_LABELS.needsActivation,
+                            contactPrice,
+                            onActivate: () => void onActivateIntelligence(),
+                            activating,
+                            // The identity gate, from the same rule the route applies, so a
+                            // control that would be refused is never on screen and the
+                            // reason appears in its place.
+                            activateUnavailableReason: trackRefusal(
+                              selected.detail?.profile.linkedinVerificationStatus ?? null,
+                              selected.detail?.profile.profileUrl ?? null
+                            ),
+                            activatePrice,
+                            notice: activationNotice,
+                            // Only the prospect read gates the stage. A ranking or belief
+                            // that could not be read is a *narrower* absence the stage
+                            // machine already handles honestly — it lands on WAITING, which
+                            // claims less rather than more.
+                            readFailed: selected.detailFailed,
+                            recommended: selected.ranking?.recommended ?? null,
+                            onTakeAction: onTakeAction,
+                            rankingFailed: selected.rankingFailed,
+                          }}
+                          intelligence={{
+                            brandId: spaceId ?? "",
+                            gtmLeadId: gtmLeadIdOf(selectedLead),
+                            state: selected.detail?.state ?? null,
+                            stateFull: selected.state,
+                            refreshKey: intelligenceKey,
+                          }}
                           onOpenMax={() => navigate(`/sales/${spaceId}`)}
                           onOpenRelationshipIntelligence={() =>
                             navigate(
+                              // `gtmLeadIdOf`, never `selectedLead.id`: the destination
+                              // page uses this value as its `lead_id` on every GTM
+                              // request, and Eva's document id 404s all of them.
                               `/relationship-intelligence/${spaceId}?lead_id=${encodeURIComponent(
-                                selectedLead.id
+                                gtmLeadIdOf(selectedLead)
                               )}`
                             )
                           }

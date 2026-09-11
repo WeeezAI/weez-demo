@@ -666,13 +666,30 @@ export const TIMELINE_LABELS = {
 export const GTM_PAGE_LABELS = {
   // Chrome
   eyebrow: "LinkedIn GTM",
-  pageTitle: "Relationship intelligence",
+  /**
+   * "Prospect execution", not "Relationship intelligence".
+   *
+   * This page is where a decision gets carried out: the draft, the channel, the confirm
+   * ladder, the outcome. The *intelligence* — the stage, the state, the next best action
+   * and its evidence — is on Prospect Intelligence, which is where an operator now
+   * activates and decides. Calling this page "Relationship intelligence" made it read as a
+   * second, competing intelligence destination, which is exactly the framing the
+   * restructure removes: Activate Intelligence is a state transition, not a place.
+   */
+  pageTitle: "Prospect execution",
   subtitle: "What we observed, what it means, and the next move",
   timelineTitle: "Activity timeline",
   backToProspects: "Back to Prospect Intelligence",
 
-  /** The entry action added to the Prospect Intelligence dossier. */
-  entryAction: "Relationship intelligence",
+  /**
+   * The entry into this page, from the Prospect Intelligence dossier and from an Action
+   * Queue row.
+   *
+   * Named for the destination — the prospect's own page — rather than for a product
+   * concept. It used to read "Relationship intelligence" at both call sites, which promised
+   * an intelligence surface and delivered an execution one.
+   */
+  entryAction: "Open prospect",
 
   // Live-region announcements about the page itself.
   statusLoading: "Loading prospect intelligence",
@@ -1000,10 +1017,16 @@ export const GTM_VERIFICATION_TONE: Record<string, string> = {
  * settled. One is a decision waiting to be made, the other is a precondition that
  * has not been met.
  */
+// The user-facing concept is **Activate Intelligence**, not tracking. Internally the
+// row is still `li_gtm_profiles` and the route is still `/track`, and that is fine —
+// but an operator is not deciding whether to "track a person", they are deciding
+// whether they want Weez to keep understanding this prospect and tell them when and
+// how to act. The three states below are the same three the server can be in; only
+// the sentences changed.
 export const GTM_TRACKING_STATE_LABELS: Record<string, string> = {
-  TRACKING: "Weez is tracking this prospect",
-  NOT_TRACKING: "Not tracked yet",
-  UNRESOLVED: "Can't be tracked until the identity is resolved",
+  TRACKING: "Intelligence active",
+  NOT_TRACKING: "Intelligence not activated",
+  UNRESOLVED: "Needs a confirmed LinkedIn profile first",
 };
 
 export const GTM_TRACKING_STATE_TONE: Record<string, string> = {
@@ -1046,29 +1069,68 @@ export const GTM_TRACKING_STATE_TONE: Record<string, string> = {
 export const GTM_IDENTITY_LABELS = {
   // Field labels, read by `ObservedValue` in this block.
   verificationField: "LinkedIn identity",
-  trackingField: "Tracking",
+  trackingField: "Intelligence",
   confidenceField: "Match confidence",
 
   // Controls.
-  resolve: "Enrich Now",
-  resolving: "Looking for their LinkedIn profile",
-  track: "Track Prospect",
-  tracking: "Starting to track",
+  //
+  // `resolve` is deliberately NOT called "Enrich Now" any more. It used to be, and the
+  // result was two controls in the product with one name doing two different things:
+  // Market Intelligence's Enrich Now is `evaAPI.enrichLead` — the priced action that
+  // finds the contact, resolves the identity and promotes the prospect — while this one
+  // is `gtmAPI.resolveIdentity`, a re-run of the LinkedIn search alone on a prospect
+  // already enriched. Naming it after what it does keeps the journey's one Enrich Now
+  // step unambiguous.
+  resolve: "Find their LinkedIn profile",
+  resolving: "Resolving identity",
+  track: "Activate Intelligence",
+  tracking: "Activating intelligence",
+
+  /**
+   * The positioning, rendered beside the control rather than left to be inferred.
+   *
+   * `trackHeadline` is the promise in one line and `trackBody` is what the product
+   * actually does to keep it. Both exist because the choice between contacting somebody
+   * now and paying to understand them first is the central decision in this product, and
+   * an operator should be able to make it in a few seconds without being told how the
+   * state engine works.
+   *
+   * Neither mentions a duration. There is no activation expiry in this product —
+   * `TrackProspectOut` carries no expiry field, the profile row's existence *is* the
+   * flag, and there is deliberately no pause and no stop. So the copy says "continuously"
+   * and stops; "30 days of Prospect Intelligence" would be a window nothing enforces and
+   * a countdown nothing counts.
+   */
+  trackHeadline: "Find out Who, How, and Why Now before reaching out.",
+  trackBody:
+    "Weez continuously monitors this prospect's signals, evolves their prospect state, and recommends the next best action.",
 
   // What each control actually did. Neither claims more than a queued job.
   resolveQueued: "Looking for their LinkedIn profile. The result lands on the next read.",
   resolveDeduped: "Already looking — an identical search is queued for this lead.",
   resolveFailed: "Couldn't ask for an identity search",
-  tracked: "Weez is tracking this prospect.",
-  alreadyTracking: "Already tracking this prospect — nothing changed.",
+
+  /**
+   * The state transition, not a receipt.
+   *
+   * Activation is the moment the prospect stops being a contact record and starts being
+   * an intelligent one, so the copy names the transition and then says what happens next.
+   * A bare "Activated" would leave the operator looking at empty state and NBA sections
+   * wondering whether they had bought something broken — which is exactly what the
+   * `waitingForSignals` state below exists to answer.
+   */
+  tracked: "Intelligence activated.",
+  trackedNext:
+    "We're observing this prospect and building their evolving profile. Next: we'll surface the right moment and recommend what to do.",
+  alreadyTracking: "Intelligence is already active for this prospect — nothing changed.",
   // Activation queues two reads at the click — the profile page and the activity feed —
   // rather than leaving the first activity observation to a 180-minute staleness sweep.
   // Saying so matters: the operator has just paid for intelligence, and "we have started
   // looking" is the difference between a product that feels asleep and one that does not.
   observationQueued: "Reading their profile and recent activity now.",
   observationNotQueued:
-    "Tracking started, but no read could be queued yet — the next sweep will pick them up.",
-  trackFailed: "Couldn't start tracking this prospect",
+    "Intelligence is active, but no read could be queued yet — the next sweep will pick them up.",
+  trackFailed: "Couldn't activate intelligence for this prospect",
 
   // The url, and the two very different things it can be.
   verifiedUrl: "Verified profile",
@@ -1079,17 +1141,81 @@ export const GTM_IDENTITY_LABELS = {
   /** One sentence per 409 the track route returns. */
   cannotTrack: {
     unresolved:
-      "Nobody has looked for this person on LinkedIn yet. Run Enrich Now first — tracking needs a profile we have actually confirmed.",
+      "Nobody has looked for this person on LinkedIn yet. Intelligence needs a profile we have actually confirmed before it can observe anyone.",
     possibleMatch:
-      "We found a candidate and could not confirm it is them. Tracking an unconfirmed profile would attach everything we learn to the wrong person.",
+      "We found a candidate and could not confirm it is them. Activating on an unconfirmed profile would attach everything we learn to the wrong person.",
     noMatch:
-      "We looked and found no matching profile, so there is nothing to track. Their details may need correcting before another search is worth running.",
+      "We looked and found no matching profile, so there is nobody to observe. Their details may need correcting before another search is worth running.",
     noAddress:
       "The identity is confirmed but no profile address came with it, so there is no page to observe.",
     unrecognised:
-      "This lead's identity verdict isn't one this screen knows how to read, so tracking is held rather than guessed at.",
+      "This lead's identity verdict isn't one this screen knows how to read, so activation is held rather than guessed at.",
   },
 } as const;
+
+/**
+ * The lifecycle a prospect moves through, and the one sentence each stage earns.
+ *
+ * This is the spine of the restructured Prospect Intelligence surface: the page renders
+ * the same prospect very differently depending on which of these it is in, and this table
+ * is the single statement of what each one is called and what it means.
+ *
+ * **Every stage here is derivable from a field the backend already sends.** Nothing is a
+ * guess and nothing is a timer:
+ *
+ *   `ENRICHING`      a request is in flight. The only stage that is about this page rather
+ *                    than about the prospect.
+ *   `RESOLVING`      `linkedin_verification_status` is null or unsettled and a search has
+ *                    been queued. `resolve-identity` navigates nothing itself, so the
+ *                    verdict lands on a later read — which is why this is a stage and not
+ *                    a spinner.
+ *   `ENRICHED`       the prospect has a contact and a confirmed identity, and no
+ *                    `li_gtm_profiles` row. This is the decision point: Contact Directly
+ *                    or Activate Intelligence.
+ *   `ACTIVATING`     the track request is in flight.
+ *   `WAITING`        the profile row exists — intelligence is active — but no belief has
+ *                    been folded yet. Bright Data observation is asynchronous, so this is
+ *                    a real and expected stage that can last a while, and it is the one
+ *                    the product most needs to name. An empty state panel here is not a
+ *                    fault, and saying nothing would make it look like one.
+ *   `ACTIVE`         a belief exists. EPS reads, evidence reads, no recommendation yet.
+ *   `RECOMMENDED`    an evaluation has run and `recommended` is non-null. The NBA is on
+ *                    screen and there is something to do.
+ *
+ * There is no `EXPIRED` and no `PAUSED`, for the reason `GTM_TRACKING_STATE_LABELS` gives:
+ * neither is expressible in this backend.
+ */
+export const PROSPECT_STAGE_LABELS: Record<string, { label: string; body: string }> = {
+  ENRICHING: {
+    label: "Enriching",
+    body: "Finding this person's contact details and confirming who they are.",
+  },
+  RESOLVING: {
+    label: "Resolving identity",
+    body: "Searching LinkedIn for this person. The verdict lands on the next read.",
+  },
+  ENRICHED: {
+    label: "Enriched",
+    body: "We know who this is and how to reach them. Choose how you want to proceed.",
+  },
+  ACTIVATING: {
+    label: "Activating intelligence",
+    body: "Provisioning this prospect and queueing the first reads.",
+  },
+  WAITING: {
+    label: "Waiting for signals",
+    body:
+      "Intelligence is active and the first reads are queued. Observation is asynchronous, so their state and recommendation appear here as signals arrive.",
+  },
+  ACTIVE: {
+    label: "Intelligence active",
+    body: "We're building this prospect's evolving state. No action is recommended yet.",
+  },
+  RECOMMENDED: {
+    label: "Action recommended",
+    body: "Weez has a next best action for this prospect.",
+  },
+};
 
 /**
  * The connection flow's own chrome: one control, one return prompt, one status
@@ -1262,4 +1388,161 @@ export const GTM_IDENTITY_CONFIRM_LABELS = {
     email_domain: "Email domain",
     location: "Location",
   } as Record<string, string>,
+} as const;
+
+// ─── The decision: Contact Directly or Activate Intelligence ──────────────────
+//
+// The central choice in this product, and the one place the UX has to carry the
+// product philosophy without explaining the architecture. An operator reading these
+// two cards should be able to choose in a few seconds, and neither card should need
+// them to know what a Signal, a belief or a recommendation engine is.
+//
+// The distinction, in the terms a sales rep actually thinks in:
+//
+//   Contact Directly       "I already know enough. Help me reach them now."
+//   Activate Intelligence  "I don't want to reach out blind. Keep understanding this
+//                           prospect and tell me who, how and why now."
+//
+// Both carry their price in the card, before the click. Neither is styled as the
+// default: they are two legitimate answers to a real question, and a product that
+// visually pushed one would be answering it for the operator.
+//
+// **What is deliberately absent.** No duration on the activation card — see
+// `GTM_IDENTITY_LABELS.trackHeadline` for why there is no expiry to state. No claim
+// that Weez sends anything on the contact card: every path ends in the operator
+// opening a channel themselves and copying text, which is what the backend actually
+// hands back, and Property 30 in `pages/__tests__/GTMProspect.labels.test.tsx` holds
+// this file to it.
+
+export const PROSPECT_DECISION_LABELS = {
+  heading: "How do you want to proceed?",
+
+  contact: {
+    label: "Contact Directly",
+    /** The one-line answer to "which of these am I?" */
+    tagline: "I already know enough — help me reach them now.",
+    body:
+      "Weez drafts a personalised message from what it knows about this prospect. You review it, then open the channel and send it yourself.",
+    /** Rendered on the generation control. Free, and said so before the click. */
+    generateNote: "Writing the message costs nothing — the credit is for the contact.",
+  },
+
+  activate: {
+    label: "Activate Intelligence",
+    tagline: "I don't want to reach out blind.",
+    /** The same two strings the identity block uses, so the pitch cannot drift. */
+    headline: GTM_IDENTITY_LABELS.trackHeadline,
+    body: GTM_IDENTITY_LABELS.trackBody,
+  },
+} as const;
+
+/**
+ * The Contact Directly flow: pick a channel, draft, review, copy, open.
+ *
+ * Deliberately lightweight. Choosing to contact somebody must not drop the operator
+ * into the EPS/NBA experience — they have already decided, and the only thing they
+ * need is something good to say and a way to go and say it.
+ *
+ * **Channel availability is the server's answer, never a list here.** The backend
+ * reports `executable` and `unexecutable_reason` per action, and EMAIL currently comes
+ * back `CHANNEL_NOT_IMPLEMENTED` because no adapter is registered for it. So the
+ * LinkedIn path is the executable one, and the enriched email address is offered as
+ * something to copy rather than as a Weez action that would be refused. `emailNote`
+ * is what says so, in words, instead of a disabled button with no explanation.
+ */
+export const CONTACT_DIRECTLY_LABELS = {
+  chooseChannel: "Choose a channel",
+  linkedin: "LinkedIn",
+  email: "Email",
+
+  emailNote:
+    "Weez doesn't send email yet. Copy the address and write from your own inbox — the draft below works either way.",
+
+  generate: "Generate personalised message",
+  generating: "Writing the message",
+  regenerate: "Rewrite",
+  review: "Review before you send",
+  copy: "Copy message",
+  copied: "Copied",
+  openChannel: "Open LinkedIn",
+
+  /**
+   * Why generation is unavailable, when it is.
+   *
+   * Two different absences and they need two different sentences, because the operator's
+   * next step differs. `needsActivation` is the `_require_profile` 404: no GTM prospect
+   * record exists, and only Activate Intelligence creates one. `needsConversation` is the
+   * `_require_conversation` 404: the prospect is activated, but the observation layer has
+   * not seen a thread yet, so there is nothing for a draft to attach to.
+   *
+   * Both are stated rather than hidden. A control that would 404 is not rendered, and the
+   * reason it is missing is printed where it would have been.
+   */
+  needsActivation:
+    "Weez needs a GTM record for this prospect before it can draft a message. Activate Intelligence creates one.",
+  needsConversation:
+    "No LinkedIn thread has been observed for this prospect yet, so there's nothing for a draft to attach to. This clears once Weez has read their profile.",
+  generateFailed: "Couldn't draft a message for this prospect",
+} as const;
+
+// Empty-state copy is deliberately NOT centralised into one table here.
+//
+// A first pass at this feature added an `EMPTY_STATE_LABELS` block covering all four
+// surfaces, and it was removed before it shipped: every one of those surfaces already
+// owns specific, contextual empty copy — `GTM_PAGE_LABELS.noStateBelief` and
+// `.noIntelligenceRead` here, `ACTION_QUEUE_LABELS.empty` / `.emptyFiltered` in
+// `pages/GTMActionQueue.tsx`, and five distinct `EmptyPanel` states in
+// `pages/ProspectIntelligence.tsx` that already tell "discovery has found nothing yet"
+// apart from "discovery found forty accounts and none is enriched". A second table
+// stating the same things in weaker words would be dead code the day it landed and a
+// contradiction the day somebody edited one copy and not the other.
+//
+// Where empty copy falls short it is fixed where it lives.
+
+// ─── The deeper intelligence, behind disclosures ──────────────────────────────
+//
+// The four sections below the Next Best Action card on an activated prospect. Each is a
+// `<summary>` an operator opens when they want to understand *why*, which is the second
+// question — the first is "what should I do", and the NBA card answers that above them.
+//
+// **These are summaries, not headings.** Every panel behind them already owns its own
+// heading naming exactly what it renders, so these strings label the disclosure rather than
+// the content: a heading here would either repeat the panel's name or invent a second name
+// for the same thing.
+//
+// **Three of the four fetch their own data, and are mounted only when opened.** `SignalList`,
+// `StateHistoryPanel` and `ProspectTimeline` each own a collection, a pager and a failure.
+// Mounting them closed would add three requests to every prospect selection for panels
+// nobody asked to see. `StateDimensionGrid` reads no route — it renders the payload the page
+// already holds — so it needs no disclosure and gets none.
+//
+// The order is the order the questions arrive: where do they stand, what moved them, what
+// did we read, and what happened when.
+
+export const PROSPECT_INTELLIGENCE_SECTIONS = {
+  /** No disclosure: this one costs nothing to render. */
+  state: "Current state",
+  stateNote: "Where this prospect stands, on the evidence.",
+
+  stateHistory: "Why did the state change?",
+  stateHistoryNote:
+    "Each recorded change, the evidence behind it, and the belief as it stood at any instant.",
+
+  signals: "Supporting signals",
+  signalsNote:
+    "The observed facts the state was folded from, newest first. An expired signal is still shown — it is retained, and only its influence decays.",
+
+  timeline: "Activity timeline",
+  timelineNote:
+    "The append-only record for this prospect: state changes, drafts, requested actions and recorded outcomes.",
+
+  /**
+   * The heading over the whole region.
+   *
+   * "Deeper intelligence" rather than "Details": these are the four answers to "why should
+   * I believe the recommendation above", and calling them details would suggest they are
+   * optional trivia rather than the argument.
+   */
+  regionHeading: "Deeper intelligence",
+  regionNote: "The evidence behind the recommendation. Open what you want to check.",
 } as const;

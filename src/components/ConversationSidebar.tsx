@@ -72,15 +72,26 @@ const ConversationSidebar = ({
   // populations: this one lists everything discovery qualified, and Prospect Intelligence
   // lists only what has been enriched. A label that made them sound like the same view of
   // the same list would make the second one look broken.
-  const navItems = [
-    {
-      label: "Dashboard",
-      role: "GTM command center",
-      path: `/ninna/${spaceId}`,
-      icon: LayoutDashboard,
-      color: "text-indigo-500",
-      tint: "bg-indigo-500/10",
-    },
+  // ── Two groups, and the split is the product's own shape ──
+  //
+  // The first four are the journey, in the order a prospect travels it:
+  //
+  //   Market Intelligence   discover and qualify, and press Enrich Now
+  //   Prospect Intelligence decide — contact them now, or activate intelligence
+  //   Action Queue          what the evolving state decided to recommend, across prospects
+  //   Learning              what the outcomes taught the ranking
+  //
+  // Reading the group top to bottom is reading the product: discover → understand →
+  // act → learn. That is the whole reason for the split. The four surfaces below are
+  // real and useful, but they are not steps in that loop — Outreach and Meetings are
+  // where work lands after it leaves the loop, Dashboard is a summary *of* the loop,
+  // and Settings is configuration. Mixing all eight into one list made the journey
+  // unreadable: an operator could not tell which items were sequential and which were
+  // just places.
+  //
+  // `role` is the subtitle, and each says which stage its surface owns rather than
+  // describing its contents.
+  const journeyItems = [
     {
       label: "Market Intelligence",
       role: "Discover, qualify & enrich",
@@ -91,11 +102,17 @@ const ConversationSidebar = ({
     },
     {
       label: "Prospect Intelligence",
-      role: "Enriched decision makers",
+      role: "Decide & activate",
       path: `/prospect-intelligence/${spaceId}`,
       icon: Users,
       color: "text-violet-500",
       tint: "bg-violet-500/10",
+      // The per-prospect execution surface is the same destination as far as an
+      // operator is concerned — it is entered from a prospect on this page and its own
+      // back button returns here — so it lights this item rather than none. Phase 2
+      // folds it in entirely; until then the highlight already tells the truth about
+      // where you are.
+      alsoActiveFor: [`/relationship-intelligence/${spaceId}`],
     },
     {
       label: "Action Queue",
@@ -104,6 +121,25 @@ const ConversationSidebar = ({
       icon: ListChecks,
       color: "text-sky-500",
       tint: "bg-sky-500/10",
+    },
+    {
+      label: "Learning",
+      role: "Outcomes, accuracy & credits",
+      path: `/gtm-dashboard/${spaceId}`,
+      icon: GraduationCap,
+      color: "text-cyan-500",
+      tint: "bg-cyan-500/10",
+    },
+  ];
+
+  const workspaceItems = [
+    {
+      label: "Dashboard",
+      role: "GTM command center",
+      path: `/ninna/${spaceId}`,
+      icon: LayoutDashboard,
+      color: "text-indigo-500",
+      tint: "bg-indigo-500/10",
     },
     {
       label: "Outreach",
@@ -122,14 +158,6 @@ const ConversationSidebar = ({
       tint: "bg-amber-500/10",
     },
     {
-      label: "Learning",
-      role: "Outcomes, accuracy & credits",
-      path: `/gtm-dashboard/${spaceId}`,
-      icon: GraduationCap,
-      color: "text-cyan-500",
-      tint: "bg-cyan-500/10",
-    },
-    {
       label: "Settings",
       role: "Connections & config",
       path: `/connections/${spaceId}`,
@@ -138,6 +166,95 @@ const ConversationSidebar = ({
       tint: "bg-slate-500/10",
     },
   ];
+
+  /**
+   * Whether `item` is the surface currently on screen.
+   *
+   * This used to be `location.pathname.includes(item.path)`, which is wrong by
+   * substring: `/sales/<id>` is a substring of `/sales-workspace/<id>`, so Outreach lit
+   * up while the operator was on Meetings — two items highlighted, one of them a lie.
+   * `/sales-intelligence` had the same collision.
+   *
+   * Matching the whole path, or a path plus a `/` boundary, cannot collide that way:
+   * a sibling route is never a path-segment prefix of another.
+   */
+  const matchesPath = (pathname: string, path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+
+  const isActiveItem = (item: { path: string; alsoActiveFor?: string[] }) =>
+    matchesPath(location.pathname, item.path) ||
+    (item.alsoActiveFor ?? []).some((path) => matchesPath(location.pathname, path));
+
+  /**
+   * One nav item, for both groups.
+   *
+   * Extracted when the single list became two. The alternative was the same forty lines
+   * of markup twice, and two copies of a button drift: the day somebody adjusts the
+   * active styling they will adjust one of them.
+   */
+  const renderNavItem = (item: {
+    label: string;
+    role: string;
+    path: string;
+    icon: typeof Users;
+    color: string;
+    tint: string;
+    alsoActiveFor?: string[];
+  }) => {
+    const isActive = isActiveItem(item);
+    const Icon = item.icon;
+    return (
+      <button
+        key={item.label}
+        onClick={() => navigate(item.path)}
+        aria-current={isActive ? "page" : undefined}
+        className={cn(
+          "flex items-center gap-3 w-full px-2.5 py-2.5 rounded-2xl transition-all duration-300 group relative",
+          isActive
+            ? "bg-primary/5 shadow-sm border border-primary/10"
+            : "hover:bg-secondary/50 border border-transparent"
+        )}
+      >
+        {/* Active accent bar */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full bg-primary transition-all duration-300",
+            isActive ? "h-6 opacity-100" : "h-0 opacity-0"
+          )}
+        />
+        {/* Icon tile */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+            isActive ? item.tint : "bg-secondary/40 group-hover:bg-secondary/70",
+            "group-hover:scale-105"
+          )}
+        >
+          <Icon
+            className={cn(
+              "w-4 h-4 transition-colors duration-300",
+              isActive ? item.color : "text-muted-foreground group-hover:text-foreground"
+            )}
+          />
+        </span>
+        <span className="flex flex-col items-start leading-tight min-w-0">
+          <span
+            className={cn(
+              "text-[13px] font-bold tracking-tight transition-colors",
+              isActive ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
+            )}
+          >
+            {item.label}
+          </span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
+            {item.role}
+          </span>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div className="w-full md:w-64 lg:w-72 bg-background/20 backdrop-blur-3xl border-r border-border/30 flex flex-col h-screen flex-shrink-0 relative overflow-hidden transition-all duration-500">
@@ -158,64 +275,23 @@ const ConversationSidebar = ({
         <ScrollArea className="h-full px-3">
           <div className="space-y-7">
 
-            {/* Go-to-Market navigation */}
-            <div className="space-y-1.5">
+            {/* The journey, in order. `aria-current="page"` on the active item rather
+                than colour alone, so the highlight is available to a screen reader and
+                not only to somebody who can see the accent bar. */}
+            <nav aria-label="Go-to-market journey" className="space-y-1.5">
               <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
                 Go-to-Market
               </p>
-              {navItems.map((item) => {
-                const isActive = location.pathname.includes(item.path);
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.label}
-                    onClick={() => navigate(item.path)}
-                    className={cn(
-                      "flex items-center gap-3 w-full px-2.5 py-2.5 rounded-2xl transition-all duration-300 group relative",
-                      isActive
-                        ? "bg-primary/5 shadow-sm border border-primary/10"
-                        : "hover:bg-secondary/50 border border-transparent"
-                    )}
-                  >
-                    {/* Active accent bar */}
-                    <span
-                      className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full bg-primary transition-all duration-300",
-                        isActive ? "h-6 opacity-100" : "h-0 opacity-0"
-                      )}
-                    />
-                    {/* Icon tile */}
-                    <span
-                      className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                        isActive ? item.tint : "bg-secondary/40 group-hover:bg-secondary/70",
-                        "group-hover:scale-105"
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          "w-4 h-4 transition-colors duration-300",
-                          isActive ? item.color : "text-muted-foreground group-hover:text-foreground"
-                        )}
-                      />
-                    </span>
-                    <span className="flex flex-col items-start leading-tight min-w-0">
-                      <span
-                        className={cn(
-                          "text-[13px] font-bold tracking-tight transition-colors",
-                          isActive ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
-                        )}
-                      >
-                        {item.label}
-                      </span>
-                      <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
-                        {item.role}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+              {journeyItems.map((item) => renderNavItem(item))}
+            </nav>
+
+            {/* Everything that is a place rather than a step. */}
+            <nav aria-label="Workspace" className="space-y-1.5">
+              <p className="px-3 mb-2 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-30">
+                Workspace
+              </p>
+              {workspaceItems.map((item) => renderNavItem(item))}
+            </nav>
 
           </div>
         </ScrollArea>

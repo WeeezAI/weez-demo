@@ -108,7 +108,11 @@ import { readActionTypeParam, readChannelParam } from "./GTMActionQueue";
  * open and stop there.
  */
 export const DASHBOARD_LABELS = {
-  pageTitle: "GTM dashboard",
+  // "Learning", because that is what the navigation calls this surface and a page whose
+  // title disagrees with the item that opened it makes an operator wonder whether they
+  // arrived somewhere else. It was "GTM dashboard", which named the API this reads rather
+  // than the stage of the journey it belongs to.
+  pageTitle: "Learning",
   statementsTitle: "Actionable statements",
 
   /** Why each count is a link. The promise the page is making, said once. */
@@ -143,11 +147,20 @@ export const DASHBOARD_LABELS = {
   noViewForRoute: "This build doesn't know which view opens these rows.",
 
   // The page's own announcements. Statements about the page, never about a prospect.
-  statusLoading: "Loading the GTM dashboard",
-  statusRefreshing: "Refreshing the GTM dashboard",
+  statusLoading: "Loading what Weez has learned",
+  statusRefreshing: "Refreshing what Weez has learned",
   statusCount: (shown: number, total: number) => `${shown} of ${total} statements computed`,
 
-  empty: "No statements computed for this period.",
+  /**
+   * Nothing computed, and what would change it.
+   *
+   * The first sentence is the fact; the second is the operator's next step, which is the
+   * half a bare "no statements" leaves them to guess at. Learning is fed by recorded
+   * outcomes, so an empty period on a new workspace is a workspace that has not acted yet
+   * rather than one where something is broken.
+   */
+  empty:
+    "No statements computed for this period. Weez learns from outcomes — activate intelligence on a prospect, work the recommended action, and record what came of it.",
   loadFailedTitle: "Couldn't load the dashboard",
   refreshedToast: "Dashboard refreshed",
   refreshFailedToast: "Couldn't refresh the dashboard",
