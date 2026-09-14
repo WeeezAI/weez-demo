@@ -1,52 +1,84 @@
 // pages/Ninna.tsx
 //
-// Ninna — the AI GTM Strategist Command Center.
+// Nina — the page that tells a representative what to do today.
 //
-// This is the default homepage of every workspace and the single interface
-// between the founder and the AI GTM workforce (EVA + MAX). It is
-// NOT a chatbot: it opens by proactively answering "what happened while you were
-// away?", surfaces a prioritized decision queue, a live campaign-health read and
-// a timeline, and pairs every chat reply with embedded, actionable UI cards.
+// This is the default homepage of every workspace. Its **GTM presentation** is the
+// four blocks §8 describes, and they come from three reads and three only (R13.8):
 //
-// Left: the Daily Brief dashboard. Right: Ninna's living conversation, where
-// every message can carry the same interactive cards.
+//   gtmAPI.getAttentionFeed(spaceId, { limit: 50 })
+//   gtmAPI.getActionQueue(spaceId, { sort: "priority", limit: 25 })
+//   gtmAPI.getDashboard(spaceId, { periodDays: 7 })
+//
+//   1. Immediate priorities   the `IMMEDIATE`-tier feed items, one line each
+//   2. Attention summary      `feed.summary`, counts only, plus a way into the queue
+//   3. Opportunities          `MATERIAL`-tier items joined by `leadId` to their queue row
+//   4. Suggested actions      the queue's executable rows, verb then prospect
+//
+// **Nothing here holds a count.** Block 2 reads `feed.summary` — which exists so a
+// summary surface reads its counts rather than re-deriving them — and blocks 1, 3 and 4
+// filter the payload on render. There is no tally, no counter and no derived list in
+// component state, which is what keeps R20.4 true on this page: nothing mirrors a state
+// the GTM API already reports.
+//
+// **What this page no longer does.** It used to poll `weezAPI.getActiveCampaignStatus`
+// for ten minutes and route the founder by campaign state, and to hand off to the
+// outbound workforce through `weezAPI.activateOutboundWorkforce`. Both are marketing
+// campaign orchestration rather than GTM sales, and R13.9 keeps them out of this
+// presentation. `NinaGoalIntake` stays — it is the workspace's goal and strategy, and it
+// reads its own readiness — as do Nina's brief, her visit record and her chat.
+//
+// Left: the brief and the four blocks. Right: Nina's conversation, where every message
+// can carry the same interactive cards.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import {
   ArrowUp,
   ArrowUpRight,
   Activity,
-  BrainCircuit,
-  Building2,
-  Calendar,
   CalendarClock,
-  Check,
   CheckCircle2,
   ChevronRight,
-  Clock,
-  DollarSign,
   FileText,
   Gauge,
   Lightbulb,
+  ListChecks,
   Loader2,
   Mail,
   RefreshCw,
-  Reply,
-  Send,
-  Signal,
   Sparkles,
   Target,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import ConversationSidebar from "@/components/ConversationSidebar";
 import NinaGoalIntake from "@/components/NinaGoalIntake";
-import { weezAPI } from "@/services/weezAPI";
+import { WhyNowList } from "@/components/gtm/ActionExplanation";
+import {
+  ATTENTION_LABELS,
+  ATTENTION_TRIGGER_LABELS,
+  CONSEQUENCE_TIER_LABELS,
+  FIELD_LABEL,
+  GTM_ACTION_LABELS,
+  GTM_PAGE_LABELS,
+  GTM_UI_LABELS,
+  TONE as GTM_TONE,
+} from "@/components/gtm/labels";
+import { MEASURE_MEANINGS, measureParts } from "@/components/gtm/measure";
+import { ObservedValue, UNKNOWN_SR_NOTE, UNKNOWN_TEXT } from "@/components/gtm/ObservedValue";
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
+import gtmAPI, {
+  type ActionQueueItem,
+  type ActionQueuePage,
+  type AttentionFeed,
+  type AttentionItem,
+  type AttentionTrigger,
+  type ConsequenceTier,
+  type ObservedFact,
+} from "@/services/gtmAPI";
 import {
   ninnaAPI,
   getCachedBrief,
@@ -64,7 +96,6 @@ import {
   type NinnaChatMessage,
   type Priority,
   type RecommendationData,
-  type RevenueMetric,
   type TimelineEntry,
 } from "@/services/ninnaAPI";
 
@@ -88,19 +119,93 @@ const AGENT_ICON: Record<AgentKey, typeof FileText> = { eva: Target, max: Mail }
 const PRIORITY_TONE: Record<Priority, string> = { critical: "rose", important: "amber", informational: "zinc" };
 const PRIORITY_LABEL: Record<Priority, string> = { critical: "Critical", important: "Important", informational: "FYI" };
 
-// Revenue dashboard tile icons, keyed by RevenueMetric.key from ninnaAPI.
-const METRIC_ICON: Record<string, typeof FileText> = {
-  companies: Building2,
-  signals: Signal,
-  qualified: Target,
-  outreach: Send,
-  replies: Reply,
-  meetings: CalendarClock,
-  pipeline: TrendingUp,
-  revenue: DollarSign,
-};
-
 const nowTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// ─── The four blocks' own chrome (R13.10, R18.2, R18.4) ───────────────────────
+
+/**
+ * The page-scoped copy the GTM blocks need, in `ACTION_QUEUE_LABELS`' precedent:
+ * `labels.ts` holds the vocabularies keyed by a value the server sends, and a page holds
+ * the chrome around them.
+ *
+ * Nothing here restates a string that already exists there. The band words are
+ * `CONSEQUENCE_TIER_LABELS` — block 1's own heading is the `IMMEDIATE` band, so it is read
+ * from that table rather than spelled again — the trigger words are
+ * `ATTENTION_TRIGGER_LABELS`, the verbs are `GTM_ACTION_LABELS`, and the task separator and
+ * the nothing-needs-you sentence are `ATTENTION_LABELS`.
+ *
+ * The two absence lines are the ones `labels.ts` does not hold, because they are narrower
+ * claims than `ATTENTION_LABELS.empty`: that sentence says the whole checklist is clear,
+ * while these say the feed has items and none of them is *this* kind of item. Each names
+ * what is absent and what would put something there, and neither shows a zero in place of
+ * a value nobody has (R18.2, R18.4).
+ */
+export const NINA_GTM_LABELS = {
+  summaryTitle: "What's waiting",
+  summaryTotal: "Prospects needing attention",
+  byTier: "By consequence",
+  byTrigger: "What happened",
+  openQueue: "Open the action queue",
+
+  opportunitiesTitle: "Where you could change the outcome",
+  expectedOutcome: "Expected outcome",
+  businessValue: "Business value",
+
+  suggestedTitle: "Suggested actions",
+
+  loading: "Reading what needs you today",
+
+  noImmediate:
+    "Nothing needs you in the next few minutes. Anything less urgent is counted below and listed in full on the action queue.",
+  noOpportunities:
+    "Nothing in your feed is at a point where acting would change the outcome. An entry appears here when a prospect moves toward a decision and a ranked action is live for them.",
+  noRankedAction:
+    "No live recommendation for this prospect yet, so there is nothing here about why now or what it is worth.",
+  noSuggestedActions:
+    "No prepared action is ready to run. One appears here once a prospect's recommendation is live and Weez has a channel to reach them on.",
+
+  goalTitle: "Your GTM goal",
+  goalNote:
+    "Nina reads your product, customers and industry context, asks only for what is missing, then lays out the strategy she would run.",
+  goalOpen: "Set your GTM goal",
+  goalClose: "Hide",
+} as const;
+
+/** One test hook per block, so a suite can address a block without matching its prose. */
+export const NINA_BLOCK_TEST_IDS = {
+  priorities: "nina-immediate-priorities",
+  summary: "nina-attention-summary",
+  opportunities: "nina-opportunities",
+  suggestedActions: "nina-suggested-actions",
+} as const;
+
+/** The Consequence_Tier the feed's highest band is, named once. */
+const IMMEDIATE_TIER = "IMMEDIATE" as const;
+
+/** The band block 3 is about: action here could materially affect conversion. */
+const MATERIAL_TIER = "MATERIAL" as const;
+
+/**
+ * A prospect's name inside a control, with absence spelled the way this app spells it.
+ *
+ * `ObservedValue` is what renders a fact everywhere it can, and block 3 uses it. Blocks 1
+ * and 4 cannot: their entries *are* buttons, so their content has to stay phrasing content,
+ * and `ObservedValue` renders a `<dt>`/`<dd>` pair or a `<p>`. This mirrors its unknown
+ * branch from the same two exported constants — the word, plus the screen-reader note that
+ * says why — which is the idiom `pages/ProspectIntelligence.tsx` already uses for the same
+ * reason. Never an empty slot, never a lead id standing in for a name.
+ */
+function ProspectName({ fact }: { fact: ObservedFact }) {
+  if (fact.isUnknown || fact.value == null) {
+    return (
+      <span className="font-semibold text-slate-500">
+        {UNKNOWN_TEXT}
+        <span className="sr-only">{UNKNOWN_SR_NOTE}</span>
+      </span>
+    );
+  }
+  return <span className="font-semibold text-gray-900">{fact.value}</span>;
+}
 
 // ─── Ninna avatar ─────────────────────────────────────────────────────────────
 
@@ -480,9 +585,15 @@ function Section({
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
-function BriefLoading({ spaceName }: { spaceName: string }) {
+function BriefLoading({ spaceName, balance }: { spaceName: string; balance: number | null }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 bg-[#FDFBFF]">
+    <div className="relative flex-1 flex flex-col items-center justify-center gap-8 bg-[#FDFBFF]">
+      {/* The balance is chrome, not content (R17.1): the brief is still being gathered
+          here, and a rep who opened this page still has the same credits. Passed in rather
+          than read again — the provider above `Routes` is the one read per workspace. */}
+      <div className="absolute right-6 top-4 lg:right-8">
+        <CreditBalanceBadge balance={balance} className="hidden sm:inline-flex" />
+      </div>
       <div className="relative">
         <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full animate-pulse" />
         <NinnaAvatar className="w-20 h-20 relative" />
@@ -508,6 +619,359 @@ function BriefLoading({ spaceName }: { spaceName: string }) {
   );
 }
 
+// ─── The four GTM blocks (§8) ─────────────────────────────────────────────────
+//
+// Each block takes the payload it is a view of and filters it here, at render. None of
+// them takes a count, a tally or a pre-filtered list, because none of those may exist:
+// holding one would be a client-side copy of a state the GTM API already reports (R20.4),
+// and the point of `feed.summary` is that block 2 *reads* its counts.
+
+/** Where a queue-sourced entry goes: the prospect's own page, in one step (R13.7). */
+export function prospectRoute(spaceId: string, leadId: string): string {
+  return `/prospect-intelligence/${spaceId}?lead_id=${encodeURIComponent(leadId)}`;
+}
+
+/**
+ * Block 1 — what needs the representative now (R13.1, R13.7, R13.10).
+ *
+ * The `IMMEDIATE` band, in the server's order, one line each in the same
+ * `prospect → reason → required response` form the checklist uses, and the separator comes
+ * from `ATTENTION_LABELS` rather than from this markup so the two surfaces cannot drift.
+ * The whole line is the control's accessible name, and activating it follows `item.route`
+ * as the server sent it — never a path rebuilt here.
+ *
+ * Two different absences, because they are two different pieces of news: an empty feed
+ * means nothing needs you at all, which is `ATTENTION_LABELS.empty` and is the same
+ * sentence the Action Queue says; a feed with no `IMMEDIATE` item means the urgent band is
+ * clear while other bands are not, which is a narrower claim and gets its own line.
+ */
+function ImmediatePriorities({
+  feed,
+  onOpen,
+}: {
+  feed: AttentionFeed;
+  onOpen: (route: string) => void;
+}) {
+  const items = feed.items.filter((item) => item.consequenceTier === IMMEDIATE_TIER);
+
+  return (
+    <Section icon={CheckCircle2} title={CONSEQUENCE_TIER_LABELS[IMMEDIATE_TIER]}>
+      <div data-testid={NINA_BLOCK_TEST_IDS.priorities}>
+        {feed.items.length === 0 ? (
+          <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+            {ATTENTION_LABELS.empty}
+          </p>
+        ) : items.length === 0 ? (
+          <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+            {NINA_GTM_LABELS.noImmediate}
+          </p>
+        ) : (
+          <ul aria-label={ATTENTION_LABELS.list} className="space-y-2">
+            {items.map((item: AttentionItem) => (
+              <li key={`${item.leadId}-${item.trigger}`}>
+                <button
+                  type="button"
+                  data-lead-id={item.leadId}
+                  data-consequence-tier={item.consequenceTier}
+                  data-attention-trigger={item.trigger}
+                  onClick={() => onOpen(item.route)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 text-left transition-colors hover:border-rose-200"
+                >
+                  <span className="min-w-0 flex-1 text-sm leading-relaxed text-gray-600">
+                    <ProspectName fact={item.prospectName} />{" "}
+                    <span>{item.reason}</span>
+                    <span>{ATTENTION_LABELS.taskSeparator}</span>
+                    <span className="font-semibold text-gray-900">{item.requiredResponse}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Block 2 — the attention summary (R13.2, R13.3, R13.4).
+ *
+ * Counts and only counts. No prospect, no reason, no required response: the full task
+ * detail is the Action Queue's job and restating it here would be the same information in
+ * two places, so the block ends with the control that goes there.
+ *
+ * Every number is `feed.summary`'s, read and rendered. `total` is a genuine measured zero
+ * on a clear workspace and renders `0` — nothing about it was uncomputable. The two maps
+ * carry only the keys the server counted, so a band or a trigger it did not count is
+ * *absent from this list* rather than shown as zero: "we counted none" and "we did not
+ * count" are different statements and only one of them is a finding.
+ */
+function AttentionSummaryBlock({
+  summary,
+  onOpenQueue,
+}: {
+  summary: AttentionFeed["summary"];
+  onOpenQueue: () => void;
+}) {
+  // Declared band and trigger order, narrowed to the keys the server sent. Ordering, not
+  // counting — the numbers are the payload's.
+  const tiers = (Object.keys(CONSEQUENCE_TIER_LABELS) as ConsequenceTier[]).filter(
+    (tier) => summary.byTier[tier] !== undefined
+  );
+  const triggers = (Object.keys(ATTENTION_TRIGGER_LABELS) as AttentionTrigger[]).filter(
+    (trigger) => summary.byTrigger[trigger] !== undefined
+  );
+
+  return (
+    <Section
+      icon={Gauge}
+      title={NINA_GTM_LABELS.summaryTitle}
+      action={
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onOpenQueue}>
+          <ListChecks className="h-3.5 w-3.5" />
+          {NINA_GTM_LABELS.openQueue}
+        </Button>
+      }
+    >
+      <div
+        data-testid={NINA_BLOCK_TEST_IDS.summary}
+        className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"
+      >
+        <p className="text-4xl font-black leading-none tracking-tighter text-gray-900 tabular-nums">
+          {summary.total}
+        </p>
+        <p className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          {NINA_GTM_LABELS.summaryTotal}
+        </p>
+
+        {tiers.length > 0 && (
+          <>
+            <h3 className="mt-5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {NINA_GTM_LABELS.byTier}
+            </h3>
+            <dl className="mt-2 space-y-1.5">
+              {tiers.map((tier) => (
+                <div key={tier} data-consequence-tier={tier} className="flex items-baseline justify-between gap-3 text-xs">
+                  <dt className="min-w-0 text-gray-600">{CONSEQUENCE_TIER_LABELS[tier]}</dt>
+                  <dd className="font-bold text-gray-900 tabular-nums">{summary.byTier[tier]}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+
+        {triggers.length > 0 && (
+          <>
+            <h3 className="mt-5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {NINA_GTM_LABELS.byTrigger}
+            </h3>
+            <dl className="mt-2 space-y-1.5">
+              {triggers.map((trigger) => (
+                <div
+                  key={trigger}
+                  data-attention-trigger={trigger}
+                  className="flex items-baseline justify-between gap-3 text-xs"
+                >
+                  <dt className="min-w-0 text-gray-600">{ATTENTION_TRIGGER_LABELS[trigger]}</dt>
+                  <dd className="font-bold text-gray-900 tabular-nums">{summary.byTrigger[trigger]}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Block 3 — where acting could materially affect conversion (R13.5, R13.7).
+ *
+ * The `MATERIAL` band, joined by `leadId` to its `ActionQueueItem` for the why-now bullets
+ * and the ranking's dimensions. The join is a lookup over the payload at render — two
+ * reads, one screen — and a prospect the queue has no live row for says so rather than
+ * showing an empty reasoning list.
+ *
+ * `WhyNowList` renders the bullets, so the signals read here exactly as they read on the
+ * prospect's own page, and the two measures render band-first through `measureParts` with
+ * an unread measure stating its absence instead of showing a zero.
+ */
+function Opportunities({
+  feed,
+  queue,
+  onOpen,
+}: {
+  feed: AttentionFeed;
+  queue: ActionQueueItem[];
+  onOpen: (route: string) => void;
+}) {
+  const items = feed.items.filter((item) => item.consequenceTier === MATERIAL_TIER);
+
+  return (
+    <Section icon={TrendingUp} title={NINA_GTM_LABELS.opportunitiesTitle}>
+      <div data-testid={NINA_BLOCK_TEST_IDS.opportunities}>
+        {items.length === 0 ? (
+          <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+            {feed.items.length === 0 ? ATTENTION_LABELS.empty : NINA_GTM_LABELS.noOpportunities}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {items.map((item: AttentionItem) => {
+              const row = queue.find((candidate) => candidate.leadId === item.leadId) ?? null;
+              return (
+                <li
+                  key={`${item.leadId}-${item.trigger}`}
+                  data-lead-id={item.leadId}
+                  data-consequence-tier={item.consequenceTier}
+                  className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4"
+                >
+                  <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+                    <ObservedValue
+                      label={FIELD_LABEL.name}
+                      fact={item.prospectName}
+                      variant="inline"
+                      hideProvenance
+                    />
+                    <ObservedValue
+                      label={FIELD_LABEL.company}
+                      fact={item.company}
+                      variant="inline"
+                      hideProvenance
+                    />
+                  </div>
+
+                  <p className="text-sm leading-relaxed text-gray-600">
+                    {item.reason}
+                    {ATTENTION_LABELS.taskSeparator}
+                    <span className="font-semibold text-gray-900">{item.requiredResponse}</span>
+                  </p>
+
+                  {row === null ? (
+                    <p className="text-[11px] leading-relaxed text-slate-500">
+                      {NINA_GTM_LABELS.noRankedAction}
+                    </p>
+                  ) : (
+                    <>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {(
+                          [
+                            [
+                              "expected_success_probability",
+                              NINA_GTM_LABELS.expectedOutcome,
+                              row.expectedSuccessProbability,
+                            ],
+                            ["business_value", NINA_GTM_LABELS.businessValue, row.businessValue],
+                          ] as const
+                        ).map(([key, label, raw]) => {
+                          const measure = measureParts(raw);
+                          return (
+                            <div key={key} className="min-w-0">
+                              <dt
+                                title={MEASURE_MEANINGS[key]}
+                                className="cursor-help text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400"
+                              >
+                                {label}
+                              </dt>
+                              <dd className="mt-0.5 flex items-baseline gap-1.5">
+                                {measure.label === null ? (
+                                  <span className="text-[12px] text-slate-500">
+                                    {GTM_UI_LABELS.unavailableHeading}
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-semibold",
+                                        GTM_TONE[measure.tone] ?? GTM_TONE.zinc
+                                      )}
+                                    >
+                                      {measure.label}
+                                    </span>
+                                    <span className="text-[11px] text-slate-500 tabular-nums">
+                                      {measure.value}
+                                    </span>
+                                  </>
+                                )}
+                              </dd>
+                            </div>
+                          );
+                        })}
+                      </dl>
+
+                      <WhyNowList bullets={row.whyNow} />
+                    </>
+                  )}
+
+                  <Button type="button" variant="outline" size="sm" onClick={() => onOpen(item.route)}>
+                    {GTM_PAGE_LABELS.entryAction}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Block 4 — suggested actions (R13.6, R13.7).
+ *
+ * "Contact Kerri": the queue row's `executionVerb` through `GTM_ACTION_LABELS`, then the
+ * prospect's name, in that order and in one control. The verb is the table's — Weez opens
+ * LinkedIn and the human sends, and this page does not get to phrase that differently.
+ *
+ * Only `executable` rows appear, because those are the ones a control can actually run. An
+ * `ADVISORY` row is a real recommendation and is not a suggested action.
+ */
+function SuggestedActions({
+  queue,
+  spaceId,
+  onOpen,
+}: {
+  queue: ActionQueueItem[];
+  spaceId: string;
+  onOpen: (route: string) => void;
+}) {
+  const items = queue.filter((item) => item.executable && item.executionVerb !== null);
+
+  return (
+    <Section icon={Lightbulb} title={NINA_GTM_LABELS.suggestedTitle}>
+      <div data-testid={NINA_BLOCK_TEST_IDS.suggestedActions}>
+        {items.length === 0 ? (
+          <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+            {NINA_GTM_LABELS.noSuggestedActions}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <li key={item.leadId}>
+                <button
+                  type="button"
+                  data-lead-id={item.leadId}
+                  data-action-type={item.actionType}
+                  onClick={() => onOpen(prospectRoute(spaceId, item.leadId))}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 text-left transition-colors hover:border-indigo-200"
+                >
+                  <span className="min-w-0 flex-1 text-sm text-gray-600">
+                    <span className="font-semibold text-gray-900">
+                      {GTM_ACTION_LABELS[item.executionVerb as keyof typeof GTM_ACTION_LABELS]}
+                    </span>{" "}
+                    <ProspectName fact={item.name} />
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Ninna() {
@@ -515,21 +979,37 @@ export default function Ninna() {
   const navigate = useNavigate();
   const { currentSpace, user, selectSpace, spaces } = useAuth();
 
-  const [campaignGate, setCampaignGate] = useState<"checking" | "error" | "intake" | "preparing" | "active">("checking");
-  const [statusRetryKey, setStatusRetryKey] = useState(0);
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [messages, setMessages] = useState<NinnaChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [goalIntakeOpen, setGoalIntakeOpen] = useState(false);
+
+  /**
+   * The two GTM payloads, exactly as the API returned them, and whether the read failed.
+   *
+   * Payloads, not projections. There is no `immediateCount`, no `byTier` copy and no
+   * pre-filtered opportunity list beside them, because each of those would be a second,
+   * staler copy of something `getAttentionFeed` already reports (R20.4). The blocks filter
+   * these on render and block 2 reads `feed.summary`.
+   */
+  const [feed, setFeed] = useState<AttentionFeed | null>(null);
+  const [queue, setQueue] = useState<ActionQueuePage | null>(null);
+  const [gtmFailed, setGtmFailed] = useState(false);
+
+  // The balance, in chrome, from the provider that already wraps `Routes` (R17.1). This
+  // page spends nothing, so there is nothing to refresh it after. Rendered
+  // unconditionally: `CreditBalanceBadge` is what decides that an unread balance shows
+  // nothing, and a `balance && …` guard here would hide a genuine 0 (R17.7).
+  const { balance } = useCredits();
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const seededRef = useRef(false);
   const userInteractedRef = useRef(false);
   const loadTokenRef = useRef(0);
-  const campaignCheckRef = useRef(0);
-  const pendingCampaignRef = useRef<{ id: string; target: string } | null>(null);
+  const gtmTokenRef = useRef(0);
   const spaceName = currentSpace?.name || spaces.find((s) => s.id === spaceId)?.name || "your workspace";
   const firstName = (user?.name || "").trim().split(" ")[0] || "";
 
@@ -546,16 +1026,18 @@ export default function Ninna() {
 
   // Seed / refresh the chat's opening message from the brief. We keep refreshing
   // it as the brief streams in, but stop the moment the founder starts chatting.
+  //
+  // Prose only. The opening message used to carry a decision-queue card and a
+  // campaign-health card off the brief; both are GTM statements from outside the three
+  // sanctioned reads (R13.8), and the campaign health is campaign orchestration besides
+  // (R13.9). The four blocks are where the page states what needs doing. `ChatCard` still
+  // renders every card type, because a reply from `ninnaAPI.chat` may carry one.
   const maybeSeed = (b: DailyBrief) => {
     if (userInteractedRef.current) return;
-    const openingCards: NinnaCard[] = [];
-    if (b.decisions.length > 0) openingCards.push({ type: "decisions", items: b.decisions.slice(0, 4) });
-    openingCards.push({ type: "campaign_health", health: b.health });
     setMessages([
       {
         role: "ninna",
         content: `${b.greeting} Here's everything that happened ${b.sinceLabel}.\n\n${b.narrative}`,
-        cards: openingCards,
         time: nowTime(),
       },
     ]);
@@ -606,93 +1088,63 @@ export default function Ninna() {
     }
   };
 
-  const waitForPlanner = async (campaignId: string, checkToken: number) => {
-    const deadline = Date.now() + 10 * 60 * 1000;
-    while (campaignCheckRef.current === checkToken && Date.now() < deadline) {
-      const status = await weezAPI.getActiveCampaignStatus(spaceId!);
-      if (status.active) return "active" as const;
-      if (status.campaign_id === campaignId && status.status === "planning") {
-        return "planning" as const;
-      }
-      if (status.campaign_id === campaignId && status.status === "briefing") {
-        return "briefing" as const;
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 4000));
-    }
-    if (campaignCheckRef.current !== checkToken) return "cancelled" as const;
-    throw new Error("The content plan is taking longer than expected. Retry will resume this same campaign.");
-  };
-
-  const handleProceedToPlanner = async (
-    _target: string,
-    _strategy?: { goal?: { requested?: string } }
-  ) => {
+  /**
+   * The three reads behind the four blocks, and nothing else on this page (R13.8).
+   *
+   * The feed and the queue are awaited together, because block 3 joins one to the other.
+   * The dashboard is issued alongside them and its result is deliberately not kept: block 2
+   * states `feed.summary`'s counts, so no rendered value on this page is a dashboard
+   * derivation — which is the invariant Property 33 checks, and keeping the payload would be
+   * the first step toward breaking it. Its failure is ignored for the same reason: a read
+   * nothing renders from must not be able to blank a block.
+   *
+   * A failed feed or queue read is a failure and not an absence — the page says so and
+   * offers the retry (R18.5) rather than showing a list assembled from somewhere else.
+   */
+  const loadGtm = async () => {
     if (!spaceId) return;
-    // OUTBOUND product: Nina's strategy (Eva discovery + Max outreach) IS the
-    // plan. Proceeding starts the outbound workforce directly — we no longer
-    // build a weekly LinkedIn content planner (that inbound step just wasted
-    // computation for an outbound campaign).
+    const token = ++gtmTokenRef.current;
+    setGtmFailed(false);
+
+    void gtmAPI.getDashboard(spaceId, { periodDays: 7 }).catch(() => undefined);
+
     try {
-      toast.info("Nina is handing off to your outbound workforce…");
-      await weezAPI.activateOutboundWorkforce(spaceId);
-      toast.success("Eva is discovering good-fit accounts and Max is preparing personalized outreach.");
-      navigate(`/eva/${spaceId}`);
-    } catch (error: unknown) {
-      console.error("[ninna] outbound activation failed", error);
-      const message = error instanceof Error ? error.message : "Couldn't start the outbound workforce. Please try again.";
-      toast.error(message);
+      const [feedRead, queueRead] = await Promise.all([
+        gtmAPI.getAttentionFeed(spaceId, { limit: 50 }),
+        gtmAPI.getActionQueue(spaceId, { sort: "priority", limit: 25 }),
+      ]);
+      if (gtmTokenRef.current !== token) return; // a newer load superseded this one
+      setFeed(feedRead);
+      setQueue(queueRead);
+    } catch (error) {
+      if (gtmTokenRef.current !== token) return;
+      console.error("[nina] attention read failed", error);
+      setGtmFailed(true);
     }
   };
 
   useEffect(() => {
     if (!spaceId) {
-      setCampaignGate("intake");
       setLoading(false);
       return;
     }
 
-    const checkToken = ++campaignCheckRef.current;
-    setCampaignGate("checking");
     setBrief(null);
     setMessages([]);
+    setFeed(null);
+    setQueue(null);
     seededRef.current = false;
     userInteractedRef.current = false;
 
-    const routeByCampaignStatus = async () => {
-      try {
-        const status = await weezAPI.getActiveCampaignStatus(spaceId);
-        if (campaignCheckRef.current !== checkToken) return;
+    loadBrief(false);
+    loadGtm();
 
-        if (status.active) {
-          setCampaignGate("active");
-          await loadBrief(false);
-          return;
-        }
-
-        // The old inbound content-campaign states (briefing / planning /
-        // generating a weekly LinkedIn content calendar) are retired. Never route
-        // the founder into that deprecated content workspace — show the outbound
-        // goal picker so they build a GTM strategy that hands off to Eva + Max.
-        setCampaignGate("intake");
-        setLoading(false);
-      } catch (error: unknown) {
-        if (campaignCheckRef.current !== checkToken) return;
-        console.error("[ninna] campaign status check failed", error);
-        const message = error instanceof Error ? error.message : "Nina couldn't check the campaign status.";
-        toast.error(message);
-        setCampaignGate("error");
-        setLoading(false);
-      }
-    };
-
-    routeByCampaignStatus();
     return () => {
-      campaignCheckRef.current += 1;
+      loadTokenRef.current += 1;
+      gtmTokenRef.current += 1;
     };
-    // Campaign status intentionally owns the initial brief load. Loading the brief
-    // before activation would eagerly start EVA and MAX.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId, statusRetryKey]);
+  }, [spaceId]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -718,10 +1170,11 @@ export default function Ninna() {
     }
   };
 
-  const criticalCount = useMemo(
-    () => (brief?.decisions || []).filter((d) => d.priority === "critical").length,
-    [brief]
-  );
+  /** The header control: both of Nina's sources, re-read together. */
+  const refreshAll = () => {
+    loadBrief(true);
+    loadGtm();
+  };
 
   return (
     <div className="flex h-screen bg-[#FDFBFF] overflow-hidden">
@@ -734,57 +1187,8 @@ export default function Ninna() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {campaignGate === "checking" ? (
-          <BriefLoading spaceName={spaceName} />
-        ) : campaignGate === "error" ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center bg-gradient-to-b from-rose-50/40 to-white">
-            <NinnaAvatar className="w-16 h-16" />
-            <h1 className="mt-6 text-2xl font-black tracking-tight text-gray-900">Nina couldn't verify this campaign</h1>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-              I won't start another campaign until I can safely confirm the current one. Check your connection and try again.
-            </p>
-            <Button
-              onClick={() => setStatusRetryKey((key) => key + 1)}
-              className="mt-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold gap-2"
-            >
-              <RefreshCw className="w-4 h-4" /> Retry campaign check
-            </Button>
-          </div>
-        ) : campaignGate === "intake" ? (
-          <>
-            <header className="shrink-0 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl px-6 lg:px-8 h-16 flex items-center gap-3">
-              <NinnaAvatar className="w-9 h-9" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-gray-900 leading-none">{NINNA.name}</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Campaign setup</span>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 truncate block">{spaceName}</span>
-              </div>
-            </header>
-            <main className="flex-1 overflow-y-auto bg-gradient-to-b from-indigo-50/40 via-white to-white px-5 py-10">
-              <div className="max-w-3xl mx-auto mb-7 text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-3">Build your first campaign</p>
-                <h1 className="text-3xl font-black tracking-tight text-gray-900">Let Nina turn your context into a plan</h1>
-                <p className="mt-3 text-sm leading-relaxed text-gray-500">
-                  Nina will review your product, customers, and industry context, ask only for what is missing, then prepare the campaign for your approval.
-                </p>
-              </div>
-              <NinaGoalIntake spaceId={spaceId!} onProceed={handleProceedToPlanner} />
-            </main>
-          </>
-        ) : campaignGate === "preparing" ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center bg-gradient-to-b from-indigo-50/50 to-white">
-            <NinnaAvatar className="w-16 h-16" />
-            <div className="mt-6 inline-flex items-center gap-2 text-indigo-600 font-semibold">
-              <Loader2 className="w-5 h-5 animate-spin" /> Nina is finishing your campaign plan…
-            </div>
-            <p className="mt-2 max-w-md text-sm text-gray-500">
-              Your strategy is safe. Nina will open the planner as soon as the campaign calendar is ready.
-            </p>
-          </div>
-        ) : loading || !brief ? (
-          <BriefLoading spaceName={spaceName} />
+        {loading || !brief ? (
+          <BriefLoading spaceName={spaceName} balance={balance} />
         ) : (
           <>
       {/* Header */}
@@ -804,8 +1208,9 @@ export default function Ninna() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <CreditBalanceBadge balance={balance} className="hidden sm:inline-flex" />
           <button
-            onClick={() => loadBrief(true)}
+            onClick={refreshAll}
             disabled={refreshing}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-bold text-gray-600 hover:bg-gray-100 transition-colors"
             title="Refresh brief"
@@ -838,137 +1243,64 @@ export default function Ninna() {
               </div>
             </div>
 
-            {/* GTM Summary — Nina's continuously-updated read on the workforce */}
-            {brief.gtmSummary.length > 0 && (
-              <div className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-white p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-4 h-4 text-indigo-500" />
-                  <h2 className="text-[11px] font-black uppercase tracking-[0.22em] text-indigo-600/80">
-                    Today's GTM Summary
-                  </h2>
-                  <span className="ml-auto flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-                  </span>
-                </div>
-                <ul className="space-y-2.5">
-                  {brief.gtmSummary.map((line, i) => {
-                    const isRec = line.startsWith("Recommendation:");
-                    return (
-                      <li key={i} className="flex items-start gap-2.5 text-sm">
-                        <span
-                          className={cn(
-                            "mt-1.5 h-1.5 w-1.5 rounded-full shrink-0",
-                            isRec ? "bg-amber-500" : "bg-indigo-400"
-                          )}
-                        />
-                        <span className={cn("leading-relaxed", isRec ? "font-semibold text-gray-900" : "text-gray-700")}>
-                          {line}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-            {/* Revenue Dashboard — the GTM headline numbers */}
-            {brief.revenueMetrics.length > 0 && (
-              <Section icon={TrendingUp} title="Revenue Dashboard">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {brief.revenueMetrics.map((mt: RevenueMetric) => {
-                    const Icon = METRIC_ICON[mt.key] || Activity;
-                    return (
-                      <div key={mt.key} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center mb-3">
-                          <Icon className="w-4 h-4 text-indigo-500" />
-                        </div>
-                        <p className="text-2xl font-black tracking-tight text-gray-900 tabular-nums leading-none">
-                          {mt.value}
-                        </p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1.5">
-                          {mt.label}
-                        </p>
-                      </div>
-                    );
-                  })}
+            {/* The four blocks. One failure state for the two reads they share, and one
+                announcement while they are being read — a block never fills the wait with
+                a zero or with a list from another source. */}
+            {gtmFailed ? (
+              <Section icon={CheckCircle2} title={ATTENTION_LABELS.pageTitle}>
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-3">
+                  <p className="min-w-0 flex-1 text-xs text-gray-500">{ATTENTION_LABELS.loadFailed}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={loadGtm}>
+                    {GTM_PAGE_LABELS.retry}
+                  </Button>
                 </div>
               </Section>
-            )}
-
-            {/* Decision queue */}
-            {brief.decisions.length > 0 && (
-              <Section
-                icon={CheckCircle2}
-                title="Decision Queue"
-                action={
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    {brief.decisions.length} waiting{criticalCount > 0 ? ` · ${criticalCount} critical` : ""}
-                  </span>
-                }
+            ) : !feed ? (
+              <p
+                aria-live="polite"
+                className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white p-5 text-xs font-semibold text-gray-500"
               >
-                <div className="space-y-2">
-                  {brief.decisions.map((d) => (
-                    <DecisionRow key={d.id} item={d} onOpen={openLink} />
-                  ))}
-                </div>
-              </Section>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {NINA_GTM_LABELS.loading}
+              </p>
+            ) : (
+              <>
+                <ImmediatePriorities feed={feed} onOpen={openLink} />
+                <AttentionSummaryBlock
+                  summary={feed.summary}
+                  onOpenQueue={() => navigate(`/action-queue/${spaceId}`)}
+                />
+                <Opportunities feed={feed} queue={queue?.items ?? []} onOpen={openLink} />
+                <SuggestedActions queue={queue?.items ?? []} spaceId={spaceId!} onOpen={openLink} />
+              </>
             )}
 
-            {/* Agent summaries — the AI workforce running behind the scenes */}
-            <Section icon={Users} title="The Workforce">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {brief.agentSummaries.map((s) => (
-                  <AgentSummaryCard key={s.agent} summary={s} onOpen={openLink} />
-                ))}
-              </div>
+            {/* The workspace's goal and strategy. Nina's own intake, kept whole and behind a
+                disclosure so it is available without standing in front of the day's work.
+                It reads its own readiness and owns its phases; this page only opens it. */}
+            <Section
+              icon={Target}
+              title={NINA_GTM_LABELS.goalTitle}
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-expanded={goalIntakeOpen}
+                  onClick={() => setGoalIntakeOpen((open) => !open)}
+                >
+                  {goalIntakeOpen ? NINA_GTM_LABELS.goalClose : NINA_GTM_LABELS.goalOpen}
+                </Button>
+              }
+            >
+              {goalIntakeOpen ? (
+                <NinaGoalIntake spaceId={spaceId!} />
+              ) : (
+                <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+                  {NINA_GTM_LABELS.goalNote}
+                </p>
+              )}
             </Section>
-
-            {/* Health + meetings/leads */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Section icon={Gauge} title="Health">
-                <CampaignHealthCard health={brief.health} />
-              </Section>
-
-              <Section icon={brief.meetings.length > 0 ? CalendarClock : Target} title={brief.meetings.length > 0 ? "Meetings" : "Top Leads"}>
-                {brief.meetings.length > 0 ? (
-                  <div className="space-y-2">
-                    {brief.meetings.map((m) => (
-                      <MeetingRow key={m.id} meeting={m} onOpen={openLink} />
-                    ))}
-                  </div>
-                ) : brief.topLeads.length > 0 ? (
-                  <div className="space-y-2">
-                    {brief.topLeads.slice(0, 4).map((l) => (
-                      <LeadRow key={l.id} lead={l} onOpen={openLink} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center text-xs text-gray-400">
-                    No qualified leads yet — Eva is still scanning your channels.
-                  </div>
-                )}
-              </Section>
-            </div>
-
-            {/* Recommendations */}
-            {brief.recommendations.length > 0 && (
-              <Section icon={Lightbulb} title="What I'd Do Next">
-                <div className="grid grid-cols-1 gap-3">
-                  {brief.recommendations.map((r) => (
-                    <RecommendationCard key={r.id} rec={r} onOpen={openLink} />
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {/* Timeline */}
-            {brief.timeline.length > 0 && (
-              <Section icon={Clock} title="Workspace Timeline">
-                <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-                  <TimelineList entries={brief.timeline} />
-                </div>
-              </Section>
-            )}
 
             <div className="h-4" />
           </div>

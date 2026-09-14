@@ -10,6 +10,8 @@ import {
 import { ArrowLeft, Search, Filter, RefreshCw, Plus, ExternalLink, Check, X, Zap, Target, Users, TrendingUp, AlertCircle, Link2, Unlink, ChevronDown, Star, MessageSquare, UserCheck, Archive, Mail, Linkedin, BrainCircuit, BarChart3, DollarSign } from "lucide-react";
 import MarketDiscovery from "./MarketDiscovery";
 import RevenueIntelligence from "./RevenueIntelligence";
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 
 /* ── Priority / Status helpers ─────────────────────────────────────── */
 const PRIORITY_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
@@ -32,6 +34,14 @@ export default function SalesAssistant() {
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
   };
+
+  // The balance, in chrome, from the provider that already wraps `Routes` (R17.1). This
+  // page spends nothing, so there is nothing to refresh it after. It sits outside the
+  // `leads` tab's controls on purpose: `/market-discovery/` and `/revenue-intelligence/`
+  // redirect into the other two tabs, and a rep who followed one of those does not lose
+  // the balance. Rendered unconditionally — `CreditBalanceBadge` is what decides that an
+  // unread balance shows nothing, and a `balance && …` guard would hide a genuine 0.
+  const { balance } = useCredits();
 
   /* state */
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -175,6 +185,13 @@ export default function SalesAssistant() {
         </div>
 
         <div style={{ flex: 1 }} />
+        {/* The balance, on every tab of this page. The tone overrides are this page's own —
+            its header is the dark legacy surface, and the badge's default light chrome
+            would be unreadable on it. */}
+        <CreditBalanceBadge
+          balance={balance}
+          className="hidden border-white/10 bg-white/5 text-zinc-200 sm:inline-flex"
+        />
         {/* HubSpot status */}
         {activeTab === "leads" && (
           <>

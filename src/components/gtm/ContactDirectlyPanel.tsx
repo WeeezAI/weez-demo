@@ -43,8 +43,8 @@
 //
 // No control here is named "Send". `openChannel` is "Open LinkedIn", because that is what
 // the click does: it opens a tab. The operator sends. `MessageComposer`'s own note says so
-// under the textarea, and `pages/__tests__/GTMProspect.labels.test.tsx` holds the whole
-// screen to it.
+// under the textarea; `__tests__/primitives.test.tsx` holds every label table to it and
+// `__tests__/nextAction.test.tsx` holds the rendered controls to it.
 
 import { useCallback, useState } from "react";
 import { Check, Copy, ExternalLink, Loader2, Mail, Linkedin, Sparkles } from "lucide-react";

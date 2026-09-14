@@ -792,10 +792,19 @@ export interface CTA {
  *
  * `charLimit` is the channel cap for this purpose, sent so the composer's counter
  * is read rather than recomputed in the browser.
+ *
+ * `messageId` and `conversationId` are null on exactly one response: the
+ * pre-activation draft, where no `li_gtm_messages` row was written and there is
+ * therefore no id to report. `persisted` states that as a claim of its own rather
+ * than leaving a reader to infer it from two absences — and it is what
+ * `MessageComposer` keys on when it withholds Regenerate and inline Edit, both of
+ * which address a row by id (R5.6).
  */
 export interface Message {
-  messageId: string;
-  conversationId: string;
+  messageId: string | null;
+  conversationId: string | null;
+  /** False on a pre-activation draft. True on every other response. */
+  persisted: boolean;
   direction: MessageDirection;
   messagePurpose: MessagePurpose | null;
   version: number;
@@ -1028,6 +1037,22 @@ export interface ProspectListItem {
   state: ProspectState;
   nextActionType: ActionType | null;
   updatedAt: string | null;
+
+  /**
+   * The 21-value Journey_State projection, when the row carried one.
+   *
+   * Additive and optional on the wire (`ProspectListItemOut.journey_state`), so it is
+   * `null` here whenever the server left the key off — a prospect nobody has formed a
+   * belief about. `null` is therefore "no belief exists", while an `ObservedFact` whose
+   * `isUnknown` is true is "a belief exists and it places this prospect nowhere". The
+   * same distinction `ProspectDetail.journeyState` documents at length, for the same
+   * reason: an absent key must never be normalised into an unknown fact.
+   *
+   * It travels beside `state` rather than inside it, which is where the server puts it:
+   * the projection is not a fifth dimension and the four dimensions still travel on
+   * every queue row.
+   */
+  journeyState: ObservedFact | null;
 }
 
 /** One keyset-paged page of the queue. `nextCursor` is null iff `hasMore` is false. */
@@ -1914,6 +1939,215 @@ export interface DebugView {
   learningUpdates: LearningUpdate[];
 }
 
+// ─── The Attention_Feed ───────────────────────────────────────────────────────
+//
+// `GET /gtm/attention-feed`: one item per prospect per trigger, banded by business
+// consequence. The dashboard's discipline applied to a list rather than to a count —
+// an item carries the `FilterCriterion` clauses that reproduce it, so "why is this on
+// my list" is answerable from the row instead of from the resolver's source.
+//
+// Nothing here is derived in the browser. `reason` and `requiredResponse` are server
+// prose, the tier is a server band, and the client's only job is to render them in
+// the order they arrived.
+
+/**
+ * The Attention_Item priority band. Four values, ordered by consequence.
+ *
+ * A band, not a score, so it carries no disclaimer and needs no `DerivedScore`: the
+ * server assigned it from a static trigger table and at most one upward escalation.
+ */
+export type ConsequenceTier = "IMMEDIATE" | "MATERIAL" | "IMPORTANT" | "OTHER";
+
+/**
+ * The four bands in priority order, for sorting and for exhaustive rendering.
+ *
+ * The declaration order is the same one the server orders items by, so a surface that
+ * groups by band presents the groups in the order the feed already arrived in rather
+ * than inventing a second ranking.
+ */
+export const CONSEQUENCE_TIER_ORDER: readonly ConsequenceTier[] = [
+  "IMMEDIATE",
+  "MATERIAL",
+  "IMPORTANT",
+  "OTHER",
+];
+
+/** The nine conditions that make a prospect require intervention. */
+export type AttentionTrigger =
+  | "PROSPECT_REPLIED"
+  | "BUYING_STATE_CHANGED"
+  | "STAGE_CHANGED"
+  | "HIGH_INTENT_SIGNAL"
+  | "MOVED_TOWARD_CONVERSION"
+  | "AT_RISK_OR_LOSING"
+  | "WINNING_NEEDS_FOLLOWUP"
+  | "MEANINGFUL_TRANSITION"
+  | "ACTION_MANDATORY";
+
+/**
+ * One prospect, one trigger, and what the representative has to do about it.
+ *
+ * `prospectName` and `company` are `ObservedFact`s, the same as they are on every
+ * queue row: a name nobody observed reads unknown rather than as an empty string.
+ *
+ * `escalatedFrom` and `escalationReason` travel with a raised band so the tier stays
+ * re-derivable from the row rather than being an opaque badge. Both are `null`
+ * together on an unescalated item — the server refuses the half-populated pair.
+ *
+ * `dueAt` is when the attention became due, the instant of the evidence that fired
+ * the trigger; `computedAt` is when the feed looked. Two questions, two fields.
+ *
+ * `route` is where the representative goes to act: the one prospect surface. It is
+ * the server's string and is followed as sent, never rebuilt here.
+ */
+export interface AttentionItem {
+  leadId: string;
+  prospectName: ObservedFact;
+  company: ObservedFact;
+  trigger: AttentionTrigger;
+  /** Server prose in Sales_Language. Never composed in the browser. */
+  reason: string;
+  /** The short imperative beside it — "Review and respond". */
+  requiredResponse: string;
+  consequenceTier: ConsequenceTier;
+  escalatedFrom: ConsequenceTier | null;
+  escalationReason: string | null;
+  dueAt: string;
+  computedAt: string;
+  route: string;
+  criteria: FilterCriterion[];
+}
+
+/**
+ * Counts, so a summary surface reads them rather than re-deriving them from `items`.
+ *
+ * The two maps are `Partial` because the server sends only the keys it counted — a
+ * band with no items is simply absent, and a surface renders the bands it has copy
+ * for. `total` is a genuine measured zero on an empty workspace: nothing here was
+ * uncomputable, so nothing here is missing.
+ *
+ * `total` counts the workspace's items, and `items` may be capped by `limit`, so the
+ * two are not required to agree. A surface that states a count states this one.
+ */
+export interface AttentionSummary {
+  total: number;
+  byTier: Partial<Record<ConsequenceTier, number>>;
+  byTrigger: Partial<Record<AttentionTrigger, number>>;
+}
+
+/**
+ * One workspace's attention items over one period, already ordered by consequence.
+ *
+ * `periodDays` echoes the window the event-shaped triggers looked back over — the
+ * standing-fact triggers ignore it — and `computedAt` when the read ran. Both travel
+ * because the list is a snapshot of a moment, not a stored queue.
+ *
+ * An empty workspace is a success with `items: []` and `summary.total: 0`.
+ */
+export interface AttentionFeed {
+  periodDays: number;
+  computedAt: string | null;
+  summary: AttentionSummary;
+  items: AttentionItem[];
+}
+
+// ─── Day-bucketed analytics ───────────────────────────────────────────────────
+//
+// `GET /gtm/analytics/daily`: one row per UTC calendar date over the requested range,
+// each carrying the measures the persisted rows support and nothing else.
+//
+// The absent metric is the whole reason for the shape below. A measure the stored
+// records cannot support is a *missing key* on its day, never a `null` and never a
+// `0` — "we never computed this" and "we looked and found nobody" are two different
+// statements, and only one of them is a finding. `Partial<Record<…>>` is what makes
+// the first one unrepresentable as the second rather than merely discouraged: a call
+// site cannot read a metric without handling the possibility that it is not there.
+
+/**
+ * The six Analytics_Metrics, keyed exactly as the wire keys them.
+ *
+ * A `Literal` union on both sides, so a seventh measure cannot reach a page that has
+ * no copy for it — the server pins the same six.
+ */
+export type AnalyticsMetricKey =
+  | "prospects_contacted"
+  | "state_changed"
+  | "most_likely_to_close"
+  | "at_risk"
+  | "meetings_booked"
+  | "meetings_completed";
+
+/**
+ * The direction of one metric between a day and the day before it.
+ *
+ * Read-time arithmetic over two workspace counts, which is why it is declared apart
+ * from `EngagementTrend` — that one is a persisted judgement about a single prospect,
+ * and two vocabularies that happen to share `RISING` are still two vocabularies.
+ */
+export type AnalyticsTrend = "RISING" | "FALLING" | "FLAT";
+
+/**
+ * One computed measure for one day, with the filter that reproduces it.
+ *
+ * `count` **is** `leadIds.length` server-side, held there by a validator rather than
+ * by convention, so the number and the list it links to cannot disagree. `criteria` is
+ * how a figure stays a link to the prospects behind it instead of a bare number.
+ *
+ * A `count` of `0` here is a measurement: the query ran over the day and found nobody.
+ * A metric that could not be computed is not this shape with a zero — it is absent
+ * from its row's `metrics` map entirely.
+ *
+ * `trend` travels on `most_likely_to_close` alone, and only from the second day of a
+ * range: the first day has no prior day to compare against, so its direction is
+ * `null` rather than `FLAT`.
+ */
+export interface AnalyticsMetric {
+  count: number;
+  leadIds: string[];
+  criteria: FilterCriterion[];
+  /** Only `most_likely_to_close` carries one, and not on the first day. */
+  trend: AnalyticsTrend | null;
+}
+
+/**
+ * One UTC calendar date, and what the persisted rows support saying about it.
+ *
+ * `date` is the UTC calendar date of the source column — when the thing happened,
+ * never when the row landed — so a reader in another zone gets the same boundary the
+ * count used.
+ */
+export interface AnalyticsDayRow {
+  /** ISO calendar date, UTC. */
+  date: string;
+  /**
+   * `Partial` on purpose: a missing key is a metric the stored data cannot support,
+   * and it must not be readable as a zero. The optionality is what forces every call
+   * site to handle the absence.
+   */
+  metrics: Partial<Record<AnalyticsMetricKey, AnalyticsMetric>>;
+}
+
+/**
+ * One workspace's day rows over the requested range, oldest → newest.
+ *
+ * `days` echoes the requested range length and `startDate` / `endDate` the inclusive
+ * bounds it resolved to, so a short list can be told from a shifted window.
+ * `computedAt` is when the read ran: nothing here is stored, so the payload is a
+ * snapshot of a moment rather than a table.
+ *
+ * `rows` holds one entry per calendar date in the range **including the days with
+ * nothing recorded** — such a day's metrics are then a measured `0` or absent, which
+ * is a different statement from the day not existing.
+ */
+export interface DailyAnalytics {
+  brandId: string;
+  days: number;
+  startDate: string;
+  endDate: string;
+  computedAt: string | null;
+  rows: AnalyticsDayRow[];
+}
+
 // ─── Request inputs ───────────────────────────────────────────────────────────
 
 /**
@@ -2111,6 +2345,33 @@ export interface DashboardQuery {
   periodDays?: number;
 }
 
+/**
+ * The lookback, the band filter and the cap for one attention read.
+ *
+ * `periodDays` is `1..365` server-side and defaults to 7; `limit` is `1..200` and
+ * defaults to 50. Both are left off the query string when unset, so the server's
+ * defaults are the only defaults — this module does not keep a second copy of them.
+ * `tier` narrows to one band, for a surface that presents the top band alone.
+ */
+export interface AttentionFeedQuery {
+  periodDays?: number;
+  tier?: ConsequenceTier | null;
+  limit?: number;
+}
+
+/**
+ * The range length and the last day for one analytics read.
+ *
+ * `days` is `1..365` server-side and defaults to 7; a longer range is refused rather
+ * than silently clamped. `endDate` is an ISO calendar date and is **inclusive**,
+ * defaulting to today UTC. Both are left off the query string when unset, so the
+ * server's defaults are the only defaults this module knows about.
+ */
+export interface DailyAnalyticsQuery {
+  days?: number;
+  endDate?: string | null;
+}
+
 /** `limit` caps each debug collection independently; every one is newest-first. */
 export interface DebugViewQuery {
   limit?: number;
@@ -2229,8 +2490,9 @@ interface WireCTA {
 }
 
 interface WireMessage {
-  message_id?: string;
-  conversation_id?: string;
+  message_id?: string | null;
+  conversation_id?: string | null;
+  persisted?: boolean;
   direction?: MessageDirection;
   message_purpose?: MessagePurpose | null;
   version?: number;
@@ -2357,6 +2619,8 @@ interface WireProspectListItem {
   state?: WireProspectState;
   next_action_type?: ActionType | null;
   updated_at?: string | null;
+  /** Additive and dropped from the JSON when there is no belief to report. */
+  journey_state?: WireObservedFact | null;
 }
 
 interface WireProspectListPage {
@@ -2811,6 +3075,62 @@ interface WireDashboard {
   aggregates?: WireDashboardAggregate[];
 }
 
+interface WireAttentionItem {
+  lead_id?: string;
+  prospect_name?: WireObservedFact;
+  company?: WireObservedFact;
+  trigger?: AttentionTrigger;
+  reason?: string;
+  required_response?: string;
+  consequence_tier?: ConsequenceTier;
+  escalated_from?: ConsequenceTier | null;
+  escalation_reason?: string | null;
+  due_at?: string | null;
+  computed_at?: string | null;
+  route?: string;
+  criteria?: WireFilterCriterion[];
+}
+
+interface WireAttentionSummary {
+  total?: number;
+  // Sent with only the keys the server counted, which is why the domain shape is
+  // `Partial` too: an absent band was not counted as zero, it was not counted.
+  by_tier?: Partial<Record<ConsequenceTier, number>>;
+  by_trigger?: Partial<Record<AttentionTrigger, number>>;
+}
+
+interface WireAttentionFeed {
+  period_days?: number;
+  computed_at?: string | null;
+  summary?: WireAttentionSummary;
+  items?: WireAttentionItem[];
+}
+
+interface WireAnalyticsMetric {
+  count?: number;
+  lead_ids?: string[];
+  criteria?: WireFilterCriterion[];
+  trend?: AnalyticsTrend | null;
+}
+
+interface WireAnalyticsDayRow {
+  date?: string;
+  // `Partial` here for the reason the domain shape is: the server omits the key of a
+  // metric it could not compute, so an absent entry is absence and not a zero. The
+  // value is optional a second time so a payload that spelled absence as `null`
+  // still normalises to a missing entry rather than to a metric with no count.
+  metrics?: Partial<Record<AnalyticsMetricKey, WireAnalyticsMetric | null>>;
+}
+
+interface WireDailyAnalytics {
+  brand_id?: string;
+  days?: number;
+  start_date?: string;
+  end_date?: string;
+  computed_at?: string | null;
+  rows?: WireAnalyticsDayRow[];
+}
+
 interface WireFeedbackRecorded {
   feedback_id?: string;
   lead_id?: string;
@@ -3087,8 +3407,12 @@ function toCTA(raw?: WireCTA | null): CTA {
 function toMessage(raw?: WireMessage | null): Message | null {
   if (!raw) return null;
   return {
-    messageId: raw.message_id ?? "",
-    conversationId: raw.conversation_id ?? "",
+    // Null, never `""`: an empty-string id would read as an id and would be sent
+    // into `PATCH /message/{id}`. The absence is the fact here.
+    messageId: raw.message_id ?? null,
+    conversationId: raw.conversation_id ?? null,
+    // Absent means persisted — every response before this field existed was.
+    persisted: raw.persisted ?? true,
     direction: raw.direction ?? "OUTBOUND",
     messagePurpose: raw.message_purpose ?? null,
     version: raw.version ?? 1,
@@ -3244,6 +3568,9 @@ function toProspectListItem(raw: WireProspectListItem): ProspectListItem {
     state: toState(raw.state),
     nextActionType: raw.next_action_type ?? null,
     updatedAt: raw.updated_at ?? null,
+    // `toFact()` only where the key arrived: it maps an absent payload to an *unknown
+    // fact*, and unknown is a reading rather than a gap. An absent key stays `null`.
+    journeyState: raw.journey_state ? toFact(raw.journey_state) : null,
   };
 }
 
@@ -3722,6 +4049,142 @@ function toDashboardAggregate(raw: WireDashboardAggregate): DashboardAggregate {
     key: raw.key ?? "state_changed",
     count: raw.count ?? 0,
     filter: toAggregateFilter(raw.filter),
+  };
+}
+
+/**
+ * One attention item, renamed and nothing else.
+ *
+ * `reason` and `requiredResponse` are carried through verbatim: they are the server's
+ * prose, and composing or trimming a sentence here is exactly what R10.6 forbids.
+ *
+ * The two escalation fields are mapped independently and neither is inferred from the
+ * other. The server refuses a half-populated pair, so an item that names a band it was
+ * escalated from always names why — this function does not need to re-check that, and
+ * it must not quietly repair a payload that broke it.
+ *
+ * The trigger and tier fallbacks are the least-consequential members of each set, so a
+ * malformed payload can only under-state urgency, never manufacture it.
+ */
+function toAttentionItem(raw: WireAttentionItem): AttentionItem {
+  return {
+    leadId: raw.lead_id ?? "",
+    prospectName: toFact(raw.prospect_name),
+    company: toFact(raw.company),
+    trigger: raw.trigger ?? "MEANINGFUL_TRANSITION",
+    reason: raw.reason ?? "",
+    requiredResponse: raw.required_response ?? "",
+    consequenceTier: raw.consequence_tier ?? "OTHER",
+    escalatedFrom: raw.escalated_from ?? null,
+    escalationReason: raw.escalation_reason ?? null,
+    // Both are required and non-null server-side, so the empty fallback is the
+    // unreachable branch rather than a supplied instant.
+    dueAt: raw.due_at ?? "",
+    computedAt: raw.computed_at ?? "",
+    route: raw.route ?? "",
+    criteria: (raw.criteria ?? []).map(toFilterCriterion),
+  };
+}
+
+/**
+ * The summary counts, copied rather than aliased.
+ *
+ * A key the server did not send stays missing: the maps are `Partial` on both sides,
+ * and filling a band with `0` would turn "not counted" into "counted none".
+ */
+function toAttentionSummary(raw?: WireAttentionSummary | null): AttentionSummary {
+  return {
+    total: raw?.total ?? 0,
+    byTier: { ...(raw?.by_tier ?? {}) },
+    byTrigger: { ...(raw?.by_trigger ?? {}) },
+  };
+}
+
+/**
+ * The wire feed as the surfaces read it.
+ *
+ * `items` keeps the server's order — tier, then newest, then lead id — because that
+ * ordering is the endpoint's answer to R10.5 and re-sorting here would replace it with
+ * a second opinion. `computedAt` stays `null` when the payload carried none: a feed
+ * with no computation instant is a feed whose freshness cannot be stated.
+ */
+function toAttentionFeed(raw: WireAttentionFeed, requestedPeriodDays?: number): AttentionFeed {
+  return {
+    periodDays: raw.period_days ?? requestedPeriodDays ?? 7,
+    computedAt: raw.computed_at ?? null,
+    summary: toAttentionSummary(raw.summary),
+    items: (raw.items ?? []).map(toAttentionItem),
+  };
+}
+
+/**
+ * One present metric, renamed and nothing else.
+ *
+ * The `count` fallback is the identifier list's own length rather than a zero, because
+ * those are the only two numbers this function is entitled to: the server holds
+ * `count == len(lead_ids)` structurally, so the length is what the count was. `0`
+ * survives `??` on its own, so a genuine measured zero stays a measured zero.
+ *
+ * `trend` is `null` for every metric but `most_likely_to_close` and for that one's
+ * first day — an absent direction, never a `FLAT` this module made up.
+ */
+function toAnalyticsMetric(raw: WireAnalyticsMetric): AnalyticsMetric {
+  const leadIds = raw.lead_ids ?? [];
+  return {
+    count: raw.count ?? leadIds.length,
+    leadIds,
+    criteria: (raw.criteria ?? []).map(toFilterCriterion),
+    trend: raw.trend ?? null,
+  };
+}
+
+/**
+ * One day row, and the load-bearing half of the whole analytics mapping.
+ *
+ * Only the keys the payload **carried** reach the map. A key the server omitted stays
+ * omitted, and a key it sent as `null` becomes omitted too: both spellings mean the
+ * measure was never computed, and there is exactly one representation of that here.
+ * Nothing in this function can produce a `0` for an absent metric — the map starts
+ * empty and is only ever written from a metric object that actually arrived. Filling
+ * the six keys with defaults, or normalising absence to a zeroed metric, is precisely
+ * the conversion R15.5 and R15.6 forbid.
+ */
+function toAnalyticsDayRow(raw: WireAnalyticsDayRow): AnalyticsDayRow {
+  const metrics: Partial<Record<AnalyticsMetricKey, AnalyticsMetric>> = {};
+  const wireMetrics = raw.metrics ?? {};
+  (Object.keys(wireMetrics) as AnalyticsMetricKey[]).forEach((key) => {
+    const metric = wireMetrics[key];
+    if (metric === undefined || metric === null) return;
+    metrics[key] = toAnalyticsMetric(metric);
+  });
+  return {
+    // Required server-side, so the empty fallback is the unreachable branch rather
+    // than a date this module chose — today's would be a claim about a day nobody
+    // counted.
+    date: raw.date ?? "",
+    metrics,
+  };
+}
+
+/**
+ * The wire analytics as the surfaces read it.
+ *
+ * `rows` keeps the server's order — oldest → newest, one entry per calendar date in
+ * the range — because completeness and ordering are the endpoint's promise, and
+ * re-sorting or gap-filling here would replace it with a second opinion. A day the
+ * server did not send is a day this function does not invent.
+ *
+ * `computedAt` stays `null` when the payload carried none: a snapshot with no
+ * computation instant is a snapshot whose freshness cannot be stated.
+ */
+function toDailyAnalytics(raw: WireDailyAnalytics, requestedDays?: number): DailyAnalytics {
+  return {
+    brandId: raw.brand_id ?? "",
+    days: raw.days ?? requestedDays ?? 7,
+    startDate: raw.start_date ?? "",
+    endDate: raw.end_date ?? "",
+    computedAt: raw.computed_at ?? null,
+    rows: (raw.rows ?? []).map(toAnalyticsDayRow),
   };
 }
 
@@ -4549,6 +5012,57 @@ export const gtmAPI = {
       computedAt: raw.computed_at ?? null,
       aggregates: (raw.aggregates ?? []).map(toDashboardAggregate),
     };
+  },
+
+  /**
+   * `GET /gtm/attention-feed` — the prospects that require intervention, one item per
+   * prospect per trigger, already ordered by business consequence.
+   *
+   * The one wrapper for this route (R10.10). A surface that needs the attention list
+   * calls this; it does not assemble one from `getDashboard`'s aggregates, which are
+   * counts and cannot name a prospect.
+   *
+   * Read-only, and the order arrives decided: the server bands each item, escalates at
+   * most one band upward with its reason attached, and sorts by band, then recency,
+   * then lead id. Nothing below re-ranks. An empty workspace answers successfully with
+   * no items and a summary total of zero.
+   */
+  getAttentionFeed: async (
+    brandId: string,
+    query: AttentionFeedQuery = {}
+  ): Promise<AttentionFeed> => {
+    const search = gtmQuery(brandId, {
+      period_days: query.periodDays,
+      tier: query.tier,
+      limit: query.limit,
+    });
+    const raw = await gtmFetch<WireAttentionFeed>(`/attention-feed?${search}`);
+    return toAttentionFeed(raw, query.periodDays);
+  },
+
+  /**
+   * `GET /gtm/analytics/daily` — one row per UTC calendar date, each carrying the six
+   * measures the persisted rows support and nothing else.
+   *
+   * The one wrapper for this route (R15.10). A surface that needs day-bucketed counts
+   * calls this; it does not sum them out of `getActionQueue` or re-bucket
+   * `getDashboard`'s period aggregates, which are one number for the whole window and
+   * cannot be split by day.
+   *
+   * `days` is `1..365` and `endDate` is inclusive; both are omitted from the query
+   * string when unset so the server's defaults (7 days, today UTC) are the only ones.
+   *
+   * Read-only, and absence arrives as absence: a metric the stored records cannot
+   * support is a missing key on its day rather than a `null` or a `0`, and it stays
+   * missing through the mapping. A day with nothing recorded is still a row.
+   */
+  getDailyAnalytics: async (
+    brandId: string,
+    query: DailyAnalyticsQuery = {}
+  ): Promise<DailyAnalytics> => {
+    const search = gtmQuery(brandId, { days: query.days, end_date: query.endDate });
+    const raw = await gtmFetch<WireDailyAnalytics>(`/analytics/daily?${search}`);
+    return toDailyAnalytics(raw, query.days);
   },
 
   /**

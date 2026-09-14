@@ -44,11 +44,13 @@ export const CREDIT_REASON_LABELS: Record<CreditReason, string> = {
   ADJUSTMENT: "Manual adjustment",
 };
 
+/** Singular/plural handled explicitly rather than by a naive `+ "s"`. */
+const creditUnit = (n: number) => (n === 1 ? "credit" : "credits");
+
 export const CREDIT_LABELS = {
   balance: "Credits",
   balanceAria: "Credit balance",
-  /** Singular/plural handled explicitly rather than by a naive `+ "s"`. */
-  unit: (n: number) => (n === 1 ? "credit" : "credits"),
+  unit: creditUnit,
   prices: "What things cost",
   ledger: "Recent credit activity",
   ledgerEmpty: "No credit activity yet.",
@@ -77,6 +79,21 @@ export const CREDIT_LABELS = {
    */
   insufficientBody:
     "This action was not performed and nothing was charged. Top up to continue.",
+  /**
+   * The gap, stated where the control was, *before* a press (R17.5).
+   *
+   * Both figures are the workspace read's own — the balance from `GET /gtm/credits` and the
+   * price from that same payload's list — and the deficit is their difference. Nothing here
+   * is invented: a sentence that named a number the server never sent would be this screen
+   * guessing at the ledger, which is what the credit feature exists to stop.
+   *
+   * The deficit is deliberately *not* phrased as "N credits". A price tag already says
+   * "N credits" beside the control, and that reads the same whether or not the workspace can
+   * afford it — so the one figure that only a shortfall carries has to be legible as itself.
+   */
+  shortfall: (balance: number, price: number) =>
+    `Needs ${price - balance} more — this costs ${price} ${creditUnit(price)} and ` +
+    `this workspace holds ${balance}. Top up to continue.`,
   repeat: "Already paid for",
   repeatNote: "You were charged for this once. This click cost nothing.",
 } as const;
@@ -295,4 +312,50 @@ export function priceOf(
   if (!credits) return null;
   const found = credits.prices.find((price) => price.action === reason);
   return found ? found.credits : null;
+}
+
+// ─── Can this workspace afford it ─────────────────────────────────────────────
+
+/** A gap between what the workspace holds and what a control costs. */
+export interface CreditShortfall {
+  /** The workspace's balance, as the server reported it. */
+  balance: number;
+  /** The server's price for this action. */
+  price: number;
+  /** How many more credits are needed. Always at least 1. */
+  short: number;
+  /** The sentence a rep reads in place of the control. */
+  statement: string;
+}
+
+/**
+ * The gap that keeps a priced control non-executing, or `null` when there is none.
+ *
+ * Design §11's rule, stated once so that every priced control asks the same question:
+ *
+ *     blocked  ⇔  balance is known ∧ price is known ∧ balance < price
+ *
+ * Both `null`s block nothing, and that is the whole point of putting this beside `priceOf`
+ * rather than writing `balance < price` at a call site. An **unread balance** is "we have not
+ * asked", not "you cannot afford it" — refusing on that basis would stop a rep who has the
+ * credits, which is a worse failure than the one this guards. An **unread price** is nothing
+ * to compare against, so it is not a shortfall either; `priceOf` already returns `null` for a
+ * price list that has not landed and for an action the server did not price.
+ *
+ * A control that can be afforded gets `null` too, which is why callers can render the
+ * statement unconditionally when this is non-null: the presence of a gap and the sentence
+ * describing it are one answer, so a control cannot be blocked without saying why.
+ */
+export function shortfallOf(
+  balance: number | null,
+  price: number | null
+): CreditShortfall | null {
+  if (balance === null || price === null) return null;
+  if (balance >= price) return null;
+  return {
+    balance,
+    price,
+    short: price - balance,
+    statement: CREDIT_LABELS.shortfall(balance, price),
+  };
 }

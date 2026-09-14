@@ -61,10 +61,26 @@
 //
 // `primitives.test.tsx` stays untouched: this feature adds no primitive, and
 // `ObservedValue` / `DerivedScore` / the status labels are its subject, not this one's.
+//
+// ── Where three of them now live (R20.8, §15.3) ────────────────────────────────
+//
+// The restructure moves `BuyingStagePanel`, `IntentPanel` and `ChannelIntelligencePanel`
+// off the retired `GTMProspect` page and behind the dossier's "Where this prospect
+// stands" disclosure. Their own claims above are unaffected — they are pure renders of
+// the props they are handed — but "which surface builds them, and when" is not a claim
+// any of them can keep, so the last block in this file mounts the real dossier through
+// the real transport and reads the DOM. Same idiom as
+// `components/gtm/__tests__/insufficientCredits.test.tsx`, which already mounts that page
+// from this folder.
+//
+// It is deliberately about *mounting and order*, not about requests. All three read
+// slices of a payload the selection already holds, so opening that section costs nothing,
+// and the request budget belongs to `ProspectDossier.compose.test.tsx`'s property 6.
 
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -118,12 +134,36 @@ import {
   GTM_IDENTITY_LABELS,
   GTM_INTENT_LABELS,
   GTM_LIFECYCLE_LABELS,
+  GTM_PAGE_LABELS,
   GTM_TRACKING_STATE_LABELS,
   GTM_UI_LABELS,
   GTM_VERIFICATION_LABELS,
+  PROSPECT_INTELLIGENCE_SECTIONS,
   STATE_LABEL,
   TONE,
 } from "../labels";
+import ProspectIntelligence from "@/pages/ProspectIntelligence";
+import { CreditsProvider } from "@/hooks/useCredits";
+import { evaAPI, type EvaWorkspace, type QualifiedLead } from "@/services/evaAPI";
+
+// The page mounted in the last block pulls both of these in. Neither is any of this
+// file's business: the sidebar owns a conversation read of its own, and nothing here
+// asserts on a toast.
+vi.mock("sonner", () => {
+  const toastFn = Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    message: vi.fn(),
+    dismiss: vi.fn(),
+  });
+  return { toast: toastFn, Toaster: () => null };
+});
+
+vi.mock("@/components/ConversationSidebar", () => ({
+  default: () => <nav aria-label="Conversations" />,
+}));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -771,8 +811,9 @@ afterEach(() => {
  *
  * jsdom cannot compute a rendered outline, so this is not a measurement of a visible
  * ring — it is the assertion that every control came from the design system's focus
- * treatment instead of being hand-rolled without one. The same list
- * `pages/__tests__/GTMProspect.a11y.test.tsx` walks the page with.
+ * treatment instead of being hand-rolled without one. The same list the dossier's own
+ * accessibility suite walks the page with — `pages/__tests__/ProspectDossier.a11y.test.tsx`,
+ * since §15.2's swap landed in task 13.1.
  */
 const FOCUS_VISIBLE_CLASSES = [
   "focus-visible:outline-none",
@@ -1773,7 +1814,7 @@ describe("accessibility", () => {
 // IdentityPanel — the three decisions it makes, made in isolation
 // ══════════════════════════════════════════════════════════════════════════════
 //
-// `pages/__tests__/GTMProspect.identity.test.tsx` drives this block through the real
+// `pages/__tests__/ProspectDossier.identity.test.tsx` drives this block through the real
 // page and the real transport, which is where the claims about *behaviour* belong. What
 // is tested here is the part of it that is a pure function of the verdict, because
 // three of the panel's decisions are pure and each of them is a place where a null
@@ -1942,5 +1983,429 @@ describe("IdentityPanel", () => {
     expect(screen.getByText(GTM_TRACKING_STATE_LABELS.TRACKING)).toBeInTheDocument();
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// The three panels behind "Where this prospect stands" (R20.8, §15.3)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// `BuyingStagePanel`, `IntentPanel` and `ChannelIntelligencePanel` are the content of one
+// dossier disclosure — `PROSPECT_INTELLIGENCE_SECTIONS.standing` — and of nothing else.
+// Everything above this line is a claim about what each renders when it is handed a
+// payload. This is the claim none of them can make about itself: that they are built when
+// the operator opens that section, and not before.
+//
+// `IntelligenceSection` takes its `children` as a function, so a collapsed `<details>`
+// never calls it and the three panels are not in the tree at all. That distinction is what
+// this block is for. `<details>` already hides content; a section that merely hid these
+// would still have constructed them, and the closed state would be indistinguishable from
+// the open one to anything reading the DOM — including the axe sweep further up, which
+// would then be auditing panels no operator had asked for.
+//
+// ── The markers, and why not the titles ───────────────────────────────────────
+//
+// `BUYING_STAGE_PANEL_LABELS.title` is the string "Buying stage", and so is
+// `FIELD_LABEL.buying_stage` — which `StateDimensionGrid` renders in the *always-open*
+// grid above the inventory, on every activated dossier. So a title query would find the
+// grid's row and report the panel present while the section was still shut. Each panel is
+// therefore located by something only it renders: its own `note` sentence, its own list
+// name, and `BuyingStagePanel`'s `data-buying-stage` attribute.
+//
+// ── The stage the inventory needs ─────────────────────────────────────────────
+//
+// The whole disclosure region renders only while `isIntelligenceActive(stage)` —
+// `WAITING`, `ACTIVE` or `RECOMMENDED` — so the fixture serves a `li_gtm_profiles` row.
+// An `ENRICHED` dossier has no `<details>` on it at all, which is the last case below.
+
+describe("behind the standing disclosure on the dossier", () => {
+  /** A real brand id: `evaAPI` and `CreditsProvider` both refuse anything else. */
+  const BRAND = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+  const EVA_LEAD = "lead_ada7f1";
+  const GTM_LEAD = "9c1e2b44-77aa-4c1e-9f6b-0f3a5c8d1e20";
+  const PERSON = "Ada Lovelace";
+  const COMPANY = "Analytical Engines";
+  const LINKEDIN = "https://www.linkedin.com/in/ada-lovelace";
+  const ISO = "2024-05-01T12:00:00.000Z";
+
+  /** The stage the served payload places the prospect in, so it can be read back. */
+  const SERVED_STAGE = "EVALUATING";
+
+  function pageLead(): QualifiedLead {
+    return {
+      id: EVA_LEAD,
+      entityId: "ent-1",
+      company: COMPANY,
+      domain: "analyticalengines.com",
+      website: "https://analyticalengines.com",
+      industry: "B2B SaaS",
+      employeeRange: "51-200",
+      hqLocation: "London",
+      acvTier: "medium",
+      identityVerified: true,
+      enrichable: true,
+      icpFit: 82,
+      recommendedAction: "queued_review",
+      escalation: "none",
+      qualificationReason: "Hiring for a data platform team.",
+      primaryEvent: "Posted three data-platform roles",
+      eventType: "job_posting",
+      signals: [],
+      contact: {
+        name: PERSON,
+        role: "Head of Engineering",
+        email: "ada@analyticalengines.com",
+        emailVerified: true,
+        linkedinUrl: LINKEDIN,
+      },
+      enrichment: { website: "https://analyticalengines.com", status: "enriched" },
+      handoffState: "enriched",
+      status: "qualified",
+      notes: "",
+      createdAt: ISO,
+      updatedAt: ISO,
+      gtmLeadId: GTM_LEAD,
+    };
+  }
+
+  function pageWorkspace(): EvaWorkspace {
+    const leads = [pageLead()];
+    return {
+      signals: [],
+      entities: [],
+      leads,
+      potentialLeads: [],
+      channels: [],
+      icp: {
+        brand_name: "Weez",
+        industry: "B2B SaaS",
+        segments: ["Mid-market SaaS"],
+        personas: ["RevOps"],
+        value_prop: "unify GTM reporting into one decision view",
+      },
+      metrics: {
+        channelsMonitored: 4,
+        signalsCaptured: 0,
+        signalsThisWeek: 0,
+        orgsTracked: 1,
+        potentialLeads: 0,
+        qualifiedLeads: leads.length,
+        enrichedLeads: leads.length,
+        emailsFound: leads.length,
+        handedToMax: 0,
+        byTier: { low: 0, medium: 1, high: 0 },
+        bySignalType: {},
+      },
+      // Discovery has landed, so the page arms no silent re-read behind these mounts.
+      sweepState: "complete",
+      isDemo: false,
+    };
+  }
+
+  // ─── The wire, as `schemas/gtm.py` serialises it ────────────────────────────
+
+  function wireFact(value: string | null) {
+    return {
+      value,
+      is_unknown: value === null,
+      source_surface: value === null ? null : "LINKEDIN_PROFILE_PAGE",
+      observed_at: value === null ? null : ISO,
+      is_stale: false,
+      is_derived: false,
+    };
+  }
+
+  /**
+   * `ProspectOut`, carrying the three collections the standing section renders.
+   *
+   * All three arrive on the *detail* payload — `buying_stage`, `intents` and
+   * `channel_states` — which is what makes the section free to open: the page holds them
+   * from the selection's own read and the disclosure asks for nothing.
+   */
+  function wireDetail(activated: boolean) {
+    return {
+      lead_id: GTM_LEAD,
+      profile: {
+        lead_id: GTM_LEAD,
+        // The activation flag. Without it there is no disclosure inventory at all.
+        profile_id: activated ? "profile-1" : null,
+        profile_url: activated ? LINKEDIN : null,
+        public_identifier: activated ? "ada-lovelace" : null,
+        linkedin_verification_status: "VERIFIED",
+        linkedin_verified_at: ISO,
+        linkedin_match_confidence: 93,
+        name: wireFact(PERSON),
+        headline: wireFact("Head of Engineering"),
+        company: wireFact(COMPANY),
+        role: wireFact("Head of Engineering"),
+        location: wireFact("London"),
+        lead_score: {
+          score: 82,
+          score_kind: "RECOMMENDATION_SCORE",
+          score_disclaimer:
+            "A prioritisation signal, not a predicted probability of conversion.",
+          is_derived: true,
+        },
+      },
+      state: {
+        relationship_state: wireFact("NOT_CONNECTED"),
+        conversation_state: wireFact("WARMUP_READY"),
+        confirmation_status: "NOT_APPLICABLE",
+        display_summary: "Not connected · warm-up ready",
+        display_summary_is_derived: true,
+      },
+      buying_stage: { value: SERVED_STAGE, confidence: 58, signal_ids: ["sig-1"] },
+      intents: [
+        {
+          intent_type: "BUYING",
+          value: 72,
+          confidence: 61,
+          source: "DERIVED",
+          evaluated_at: ISO,
+          decay_rate: 0,
+          signal_ids: ["sig-1"],
+          is_derived: true,
+        },
+      ],
+      channel_states: [
+        {
+          channel: "LINKEDIN",
+          availability: "AVAILABLE",
+          reachability: 70,
+          activity: 55,
+          engagement: 40,
+          responsiveness: 35,
+          response_rate: 20,
+          historical_conversion_rate: 8,
+          confidence: 60,
+          suitability: 66,
+          last_interaction_at: ISO,
+          last_inbound_at: null,
+          last_outbound_at: ISO,
+          cooldown_until: null,
+          consecutive_unanswered: 0,
+          provenance: {},
+        },
+      ],
+      updated_at: ISO,
+    };
+  }
+
+  function wireCredits() {
+    return {
+      brand_id: BRAND,
+      balance: 40,
+      prices: [
+        { action: "ENRICH", credits: 1 },
+        { action: "CONTACT", credits: 1 },
+        { action: "ACTIVATE", credits: 2 },
+      ],
+      history: [],
+    };
+  }
+
+  const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
+
+  /**
+   * Every route the dossier can reach, replacing this module's `serveCollections()`.
+   *
+   * Ordered longest-first: `/prospect/{id}/state/history` contains `/state`, and the bare
+   * detail read has to come last or it would answer for all of them.
+   */
+  function servePage(activated: boolean) {
+    fetchMock.mockImplementation(async (input: unknown) => {
+      const url = String(input);
+      if (url.includes("/credits")) return ok(wireCredits());
+      if (url.includes("/action-queue")) return ok({ items: [], has_more: false });
+      if (url.includes("/next-best-action")) return ok({ lead_id: GTM_LEAD });
+      if (url.includes("/state/history"))
+        return ok({ items: [], next_cursor: null, has_more: false });
+      if (url.includes("/state")) return ok({ lead_id: GTM_LEAD, state_version: 0 });
+      if (url.includes("/signals")) return ok({ items: [], next_cursor: null, has_more: false });
+      if (url.includes("/timeline"))
+        return ok({ entries: [], next_cursor: null, has_more: false });
+      if (url.includes("/debug")) return ok({ lead_id: GTM_LEAD, learning_updates: [] });
+      if (url.includes(`/prospect/${GTM_LEAD}`)) return ok(wireDetail(activated));
+      return ok({});
+    });
+  }
+
+  // ─── Harness ────────────────────────────────────────────────────────────────
+
+  const DOSSIER = 'section[aria-label="Prospect dossier"]';
+  const STAGE_MARKER = "[data-gtm-stage]";
+  /** `BuyingStagePanel`'s own attribute. `StateDimensionGrid` carries no such thing. */
+  const BUYING_STAGE_BLOCK = "[data-buying-stage]";
+
+  const stageOf = (root: ParentNode) =>
+    root.querySelector(STAGE_MARKER)?.getAttribute("data-gtm-stage") ?? null;
+
+  /** The `<summary>` of one disclosure, found by the section's own label. */
+  function disclosure(root: ParentNode, summary: string): HTMLElement {
+    const match = Array.from(root.querySelectorAll("summary")).find((element) =>
+      Array.from(element.querySelectorAll("span")).some(
+        (span) => (span.textContent ?? "").trim() === summary,
+      ),
+    );
+    if (!match) throw new Error(`no disclosure labelled ${JSON.stringify(summary)}`);
+    return match as HTMLElement;
+  }
+
+  /** Whether `a` precedes `b` in document order. */
+  function isBefore(a: Node, b: Node): boolean {
+    return Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }
+
+  function renderPage() {
+    return render(
+      <MemoryRouter initialEntries={[`/prospect-intelligence/${BRAND}`]}>
+        <CreditsProvider brandId={BRAND}>
+          <Routes>
+            <Route path="/prospect-intelligence/:spaceId" element={<ProspectIntelligence />} />
+          </Routes>
+        </CreditsProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  /**
+   * The loaded dossier, waited on the *stage* rather than on the marker carrying it.
+   *
+   * Band 3 paints immediately and a prospect whose read is in flight reads as `ENRICHED`,
+   * which is a real answer rather than a placeholder — so waiting for the element alone
+   * would let a case read the page before its payload landed. `WAITING` is reachable only
+   * once the profile row is on the payload.
+   */
+  async function openDossier(activated: boolean) {
+    servePage(activated);
+    const { container } = renderPage();
+    await waitFor(() => expect(stageOf(container)).toBe(activated ? "WAITING" : "ENRICHED"));
+    return {
+      container,
+      dossier: container.querySelector(DOSSIER) as HTMLElement,
+      user: userEvent.setup(),
+    };
+  }
+
+  // Overrides this module's `serveCollections()` for these cases only: nested hooks run
+  // after the outer ones, so `fetchMock` is already stubbed onto `fetch` by the time this
+  // re-implements it. The workspace spy is restored by `restoreMocks`.
+  beforeEach(() => {
+    vi.spyOn(evaAPI, "getWorkspace").mockResolvedValue(pageWorkspace());
+  });
+
+  // The instrument. A case that could not find the section would report an absence with
+  // nothing to do with whether the three panels mount.
+  it("puts the standing section on the dossier, collapsed", async () => {
+    const { dossier } = await openDossier(true);
+
+    const summary = disclosure(dossier, PROSPECT_INTELLIGENCE_SECTIONS.standing);
+    const details = summary.closest("details") as HTMLDetailsElement;
+    expect(details).not.toBeNull();
+    expect(details.open).toBe(false);
+    // It says what is behind it before anything is opened, which is what makes the
+    // disclosure a question rather than a mystery.
+    expect(summary.textContent).toContain(PROSPECT_INTELLIGENCE_SECTIONS.standingNote);
+  });
+
+  it("builds none of the three while the section is closed", async () => {
+    const { container, dossier } = await openDossier(true);
+
+    // Not hidden — absent. Each panel is located by something only it renders, never by a
+    // title: "Buying stage" is also `FIELD_LABEL.buying_stage`, which the always-open
+    // dimension grid prints on every activated dossier.
+    expect(container.querySelector(BUYING_STAGE_BLOCK)).toBeNull();
+    expect(within(dossier).queryByText(BUYING_STAGE_PANEL_LABELS.note)).toBeNull();
+    expect(within(dossier).queryByText(INTENT_PANEL_LABELS.note)).toBeNull();
+    expect(within(dossier).queryByRole("list", { name: INTENT_PANEL_LABELS.list })).toBeNull();
+    expect(within(dossier).queryByText(CHANNEL_PANEL_LABELS.note)).toBeNull();
+
+    // The grid above the inventory is unaffected: it renders `buying_stage` from the same
+    // read, always open, and that is the row a title query would have found. Asserting it
+    // is present is what makes the four absences above assertions about the panels rather
+    // than about the dossier having loaded.
+    expect(within(dossier).getByText(FIELD_LABEL.buying_stage!)).toBeInTheDocument();
+  });
+
+  it("builds all three, in order, once the section is opened", async () => {
+    const { container, dossier, user } = await openDossier(true);
+    const summary = disclosure(dossier, PROSPECT_INTELLIGENCE_SECTIONS.standing);
+    const details = summary.closest("details") as HTMLElement;
+
+    await user.click(summary);
+
+    const buyingStage = await waitFor(() => {
+      const found = container.querySelector(BUYING_STAGE_BLOCK);
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    const intents = within(details).getByRole("list", { name: INTENT_PANEL_LABELS.list });
+    const channels = within(details).getByText(CHANNEL_PANEL_LABELS.note);
+
+    // All three inside *that* disclosure, and not merely somewhere on the page.
+    [buyingStage, intents, channels].forEach((element) =>
+      expect(details).toContainElement(element),
+    );
+
+    // The order the section composes them in: their own position, what they want, then
+    // which channel reaches them.
+    expect(isBefore(buyingStage, intents)).toBe(true);
+    expect(isBefore(intents, channels)).toBe(true);
+
+    // And each is reading the served payload rather than a resting default. The stage is
+    // the one the server placed them in, the intent list holds the eleven types it always
+    // holds, and the channel panel is scoped to its own evidence.
+    expect(buyingStage).toHaveAttribute("data-buying-stage", SERVED_STAGE);
+    expect(within(buyingStage).getByText(STATE_LABEL[SERVED_STAGE]!)).toBeInTheDocument();
+    expect(within(intents).getAllByRole("listitem")).toHaveLength(INTENT_TYPES.length);
+    expect(within(details).getByText(GTM_INTENT_LABELS.BUYING!)).toBeInTheDocument();
+
+    // One column per channel, in `CHANNEL_KEYS` order, and only the served one carries a
+    // row: the two the payload said nothing about state the absence rather than showing a
+    // zero, which is the same rule the panel's own cases above assert on fixtures.
+    const columns = Array.from(details.querySelectorAll("[data-channel]")) as HTMLElement[];
+    expect(columns.map((column) => column.getAttribute("data-channel"))).toEqual([
+      "LINKEDIN",
+      "EMAIL",
+      "PHONE",
+    ]);
+    expect(within(columns[0]!).queryByText(CHANNEL_PANEL_LABELS.noState)).toBeNull();
+    expect(within(columns[1]!).getByText(CHANNEL_PANEL_LABELS.noState)).toBeInTheDocument();
+
+    // The section's own "nothing was read" line stays away: all three panels rendered, so
+    // there is nothing for it to say.
+    expect(within(details).queryByText(GTM_PAGE_LABELS.noIntelligenceRead)).toBeNull();
+  });
+
+  it("keeps them built after the section is closed again", async () => {
+    // The section latches on first open rather than tracking `open`: closing must not
+    // throw away work the operator already asked for, so re-opening is free.
+    const { container, dossier, user } = await openDossier(true);
+    const summary = disclosure(dossier, PROSPECT_INTELLIGENCE_SECTIONS.standing);
+    const details = summary.closest("details") as HTMLDetailsElement;
+
+    await user.click(summary);
+    await waitFor(() => expect(container.querySelector(BUYING_STAGE_BLOCK)).not.toBeNull());
+
+    await user.click(summary);
+
+    expect(details.open).toBe(false);
+    expect(container.querySelector(BUYING_STAGE_BLOCK)).not.toBeNull();
+  });
+
+  it("cannot be reached on an enriched dossier, which has no inventory at all", async () => {
+    // The inventory renders only while `isIntelligenceActive(stage)`. Before activation
+    // nothing has been evaluated, so there is no section to open — and a case that
+    // expected one here would be measuring the fixture rather than the page.
+    const { container, dossier } = await openDossier(false);
+
+    expect(dossier.querySelectorAll("details")).toHaveLength(0);
+    expect(container.querySelector(BUYING_STAGE_BLOCK)).toBeNull();
+    expect(within(dossier).queryByText(PROSPECT_INTELLIGENCE_SECTIONS.standing)).toBeNull();
+    expect(within(dossier).queryByText(CHANNEL_PANEL_LABELS.note)).toBeNull();
+    // Still a dossier: the prospect is named, so the absences above are the composition
+    // and not a failed read. `getAllByText`, because the decision the enriched dossier is
+    // showing names the person in its own copy as well as in band 2's heading.
+    expect(within(dossier).getAllByText(PERSON).length).toBeGreaterThan(0);
   });
 });

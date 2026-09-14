@@ -1,6 +1,6 @@
 // services/__tests__/gtmAPI.test.ts
 //
-// Three things are checked here, and they are the three things the service module
+// Five things are checked here, and they are the five things the service module
 // is responsible for.
 //
 // 1. **Transport.** The bearer token reaches the `Authorization` header, `brand_id`
@@ -17,12 +17,27 @@
 //    with the expression `schemas/gtm.py` uses. The session token has exactly one
 //    shape in that module — a request header — and this asserts it never becomes a
 //    field on a type or a key in a payload.
+//
+// 4. **One route, one wrapper (property 45).** Every member of the client is invoked
+//    and the request path it issues is read off the transport, so no route ends up
+//    with a second wrapper and each of the two new routes has exactly one.
+//
+// 5. **The two new wrappers (R15.5, R15.6, R20.9).** `getAttentionFeed` and
+//    `getDailyAnalytics`: what reaches the query string when a parameter is set and
+//    what leaves it when one is not, and the wire→domain mapping — above all that a
+//    metric the server did not compute arrives as a *missing map entry* rather than
+//    as `null` or `0`, which is property 36's client half.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import fc from "fast-check";
 
-import gtmAPI, { GTM_BASE_URL, unknownFact } from "../gtmAPI";
+import gtmAPI, {
+  GTM_BASE_URL,
+  unknownFact,
+  type AnalyticsMetricKey,
+} from "../gtmAPI";
 
 // The same expression as `schemas.gtm.CREDENTIAL_FIELD_PATTERN`, matched as a
 // substring so `access_token`, `li_at_cookie`, and `session_state` are all caught.
@@ -799,5 +814,634 @@ describe("the credential prohibition", () => {
     expect(
       Object.keys(body).filter((key) => CREDENTIAL_FIELD_PATTERN.test(key))
     ).toEqual([]);
+  });
+});
+
+// ─── 4. One route, one wrapper (R10.10, R15.10, R20.3) ────────────────────────
+
+/**
+ * Feature: sales-workflow-frontend-restructure, Property 45: One route, one wrapper.
+ *
+ * *For any* GTM route path, at most one member of the API client issues a request to
+ * it, and each of the two new routes has exactly one.
+ *
+ * The scan is deliberately **programmatic rather than a list of member names**. A
+ * hard-coded list asserts what somebody remembered to write down; the failure this
+ * property exists to catch is a *second* wrapper added later for a route that already
+ * has one, and a list would grow to accommodate it. So every function-valued member of
+ * the default export is invoked against a stubbed transport and the path it actually
+ * requested is read back off `fetch`.
+ *
+ * Two things make the invocation generic. Every member takes the brand as its first
+ * argument and, at most, a path identifier and one options object after it, so the same
+ * three arguments reach all of them: a member that reads `query.limit` off a string
+ * finds `undefined` and drops the parameter, which is the behaviour `gtmQuery` already
+ * has for an unset value. And the request leaves the module *before* the response is
+ * mapped, so a mapping that rejects an empty stub body has already told the scan what
+ * it needed — the throw is caught and discarded.
+ *
+ * The route is the path with the query string removed and the generated identifier
+ * folded back to `{id}`. The brand travels as a query parameter on every route and is
+ * not part of any route's identity; the identifier is a path segment and is.
+ */
+describe("Feature: sales-workflow-frontend-restructure, Property 45: One route, one wrapper", () => {
+  /** The two routes this feature adds, as the design fixes their paths (§5.1, §5.2). */
+  const NEW_ROUTES = ["/attention-feed", "/analytics/daily"] as const;
+
+  type ClientMember = (...args: unknown[]) => Promise<unknown>;
+
+  /**
+   * Identifiers carry an `id-` prefix so a generated value can never collide with a
+   * literal path segment — `/credits` normalising to `/{id}` because the generator
+   * happened to produce "credits" would invent a duplicate that does not exist.
+   */
+  const idTokenArb = fc.string().map((suffix) => `id-${suffix}`);
+  const brandIdArb = fc.string({ minLength: 1 });
+
+  function clientMembers(): [string, ClientMember][] {
+    return Object.entries(gtmAPI as unknown as Record<string, unknown>).filter(
+      (entry): entry is [string, ClientMember] => typeof entry[1] === "function"
+    );
+  }
+
+  /** The path a request went to, with the brand's query string and the id folded out. */
+  function routeOf(url: string, idToken: string): string {
+    expect(url.startsWith(`${GTM_BASE_URL}/`)).toBe(true);
+    const [path] = url.slice(GTM_BASE_URL.length).split("?");
+    const encodedId = encodeURIComponent(idToken);
+    return path
+      .split("/")
+      .map((segment) => (segment === encodedId ? "{id}" : segment))
+      .join("/");
+  }
+
+  /** Route → the members that issued a request to it, each labelled with its verb. */
+  async function scanRoutes(
+    brandId: string,
+    idToken: string
+  ): Promise<Map<string, string[]>> {
+    const routes = new Map<string, string[]>();
+
+    for (const [name, member] of clientMembers()) {
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+
+      try {
+        await member(brandId, idToken, idToken);
+      } catch {
+        // The mapping rejected the empty stub body. Irrelevant here: the request had
+        // already left, and its url is the whole of what this scan reads.
+      }
+
+      const calls = fetchMock.mock.calls as [string, RequestInit | undefined][];
+      // Not a formality. A member that issued nothing would be invisible to the
+      // uniqueness check below, which is how a scan silently stops covering the client.
+      expect(calls.length, `${name} issued no request`).toBe(1);
+
+      const [url, options] = calls[0];
+      const route = routeOf(String(url), idToken);
+      const label = `${name} (${options?.method ?? "GET"})`;
+      routes.set(route, [...(routes.get(route) ?? []), label]);
+    }
+
+    return routes;
+  }
+
+  it("reaches every member of the client, so the scan is not vacuous", async () => {
+    const members = clientMembers();
+    expect(members.length).toBeGreaterThan(25);
+
+    const routes = await scanRoutes("brand-1", "id-lead_1");
+    // One route recorded per member: no member was skipped, and none was double-counted.
+    expect([...routes.values()].flat()).toHaveLength(members.length);
+  });
+
+  it("issues at most one member's request to any route path", async () => {
+    await fc.assert(
+      fc.asyncProperty(brandIdArb, idTokenArb, async (brandId, idToken) => {
+        const routes = await scanRoutes(brandId, idToken);
+        const duplicated = [...routes.entries()].filter(
+          ([, members]) => members.length > 1
+        );
+        // Reported as route → members so a failure names the second wrapper rather
+        // than only counting it.
+        expect(Object.fromEntries(duplicated)).toEqual({});
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it("exposes exactly one wrapper for the attention feed and one for the daily analytics", async () => {
+    await fc.assert(
+      fc.asyncProperty(brandIdArb, idTokenArb, async (brandId, idToken) => {
+        const routes = await scanRoutes(brandId, idToken);
+        for (const route of NEW_ROUTES) {
+          expect(routes.get(route) ?? [], `wrappers for ${route}`).toHaveLength(1);
+        }
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it("names the one wrapper each new route has", async () => {
+    const routes = await scanRoutes("brand-1", "id-lead_1");
+    expect(routes.get("/attention-feed")).toEqual(["getAttentionFeed (GET)"]);
+    expect(routes.get("/analytics/daily")).toEqual(["getDailyAnalytics (GET)"]);
+  });
+});
+
+// ─── 5. The two new wrappers (R15.5, R15.6, R20.9) ────────────────────────────
+//
+// Two halves, and they fail for different reasons. Serialisation is about what the
+// server is asked: an unset parameter must be *absent* from the query string, because
+// the server owns the defaults and a client-side copy of them is a second opinion that
+// drifts. Mapping is about what the answer is allowed to say, and the one statement
+// that matters is absence — see the property-36 block below.
+
+/** The six metric keys, in the order the type declares them. */
+const ALL_METRIC_KEYS: readonly AnalyticsMetricKey[] = [
+  "prospects_contacted",
+  "state_changed",
+  "most_likely_to_close",
+  "at_risk",
+  "meetings_booked",
+  "meetings_completed",
+];
+
+const ATTENTION_ITEM_WIRE = {
+  lead_id: "lead_1",
+  prospect_name: { ...OBSERVED, value: "Priya Patel" },
+  company: { ...OBSERVED, value: "Brightloop" },
+  trigger: "PROSPECT_REPLIED",
+  reason: "Priya replied yesterday and the thread is waiting on you.",
+  required_response: "Review and respond",
+  consequence_tier: "IMMEDIATE",
+  escalated_from: null,
+  escalation_reason: null,
+  due_at: "2025-01-04T09:00:00+00:00",
+  computed_at: "2025-01-04T12:00:00+00:00",
+  route: "/prospect/lead_1",
+  criteria: [{ field: "trigger", operator: "EQUALS", values: ["PROSPECT_REPLIED"] }],
+};
+
+const ATTENTION_FEED_WIRE = {
+  period_days: 7,
+  computed_at: "2025-01-04T12:00:00+00:00",
+  summary: {
+    total: 2,
+    // Two of the four bands and two of the nine triggers: the keys the server counted
+    // and no others.
+    by_tier: { IMMEDIATE: 1, MATERIAL: 1 },
+    by_trigger: { PROSPECT_REPLIED: 1, AT_RISK_OR_LOSING: 1 },
+  },
+  items: [
+    ATTENTION_ITEM_WIRE,
+    {
+      ...ATTENTION_ITEM_WIRE,
+      lead_id: "lead_2",
+      prospect_name: { ...OBSERVED, value: "Dev Rao" },
+      trigger: "AT_RISK_OR_LOSING",
+      consequence_tier: "MATERIAL",
+      escalated_from: "IMPORTANT",
+      escalation_reason: "the deal value moved this into the material band",
+      due_at: "2025-01-03T09:00:00+00:00",
+      route: "/prospect/lead_2",
+    },
+  ],
+};
+
+/**
+ * The analytics fixture, built so every case property 36 cares about is present in one
+ * payload and can be told from the others:
+ *
+ * | metric | day 1 (`2025-01-01`) | day 2 (`2025-01-02`) |
+ * |---|---|---|
+ * | `prospects_contacted` | measured `3` | measured `1` |
+ * | `state_changed` | **measured `0`** — the query ran and found nobody | measured `2` |
+ * | `most_likely_to_close` | present, `trend: null` (no prior day) | present, `trend: "RISING"` |
+ * | `at_risk` | **key omitted** by the server | measured `0` |
+ * | `meetings_booked` | **key sent as `null`** | measured `1` |
+ * | `meetings_completed` | present with **no `count`**, two lead ids | measured `0` |
+ */
+const ANALYTICS_WIRE = {
+  brand_id: "brand-1",
+  days: 2,
+  start_date: "2025-01-01",
+  end_date: "2025-01-02",
+  computed_at: "2025-01-04T12:00:00+00:00",
+  rows: [
+    {
+      date: "2025-01-01",
+      metrics: {
+        prospects_contacted: {
+          count: 3,
+          lead_ids: ["lead_1", "lead_2", "lead_3"],
+          criteria: [{ field: "outreach_sent_at", operator: "WITHIN_DAYS", values: ["1"] }],
+        },
+        state_changed: {
+          count: 0,
+          lead_ids: [],
+          criteria: [{ field: "state_changed_at", operator: "WITHIN_DAYS", values: ["1"] }],
+        },
+        most_likely_to_close: {
+          count: 1,
+          lead_ids: ["lead_1"],
+          criteria: [{ field: "lead_score", operator: "AT_LEAST", values: ["70"] }],
+          trend: null,
+        },
+        // `at_risk` is absent: no key at all.
+        meetings_booked: null,
+        meetings_completed: {
+          // No `count`: the list's own length is the count the server held.
+          lead_ids: ["lead_1", "lead_2"],
+          criteria: [{ field: "meeting_completed_at", operator: "WITHIN_DAYS", values: ["1"] }],
+        },
+      },
+    },
+    {
+      date: "2025-01-02",
+      metrics: {
+        prospects_contacted: { count: 1, lead_ids: ["lead_4"], criteria: [] },
+        state_changed: { count: 2, lead_ids: ["lead_1", "lead_4"], criteria: [] },
+        most_likely_to_close: {
+          count: 2,
+          lead_ids: ["lead_1", "lead_4"],
+          criteria: [{ field: "lead_score", operator: "AT_LEAST", values: ["70"] }],
+          trend: "RISING",
+        },
+        at_risk: { count: 0, lead_ids: [], criteria: [] },
+        meetings_booked: { count: 1, lead_ids: ["lead_1"], criteria: [] },
+        meetings_completed: { count: 0, lead_ids: [], criteria: [] },
+      },
+    },
+  ],
+};
+
+describe("getAttentionFeed", () => {
+  it("serialises the lookback, the band and the cap beside the brand", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    await gtmAPI.getAttentionFeed("brand-1", {
+      periodDays: 30,
+      tier: "IMMEDIATE",
+      limit: 10,
+    });
+
+    const [url] = lastCall();
+    expect(url).toBe(
+      `${GTM_BASE_URL}/attention-feed?brand_id=brand-1&period_days=30&tier=IMMEDIATE&limit=10`
+    );
+  });
+
+  it("sends the brand alone when nothing was asked for, so the server's defaults are the only defaults", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    await gtmAPI.getAttentionFeed("brand-1");
+
+    const [url] = lastCall();
+    expect(url).toBe(`${GTM_BASE_URL}/attention-feed?brand_id=brand-1`);
+    // The failure this guards against is `period_days=undefined`, which the server
+    // reads as a malformed integer rather than as an omission.
+    expect(url).not.toContain("undefined");
+    expect(url).not.toContain("period_days");
+    expect(url).not.toContain("tier");
+    expect(url).not.toContain("limit");
+  });
+
+  it("carries the parameters that were set and drops the ones that were not", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    await gtmAPI.getAttentionFeed("brand-1", { tier: "MATERIAL" });
+
+    const [url] = lastCall();
+    expect(url).toBe(`${GTM_BASE_URL}/attention-feed?brand_id=brand-1&tier=MATERIAL`);
+  });
+
+  it("drops a null tier rather than narrowing to the string 'null'", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    await gtmAPI.getAttentionFeed("brand-1", { tier: null, periodDays: 14 });
+
+    const [url] = lastCall();
+    expect(url).toBe(`${GTM_BASE_URL}/attention-feed?brand_id=brand-1&period_days=14`);
+  });
+
+  it("renames the feed's keys and keeps the server's order", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    const feed = await gtmAPI.getAttentionFeed("brand-1");
+
+    expect(feed.periodDays).toBe(7);
+    expect(feed.computedAt).toBe("2025-01-04T12:00:00+00:00");
+    expect(feed.items.map((item) => item.leadId)).toEqual(["lead_1", "lead_2"]);
+    expect(feed.items[0]).toMatchObject({
+      trigger: "PROSPECT_REPLIED",
+      reason: "Priya replied yesterday and the thread is waiting on you.",
+      requiredResponse: "Review and respond",
+      consequenceTier: "IMMEDIATE",
+      escalatedFrom: null,
+      escalationReason: null,
+      dueAt: "2025-01-04T09:00:00+00:00",
+      route: "/prospect/lead_1",
+    });
+    expect(feed.items[0].prospectName.value).toBe("Priya Patel");
+    expect(feed.items[0].criteria).toEqual([
+      { field: "trigger", operator: "EQUALS", values: ["PROSPECT_REPLIED"] },
+    ]);
+    expect(feed.items[1].escalatedFrom).toBe("IMPORTANT");
+    expect(feed.items[1].escalationReason).toBe(
+      "the deal value moved this into the material band"
+    );
+  });
+
+  it("leaves an uncounted band and an uncounted trigger missing from the summary", async () => {
+    respondWith(ATTENTION_FEED_WIRE);
+    const { summary } = await gtmAPI.getAttentionFeed("brand-1");
+
+    expect(summary.total).toBe(2);
+    expect(summary.byTier).toEqual({ IMMEDIATE: 1, MATERIAL: 1 });
+    // Not counted is not counted-none: filling the two absent bands with `0` would
+    // state a finding the server never made.
+    expect("IMPORTANT" in summary.byTier).toBe(false);
+    expect("OTHER" in summary.byTier).toBe(false);
+    expect(Object.keys(summary.byTrigger)).toEqual([
+      "PROSPECT_REPLIED",
+      "AT_RISK_OR_LOSING",
+    ]);
+  });
+
+  it("echoes the requested lookback only when the payload carried none", async () => {
+    respondWith({ ...ATTENTION_FEED_WIRE, period_days: undefined });
+    const echoed = await gtmAPI.getAttentionFeed("brand-1", { periodDays: 30 });
+    expect(echoed.periodDays).toBe(30);
+
+    // And the payload wins when both are present: the window the server actually
+    // looked over is the one a surface states.
+    respondWith({ ...ATTENTION_FEED_WIRE, period_days: 7 });
+    const served = await gtmAPI.getAttentionFeed("brand-1", { periodDays: 30 });
+    expect(served.periodDays).toBe(7);
+  });
+
+  it("reads an empty workspace as a success with no items", async () => {
+    respondWith({ period_days: 7, computed_at: null, summary: { total: 0 }, items: [] });
+    const feed = await gtmAPI.getAttentionFeed("brand-1");
+
+    expect(feed.items).toEqual([]);
+    expect(feed.computedAt).toBeNull();
+    expect(feed.summary.total).toBe(0);
+    expect(feed.summary.byTier).toEqual({});
+  });
+});
+
+describe("getDailyAnalytics", () => {
+  it("serialises the range length and the inclusive last day beside the brand", async () => {
+    respondWith(ANALYTICS_WIRE);
+    await gtmAPI.getDailyAnalytics("brand-1", { days: 30, endDate: "2025-01-31" });
+
+    const [url] = lastCall();
+    expect(url).toBe(
+      `${GTM_BASE_URL}/analytics/daily?brand_id=brand-1&days=30&end_date=2025-01-31`
+    );
+  });
+
+  it("sends the brand alone when nothing was asked for", async () => {
+    respondWith(ANALYTICS_WIRE);
+    await gtmAPI.getDailyAnalytics("brand-1");
+
+    const [url] = lastCall();
+    expect(url).toBe(`${GTM_BASE_URL}/analytics/daily?brand_id=brand-1`);
+    expect(url).not.toContain("undefined");
+    expect(url).not.toContain("days");
+    expect(url).not.toContain("end_date");
+  });
+
+  it("carries a range with no end date, and an end date with no range", async () => {
+    respondWith(ANALYTICS_WIRE);
+    await gtmAPI.getDailyAnalytics("brand-1", { days: 14 });
+    expect(lastCall()[0]).toBe(
+      `${GTM_BASE_URL}/analytics/daily?brand_id=brand-1&days=14`
+    );
+
+    respondWith(ANALYTICS_WIRE);
+    await gtmAPI.getDailyAnalytics("brand-1", { endDate: "2025-02-01" });
+    expect(lastCall()[0]).toBe(
+      `${GTM_BASE_URL}/analytics/daily?brand_id=brand-1&end_date=2025-02-01`
+    );
+  });
+
+  it("drops a null end date rather than sending the string 'null'", async () => {
+    respondWith(ANALYTICS_WIRE);
+    await gtmAPI.getDailyAnalytics("brand-1", { days: 7, endDate: null });
+
+    expect(lastCall()[0]).toBe(
+      `${GTM_BASE_URL}/analytics/daily?brand_id=brand-1&days=7`
+    );
+  });
+
+  it("renames the envelope and keeps one row per day in the server's order", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const analytics = await gtmAPI.getDailyAnalytics("brand-1", { days: 2 });
+
+    expect(analytics.brandId).toBe("brand-1");
+    expect(analytics.days).toBe(2);
+    expect(analytics.startDate).toBe("2025-01-01");
+    expect(analytics.endDate).toBe("2025-01-02");
+    expect(analytics.computedAt).toBe("2025-01-04T12:00:00+00:00");
+    expect(analytics.rows.map((row) => row.date)).toEqual(["2025-01-01", "2025-01-02"]);
+  });
+
+  it("echoes the requested range only when the payload carried none", async () => {
+    respondWith({ ...ANALYTICS_WIRE, days: undefined });
+    const echoed = await gtmAPI.getDailyAnalytics("brand-1", { days: 30 });
+    expect(echoed.days).toBe(30);
+
+    respondWith({ ...ANALYTICS_WIRE, days: undefined });
+    const neither = await gtmAPI.getDailyAnalytics("brand-1");
+    expect(neither.days).toBe(7);
+  });
+
+  it("renames one present metric and links it to the prospects behind it", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    expect(day1.metrics.prospects_contacted).toEqual({
+      count: 3,
+      leadIds: ["lead_1", "lead_2", "lead_3"],
+      criteria: [{ field: "outreach_sent_at", operator: "WITHIN_DAYS", values: ["1"] }],
+      trend: null,
+    });
+  });
+
+  it("reads an empty range as no rows rather than as invented ones", async () => {
+    respondWith({ ...ANALYTICS_WIRE, rows: [], computed_at: null });
+    const analytics = await gtmAPI.getDailyAnalytics("brand-1");
+
+    expect(analytics.rows).toEqual([]);
+    expect(analytics.computedAt).toBeNull();
+  });
+});
+
+/**
+ * Feature: sales-workflow-frontend-restructure, Property 36 (client half): an
+ * uncomputable metric is absent, a computed zero is zero.
+ *
+ * *For any* wire payload, the client maps a missing metric key to a **missing map
+ * entry** rather than to `null` or `0`.
+ *
+ * Three cases, and the whole point is that they stay three: a key the server omitted,
+ * a key the server sent as `null`, and a key carrying a measured `0`. The first two are
+ * the same statement — "this was never computed" — and must collapse to one
+ * representation, absence. The third is a finding and must survive as a number.
+ *
+ * A zero-filling mapper passes every other test in this file. It fails here, which is
+ * why these assertions read the map's *own* keys rather than only its values: a
+ * `metrics.at_risk` of `undefined` is indistinguishable by value from an entry
+ * explicitly set to `undefined`, and only one of the two is absence.
+ *
+ * **Validates: Requirements 15.5, 15.6**
+ */
+describe("Feature: sales-workflow-frontend-restructure, Property 36 (client half): an uncomputable metric is absent", () => {
+  /** Present as an own key of the metrics map — not merely non-`undefined`. */
+  function has(row: { metrics: object }, key: AnalyticsMetricKey): boolean {
+    return Object.prototype.hasOwnProperty.call(row.metrics, key);
+  }
+
+  it("maps a key the server omitted to a missing entry, not to null and not to zero", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    expect(has(day1, "at_risk")).toBe(false);
+    expect(day1.metrics.at_risk).toBeUndefined();
+    // Spelled out because these are the two wrong answers, not the same wrong answer:
+    // a `null` says "computed, and the result was nothing", a `0` says "found nobody".
+    expect(day1.metrics.at_risk).not.toBeNull();
+    expect(day1.metrics.at_risk?.count).not.toBe(0);
+  });
+
+  it("maps a key the server sent as null to the same missing entry", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    expect(has(day1, "meetings_booked")).toBe(false);
+    expect(day1.metrics.meetings_booked).toBeUndefined();
+    // The two spellings of absence produce one shape, so a call site has one branch
+    // to write rather than three.
+    expect(Object.keys(day1.metrics)).not.toContain("meetings_booked");
+    expect(Object.keys(day1.metrics)).not.toContain("at_risk");
+  });
+
+  it("keeps a measured zero as a present zero", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    expect(has(day1, "state_changed")).toBe(true);
+    expect(day1.metrics.state_changed?.count).toBe(0);
+    expect(day1.metrics.state_changed?.leadIds).toEqual([]);
+    // A zero with its criteria attached is a query that ran, which is the difference
+    // between it and the two absences above.
+    expect(day1.metrics.state_changed?.criteria).toEqual([
+      { field: "state_changed_at", operator: "WITHIN_DAYS", values: ["1"] },
+    ]);
+  });
+
+  it("distinguishes the three cases within one day row", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    // Exactly the keys the payload carried a metric object for: the two absences are
+    // gone and nothing was added to replace them.
+    expect(Object.keys(day1.metrics).sort()).toEqual(
+      ["prospects_contacted", "state_changed", "most_likely_to_close", "meetings_completed"].sort()
+    );
+    expect(Object.keys(day1.metrics)).toHaveLength(4);
+  });
+
+  it("holds no null value under any present key, on any row", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const { rows } = await gtmAPI.getDailyAnalytics("brand-1");
+
+    for (const row of rows) {
+      for (const key of ALL_METRIC_KEYS) {
+        const metric = row.metrics[key];
+        // Either the key is not there, or it carries a metric object. There is no
+        // third state — no `null`, no placeholder.
+        if (has(row, key)) {
+          expect(metric, `${row.date}.${key}`).not.toBeNull();
+          expect(typeof metric?.count, `${row.date}.${key}`).toBe("number");
+          expect(Array.isArray(metric?.leadIds), `${row.date}.${key}`).toBe(true);
+        } else {
+          expect(metric, `${row.date}.${key}`).toBeUndefined();
+        }
+      }
+    }
+  });
+
+  it("counts a metric with no count from its own identifier list rather than as zero", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    // `count == len(lead_ids)` holds server-side, so the length is what the count was.
+    // Falling back to `0` would report two counted prospects as none.
+    expect(day1.metrics.meetings_completed?.count).toBe(2);
+    expect(day1.metrics.meetings_completed?.leadIds).toEqual(["lead_1", "lead_2"]);
+  });
+
+  it("keeps count and leadIds in agreement on every present metric", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const { rows } = await gtmAPI.getDailyAnalytics("brand-1");
+
+    const seen: string[] = [];
+    for (const row of rows) {
+      for (const key of ALL_METRIC_KEYS) {
+        const metric = row.metrics[key];
+        if (!metric) continue;
+        seen.push(`${row.date}.${key}`);
+        expect(metric.count, `${row.date}.${key}`).toBe(metric.leadIds.length);
+      }
+    }
+    // The scan is not vacuous: four metrics on day 1 and six on day 2.
+    expect(seen).toHaveLength(10);
+  });
+
+  it("reports no direction rather than a flat one", async () => {
+    respondWith(ANALYTICS_WIRE);
+    const [day1, day2] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    // The first day of a range has no prior day to compare against.
+    expect(day1.metrics.most_likely_to_close?.trend).toBeNull();
+    // And from the second day the server's own value travels through unchanged.
+    expect(day2.metrics.most_likely_to_close?.trend).toBe("RISING");
+
+    // The other five metrics carry no direction at all, and none of them acquired one.
+    for (const row of [day1, day2]) {
+      for (const key of ALL_METRIC_KEYS) {
+        if (key === "most_likely_to_close") continue;
+        const metric = row.metrics[key];
+        if (!metric) continue;
+        expect(metric.trend, `${row.date}.${key}`).toBeNull();
+      }
+    }
+  });
+
+  it("leaves every metric missing on a day the server could compute nothing for", async () => {
+    respondWith({
+      ...ANALYTICS_WIRE,
+      rows: [{ date: "2025-01-03", metrics: {} }],
+    });
+    const [row] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    // A day with nothing computable is still a row — it is the metrics that are
+    // absent, not the day.
+    expect(row.date).toBe("2025-01-03");
+    expect(row.metrics).toEqual({});
+    expect(Object.keys(row.metrics)).toEqual([]);
+    for (const key of ALL_METRIC_KEYS) {
+      expect(has(row, key), key).toBe(false);
+    }
+  });
+
+  it("leaves every metric missing when the row carried no metrics object at all", async () => {
+    respondWith({ ...ANALYTICS_WIRE, rows: [{ date: "2025-01-03" }] });
+    const [row] = (await gtmAPI.getDailyAnalytics("brand-1")).rows;
+
+    expect(row.metrics).toEqual({});
+    for (const key of ALL_METRIC_KEYS) {
+      expect(has(row, key), key).toBe(false);
+    }
   });
 });

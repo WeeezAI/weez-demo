@@ -4,10 +4,11 @@
 // **Why a provider and not a per-page hook.** The balance is a property of the workspace,
 // not of a prospect — and four surfaces need it: the prospect page and the queue to price
 // their controls, Eva to price Enrich Now, and the learning dashboard to show the ledger. A
-// hook that fetched per page would add a request to each of them, and
-// `GTMProspect.identity.test.tsx`'s load contract is explicit that the prospect page makes
-// exactly two reads. That pin exists for a good reason: page load cost is a product
-// property, and a workspace-level number has no business being paid for per prospect.
+// hook that fetched per page would add a request to each of them, and the dossier's request
+// budget — Property 6, in `pages/__tests__/ProspectDossier.compose.test.tsx` — is explicit
+// about how many reads a selection is allowed to cost. That pin exists for a good reason:
+// page load cost is a product property, and a workspace-level number has no business being
+// paid for per prospect.
 //
 // So the read happens once, above the routes, and pages consume it. `useCredits()` outside
 // the provider is not an error — it answers "unread", every price tag renders nothing, and

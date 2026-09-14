@@ -29,10 +29,23 @@ import { axe } from "jest-axe";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import gtmAPI, { type Action, type Message, type NextAction } from "@/services/gtmAPI";
+import gtmAPI, {
+  type Action,
+  type CandidateAction,
+  type Message,
+  type NextAction,
+  type NextBestAction,
+} from "@/services/gtmAPI";
 import { MessageComposer } from "../MessageComposer";
-import { NextActionPanel } from "../NextActionPanel";
-import { GTM_ACTION_LABELS, GTM_ACTION_TOASTS } from "../labels";
+import { NextActionPanel, actionCardTestId } from "../NextActionPanel";
+import { NextBestActionCard, NEXT_BEST_ACTION_CARD_LABELS } from "../NextBestActionCard";
+import {
+  CONTACT_DIRECTLY_LABELS,
+  GTM_ACTION_LABELS,
+  GTM_ACTION_TOASTS,
+  GTM_NBA_ACTION_LABELS,
+  GTM_SIGNAL_TYPE_LABELS,
+} from "../labels";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -48,6 +61,15 @@ function message(overrides: Partial<Message> = {}): Message {
   return {
     messageId: "msg-1",
     conversationId: "conv-1",
+    // A saved draft, which is what every case below is about: a `li_gtm_messages` row
+    // exists, so `PATCH /message/{id}` and `POST /message/{id}/regenerate` both have a
+    // row to address and the composer offers Edit and Regenerate. The one case that is
+    // *not* about the tracked path overrides this to `false` and drops the id with it —
+    // see "the unpersisted pre-activation draft" below. Defaulting it here rather than
+    // per-test is deliberate: `persisted` is a required field on `Message`, and a fixture
+    // that omitted it would put every test in this file on the pre-activation path by
+    // accident, which is precisely the reading `!active.persisted` gives an absent field.
+    persisted: true,
     direction: "OUTBOUND",
     messagePurpose: "WARMUP",
     version: 1,
@@ -524,6 +546,316 @@ describe("MessageComposer", () => {
   it("hides the version selector when there is only one version", () => {
     renderComposer();
     expect(screen.queryByLabelText("Version")).not.toBeInTheDocument();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// The unpersisted pre-activation draft (R5.6, R20.8)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// A draft written for an enriched-but-unactivated prospect arrives with
+// `persisted: false` and no id, because no `li_gtm_messages` row was written for it.
+// Two controls address a row by id — inline **Edit** through `PATCH /message/{id}` and
+// **Rewrite**/Regenerate through `POST /message/{id}/regenerate` — so both are withheld
+// and `CONTACT_DIRECTLY_LABELS.unpersistedNote` is printed where they would have been.
+//
+// **The point of this block is the positives, not the absences.** A composer that
+// withheld every control and printed the note would satisfy "Edit is absent" and
+// "Regenerate is absent" while breaking the requirement outright: the note is a note,
+// not a refusal. So the two absences are asserted *as a set difference against the
+// tracked render* — exactly two controls disappear and nothing else does — and the
+// paths that must survive are each exercised for real: a second generated draft is
+// accepted, the draft is on screen and readable, Copy writes it, and the open-channel
+// chain runs end to end reporting a null message id rather than inventing one.
+describe("the unpersisted pre-activation draft", () => {
+  /**
+   * What `_lead_message_out` returns before activation: no row, therefore no
+   * `message_id` and no `conversation_id`, and `persisted` saying so as a claim of its
+   * own rather than leaving a reader to infer it from two absences.
+   */
+  function unsaved(overrides: Partial<Message> = {}): Message {
+    return message({ messageId: null, conversationId: null, persisted: false, ...overrides });
+  }
+
+  /** The button names on screen, however each one is labelled. */
+  function buttonNames(): Set<string> {
+    return new Set(
+      screen
+        .getAllByRole("button")
+        .map((button) => (button.getAttribute("aria-label") ?? button.textContent ?? "").trim()),
+    );
+  }
+
+  it("withholds Rewrite and inline Edit, prints the note in their place, and keeps the draft readable", () => {
+    render(<MessageComposer brandId={BRAND} versions={[unsaved()]} />);
+
+    // Both spellings of the withheld control, so a rename cannot make this pass by
+    // looking for a label nothing renders.
+    expect(screen.queryByRole("button", { name: GTM_ACTION_LABELS.REGENERATE })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: CONTACT_DIRECTLY_LABELS.regenerate })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: GTM_ACTION_LABELS.EDIT })).not.toBeInTheDocument();
+
+    // The label table's sentence, read from the table rather than restated here: a copy
+    // of the string in this file would keep passing after somebody edited the product's.
+    expect(screen.getByText(CONTACT_DIRECTLY_LABELS.unpersistedNote)).toBeInTheDocument();
+
+    // Reviewable: the text is on screen with its counter, and the note is part of the
+    // field's description, so a screen-reader user hears it while still in the draft.
+    const textarea = screen.getByLabelText("Message draft");
+    expect(textarea).toHaveValue(DRAFT);
+    const describedBy = (textarea.getAttribute("aria-describedby") ?? "").split(" ").filter(Boolean);
+    const described = describedBy.map((id) => document.getElementById(id)?.textContent ?? "").join(" ");
+    expect(described).toContain(`${DRAFT.length} of 300 characters`);
+    expect(described).toContain(CONTACT_DIRECTLY_LABELS.unpersistedNote);
+  });
+
+  it("withholds exactly those two controls and nothing else the tracked draft offered", () => {
+    const tracked = renderPanel({ messageVersions: [message()] });
+    const before = buttonNames();
+    tracked.unmount();
+
+    renderPanel({ nextAction: nextAction({ messageId: null }), messageVersions: [unsaved()] });
+    const after = buttonNames();
+
+    // A difference, not a list of absences: any other control this path dropped would
+    // show up here, and a composer that had withheld everything fails on this line.
+    expect([...before].filter((name) => !after.has(name)).sort()).toEqual(
+      [GTM_ACTION_LABELS.EDIT, GTM_ACTION_LABELS.REGENERATE].sort(),
+    );
+    // And nothing pressable appeared in their place. The note is prose.
+    expect([...after].filter((name) => !before.has(name))).toEqual([]);
+  });
+
+  it("accepts a second generated draft and keeps both selectable, so generating again is not blocked", async () => {
+    const bus = harness();
+    // Two unsaved rows both reporting version 1 — what two generations return when
+    // neither was written. Neither has an id, so nothing can collapse them into one.
+    render(
+      <MessageComposer
+        brandId={BRAND}
+        versions={[unsaved(), unsaved({ generatedContent: "A second attempt." })]}
+      />,
+    );
+
+    const selector = screen.getByLabelText("Version");
+    expect(within(selector).getAllByRole("option")).toHaveLength(2);
+
+    await bus.user.selectOptions(selector, within(selector).getAllByRole("option")[1]);
+    expect(screen.getByLabelText("Message draft")).toHaveValue("A second attempt.");
+    expect(screen.getByText(CONTACT_DIRECTLY_LABELS.unpersistedNote)).toBeInTheDocument();
+    expect(bus.apiCalls).toEqual([]);
+  });
+
+  it("still copies the draft, with no API call and nothing written anywhere", async () => {
+    const bus = harness();
+    renderPanel({ nextAction: nextAction({ messageId: null }), messageVersions: [unsaved()] });
+
+    await bus.user.click(screen.getByRole("button", { name: GTM_ACTION_LABELS.COPY }));
+
+    await waitFor(() => expect(bus.writeText).toHaveBeenCalledWith(DRAFT));
+    expect(bus.apiCalls).toEqual([]);
+  });
+
+  it("still opens the channel, in the same order, reporting a null message id", async () => {
+    const bus = harness({
+      requestAction: () => action({ messageId: null }),
+      markOpened: () => action({ messageId: null, executionState: "ACTION_IN_PROGRESS", linkedinOpenedAt: NOW }),
+    });
+    renderPanel({ nextAction: nextAction({ messageId: null }), messageVersions: [unsaved()] });
+
+    await bus.user.click(screen.getByRole("button", { name: GTM_ACTION_LABELS.SEND_MESSAGE }));
+
+    await waitFor(() => expect(bus.order).toContain("toast"));
+    expect(bus.order).toEqual(["requestAction", "clipboard", "window.open", "markOpened", "toast"]);
+    expect(bus.writeText).toHaveBeenCalledWith(DRAFT);
+    expect(bus.open).toHaveBeenCalledWith(DESTINATION, "_blank", "noopener,noreferrer");
+    // Null, not a placeholder: there is no row, and the request says so.
+    const [, , input] = (gtmAPI.requestAction as unknown as MockInstance).mock.calls[0];
+    expect(input.messageId).toBeNull();
+    expect(input.idempotencyKey.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Band 7: the decision card beside the execution panel (R20.8, §15.3)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// The dossier's seventh band is two components rather than one: `NextBestActionCard`
+// states the decision — what to do, why now, and a way through to the evidence — and
+// `NextActionPanel` executes it, with the composer, the open-channel control and the
+// confirm ladder. They sit side by side because they answer two different questions,
+// and neither replaces the other.
+//
+// **They are one read.** `NextActionPanel` takes `nextAction` off `getProspect` and
+// `nextBestAction` off `getNextBestAction`, and the card takes `NextBestAction.
+// recommended` off that same payload. So mounting the pair costs the page nothing: the
+// assertion below is an equality on the recorded API calls, not a list of methods that
+// happen not to have run, and the one entry in it is a *write* — the `VIEWED` lifecycle
+// position `ActionCard` records through route 10 for a recommendation it puts on screen.
+// A future edit that made either component fetch its own copy of the ranking fails here.
+describe("band 7: the decision card beside the execution panel", () => {
+  const NBA_TITLE = GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP;
+  const CARD_HEADING = `${NBA_TITLE} · LinkedIn`;
+  const SIGNAL_AT = "2024-04-28T09:00:00.000Z";
+
+  function candidate(overrides: Partial<CandidateAction> = {}): CandidateAction {
+    return {
+      recommendationId: "reco-1",
+      actionType: "SEND_LINKEDIN_WARMUP",
+      channel: "LINKEDIN",
+      // The server's own answer about whether outreach can carry this out, never derived
+      // here: `executable` gates the card's Take action and the panel's open control.
+      executionVerb: "SEND_MESSAGE",
+      executable: true,
+      unexecutableReason: null,
+      rank: 1,
+      isRecommended: true,
+      actionScore: {
+        score: 77,
+        scoreKind: "RECOMMENDATION_SCORE",
+        scoreDisclaimer: "Derived from the persisted terms.",
+        isDerived: true,
+      },
+      actionConfidence: 63,
+      stateConfidence: 66,
+      terms: [
+        {
+          factor: "expected_success_probability",
+          available: true,
+          weight: 20,
+          value: 41,
+          persistedValue: null,
+          source: "evaluation",
+          contributionHundredths: 820,
+          direction: "RAISES",
+          unavailableReason: null,
+        },
+      ],
+      unavailableTerms: [],
+      availableWeightMass: 88,
+      explanation: {
+        whyNow: [
+          {
+            signalId: "sig-1",
+            signalType: "LINKEDIN_POST",
+            eventTimestamp: SIGNAL_AT,
+            effectiveStrength: 68,
+            term: "timing_fit",
+            contributionHundredths: 1200,
+            evidenceId: null,
+          },
+        ],
+        whyThisChannel: [],
+        whyThisMessage: null,
+        whyNotTheOtherChannels: [],
+        scope: null,
+        versions: null,
+      },
+      exclusionReason: null,
+      expiresAt: null,
+      computedAt: NOW,
+      ...overrides,
+    };
+  }
+
+  /** One `getNextBestAction` response — the single read both components are fed from. */
+  function ranking(overrides: Partial<NextBestAction> = {}): NextBestAction {
+    const recommended = overrides.recommended ?? candidate();
+    return {
+      leadId: LEAD,
+      evaluationId: "eval-1",
+      computedAt: NOW,
+      expiresAt: null,
+      recommended,
+      candidates: [recommended],
+      policyVersion: "policy-v3",
+      modelVersion: "model-v2",
+      learningVersion: "learning-v1",
+      weightSetId: "weights-1",
+      learningScopeApplied: "WORKSPACE",
+      lifecycle: null,
+      ...overrides,
+    };
+  }
+
+  /** The band, as the dossier composes it: one payload, two components. */
+  function renderBand(nba: NextBestAction = ranking(), onTakeAction: () => void = () => {}) {
+    return render(
+      <div>
+        <NextBestActionCard action={nba.recommended as CandidateAction} onTakeAction={onTakeAction} />
+        <NextActionPanel
+          brandId={BRAND}
+          leadId={LEAD}
+          nextAction={nextAction()}
+          nextBestAction={nba}
+          confirmationStatus="NOT_APPLICABLE"
+          messageVersions={[message()]}
+        />
+      </div>,
+    );
+  }
+
+  it("renders the decision and its execution from the one ranking payload", () => {
+    harness({ postLifecycle: () => null });
+    const nba = ranking();
+    renderBand(nba);
+
+    // The decision: the action the ranking recommended, its channel, and the leading
+    // why-now bullet read from the signal type the evaluation persisted.
+    const decision = screen.getByRole("region", { name: CARD_HEADING });
+    expect(within(decision).getByText(NEXT_BEST_ACTION_CARD_LABELS.eyebrow)).toBeInTheDocument();
+    expect(within(decision).getByText(GTM_SIGNAL_TYPE_LABELS.LINKEDIN_POST)).toBeInTheDocument();
+    expect(
+      within(decision).getByRole("button", { name: NEXT_BEST_ACTION_CARD_LABELS.takeAction }),
+    ).toBeInTheDocument();
+
+    // The execution, beside it: the same recommendation by id, plus the panel's own
+    // recommendation sentence, its composer and its primary control, all still here.
+    const execution = screen.getByRole("region", { name: "Next action" });
+    expect(
+      within(execution).getByTestId(actionCardTestId((nba.recommended as CandidateAction).recommendationId)),
+    ).toBeInTheDocument();
+    expect(within(execution).getByRole("heading", { name: NBA_TITLE })).toBeInTheDocument();
+    expect(within(execution).getByText("Send the warm-up message on LinkedIn.")).toBeInTheDocument();
+    expect(within(execution).getByLabelText("Message draft")).toBeInTheDocument();
+    expect(
+      within(execution).getByRole("button", { name: GTM_ACTION_LABELS.SEND_MESSAGE }),
+    ).toBeInTheDocument();
+  });
+
+  it("adds no request on mount beyond the VIEWED lifecycle write", async () => {
+    const bus = harness({ postLifecycle: () => null });
+    const nba = ranking();
+    renderBand(nba);
+
+    await waitFor(() => expect(bus.apiCalls).toContain("postLifecycle"));
+    // The equality. Neither component re-reads the ranking the selection already made,
+    // and the only call is route 10 recording that a recommendation was put on screen.
+    expect(bus.apiCalls).toEqual(["postLifecycle"]);
+    expect(gtmAPI.getNextBestAction).not.toHaveBeenCalled();
+    expect(gtmAPI.getProspect).not.toHaveBeenCalled();
+    expect(gtmAPI.getProspectState).not.toHaveBeenCalled();
+
+    const [brandId, leadId, input] = (gtmAPI.postLifecycle as unknown as MockInstance).mock.calls[0];
+    expect(brandId).toBe(BRAND);
+    expect(leadId).toBe(LEAD);
+    expect(input.position).toBe("VIEWED");
+    expect(input.recommendationId).toBe((nba.recommended as CandidateAction).recommendationId);
+  });
+
+  it("routes Take action to the execution surface and posts nothing of its own", async () => {
+    const bus = harness({ postLifecycle: () => null });
+    const onTakeAction = vi.fn();
+    renderBand(ranking(), onTakeAction);
+
+    await waitFor(() => expect(bus.apiCalls).toEqual(["postLifecycle"]));
+    await bus.user.click(screen.getByRole("button", { name: NEXT_BEST_ACTION_CARD_LABELS.takeAction }));
+
+    expect(onTakeAction).toHaveBeenCalledTimes(1);
+    // The card decides and hands off; it never files an action itself.
+    expect(bus.apiCalls).toEqual(["postLifecycle"]);
+    expect(gtmAPI.requestAction).not.toHaveBeenCalled();
+    expect(bus.open).not.toHaveBeenCalled();
   });
 });
 

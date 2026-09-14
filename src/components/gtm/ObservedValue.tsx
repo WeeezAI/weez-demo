@@ -14,15 +14,20 @@
 //   • a `stale` badge when the observation is older than the freshness window (R2.6)
 //   • the surface it was seen on and when, as real text (R14.3)
 //
-// Nothing here computes. `STATE_LABEL` lookup and `relTime` formatting are the two
+// Nothing here computes. `resolveStateValue` and `relTime` formatting are the two
 // transforms, and both are dictionary-or-format operations over what the server
-// sent. A value missing from `STATE_LABEL` renders raw rather than as a guess.
+// sent. A value `STATE_LABEL` does not map is not given a meaning it did not arrive
+// with: if it is shaped like a backend token it is re-cased into `Newly declared
+// state`, which is the server's own word with its capitals and underscores taken
+// out, and it renders with the `as reported` marker beside it so nobody mistakes it
+// for copy somebody wrote. A value that is not token-shaped — `3/5 criteria
+// matched`, `high` — renders exactly as it arrived.
 
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { ObservedFact } from "@/services/gtmAPI";
-import { STATE_LABEL, SURFACE_LABEL, absTime, relTime } from "./labels";
+import { SURFACE_LABEL, absTime, relTime, resolveStateValue } from "./labels";
 
 /** The one spelling of absence on this screen. */
 export const UNKNOWN_TEXT = "Unknown";
@@ -35,6 +40,16 @@ export const UNKNOWN_TEXT = "Unknown";
  * one anywhere near the value slot.
  */
 export const UNKNOWN_SR_NOTE = " (not yet observed)";
+
+/**
+ * The marker on a value whose text is the server's own token, re-cased.
+ *
+ * Rendered as text rather than as a tooltip or a colour, for the same reason `derived`
+ * and `stale` are: a reader has to be able to tell a sentence somebody wrote from a
+ * token this layer tidied, and a fact nobody has written copy for is still a display
+ * gap even once it is legible.
+ */
+export const AS_REPORTED_TEXT = "as reported";
 
 export interface ObservedValueProps {
   /** The fact's name, e.g. "Relationship". Always rendered. */
@@ -65,6 +80,9 @@ export function ObservedValue({
   children,
 }: ObservedValueProps) {
   const isUnknown = fact.isUnknown || fact.value == null;
+  // One resolution for the value, so the text and the marker that qualifies it cannot
+  // disagree about how that text was produced.
+  const shown = isUnknown ? null : resolveStateValue(fact.value as string);
 
   const body: ReactNode = isUnknown ? (
     <span className="text-[13px] font-medium text-slate-500">
@@ -76,9 +94,12 @@ export function ObservedValue({
       {/* A `div` rather than a `span`: `Badge` renders a `div`, and the value row
           has to stay valid flow content wherever this primitive is dropped. */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[13px] font-semibold text-zinc-900">
-          {STATE_LABEL[fact.value as string] ?? fact.value}
-        </span>
+        <span className="text-[13px] font-semibold text-zinc-900">{shown?.text}</span>
+        {shown?.origin === "humanised" && (
+          <Badge variant="outline" className="border-zinc-200 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+            {AS_REPORTED_TEXT}
+          </Badge>
+        )}
         {fact.isDerived && (
           <Badge variant="outline" className="border-zinc-200 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
             derived

@@ -32,9 +32,9 @@ import Ninna from "./pages/Ninna";
 import MarketDiscovery from "./pages/MarketDiscovery";
 import RevenueIntelligence from "./pages/RevenueIntelligence";
 import ProspectIntelligence from "./pages/ProspectIntelligence";
-import GTMProspect from "./pages/GTMProspect";
 import GTMActionQueue from "./pages/GTMActionQueue";
 import GTMDashboard from "./pages/GTMDashboard";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -78,6 +78,21 @@ const RedirectToMarketDiscovery = () => {
 const RedirectToRevenue = () => {
   const { spaceId } = useParams<{ spaceId: string }>();
   return <Navigate to={`/leads/${spaceId}?tab=revenue`} replace />;
+};
+
+/**
+ * `/relationship-intelligence/:spaceId` → the dossier.
+ *
+ * One prospect is one surface now: `GTMProspect.tsx` folded into
+ * `ProspectIntelligence.tsx`, so the old execution path has no page of its own to
+ * render. It survives as a redirect rather than a removal because deep links to it are
+ * already out there — in browser history, in shared URLs — and a 404 on one of them
+ * would read as lost data. `replace` keeps the retired path out of the back stack, so
+ * Back from the dossier goes wherever the rep actually came from.
+ */
+const RedirectToProspectIntelligence = () => {
+  const { spaceId } = useParams<{ spaceId: string }>();
+  return <Navigate to={`/prospect-intelligence/${spaceId}`} replace />;
 };
 
 const queryClient = new QueryClient();
@@ -172,16 +187,22 @@ const AppContent = () => {
               <Route path="/eva/:spaceId" element={<Eva />} />
               {/* Prospect Intelligence — the AI reasoning layer between EVA and MAX. */}
               <Route path="/prospect-intelligence/:spaceId" element={<ProspectIntelligence />} />
-              {/* Relationship Intelligence — the LinkedIn GTM execution surface for
-                  one Eva-qualified prospect. Entered from the dossier above with
-                  ?lead_id=<lead>; :spaceId is the brand id, as everywhere else. */}
-              <Route path="/relationship-intelligence/:spaceId" element={<GTMProspect />} />
+              {/* Relationship Intelligence — retired as a destination. Its content folded
+                  into the dossier above, so this path only forwards there now. */}
+              <Route
+                path="/relationship-intelligence/:spaceId"
+                element={<RedirectToProspectIntelligence />}
+              />
               {/* Action Queue — the cross-prospect ranked queue of live GTM
                   recommendations. Read-only; :spaceId is the brand id, as above. */}
               <Route path="/action-queue/:spaceId" element={<GTMActionQueue />} />
               {/* GTM Dashboard — the seven aggregate statements, each linking to the
-                  rows behind it. Read-only; :spaceId is the brand id, as above. */}
+                  rows behind it. Read-only; :spaceId is the brand id, as above.
+                  Kept as a compatibility route: off the sidebar, still reachable. */}
               <Route path="/gtm-dashboard/:spaceId" element={<GTMDashboard />} />
+              {/* Analytics — the day-by-day read of the loop. One row per calendar day,
+                  read-only; :spaceId is the brand id, as above. */}
+              <Route path="/analytics/:spaceId" element={<Analytics />} />
               <Route path="/market-discovery/:spaceId" element={<RedirectToMarketDiscovery />} />
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />

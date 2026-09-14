@@ -92,6 +92,8 @@ import {
   type ReasoningArtifact,
   type ReasoningStageSummary,
 } from "@/services/maxAPI";
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 
 // ─── Tone → tailwind chip classes ────────────────────────────────────────────────
 
@@ -1860,6 +1862,12 @@ export default function Max() {
   const [briefLoading, setBriefLoading] = useState(false);
   const reqRef = useRef(0);
 
+  // The balance, in chrome, from the provider that already wraps `Routes` (R17.1). This
+  // page spends nothing, so there is nothing to refresh it after. Rendered
+  // unconditionally: `CreditBalanceBadge` is what decides that an unread balance shows
+  // nothing, and a `balance && …` guard here would hide a genuine 0 (R17.7).
+  const { balance } = useCredits();
+
   const loadWorkspace = useCallback(
     async (force: boolean, isScan: boolean) => {
       const my = ++reqRef.current;
@@ -2060,6 +2068,7 @@ export default function Max() {
             <Badge variant="outline" className="gap-1 border-orange-200 bg-orange-50 text-[9px] font-bold uppercase tracking-wider text-orange-700">
               <Radar className="h-3 w-3" /> {cfg.label}
             </Badge>
+            <CreditBalanceBadge balance={balance} className="hidden sm:inline-flex" />
             <Button
               variant="outline"
               size="sm"

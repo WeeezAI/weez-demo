@@ -25,6 +25,24 @@
 // the server's cap rather than a constant this file remembers, and a failed
 // generation renders as the record it is — the reason, plus a Regenerate control —
 // rather than as an error banner.
+//
+// ─── The unpersisted draft (R5.6) ─────────────────────────────────────────────
+//
+// A draft generated for an enriched-but-unactivated prospect arrives with
+// `persisted: false` and `messageId: null`, because no `li_gtm_messages` row exists
+// for it — `conversation_id` is NOT NULL and its FK chain terminates at a
+// `li_gtm_profiles` row this prospect does not have. Two of this component's controls
+// address a row by id: inline **Edit** saves through `PATCH /message/{id}` and
+// **Regenerate** appends a version through `POST /message/{id}/regenerate`. With no
+// id there is nothing to address, so both are withheld rather than rendered as
+// buttons that would 404, and `CONTACT_DIRECTLY_LABELS.unpersistedNote` is printed
+// where they would have been — the reason the two controls are absent, stated where
+// the operator would look for them (R5.8).
+//
+// Everything else stays live. The draft renders, the counter counts it, the version
+// selector still works, the send note still says Weez sends nothing, and the text is
+// selectable and copyable by the panel above. A pre-activation draft is fully usable;
+// it is simply not saved, which is what the note says.
 
 import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
 import { Loader2 } from "lucide-react";
@@ -34,7 +52,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import gtmAPI, { type Message } from "@/services/gtmAPI";
-import { GTM_ACTION_LABELS, SURFACE_LABEL, absTime, relTime } from "./labels";
+import { CONTACT_DIRECTLY_LABELS, GTM_ACTION_LABELS, SURFACE_LABEL, absTime, relTime } from "./labels";
 
 /**
  * The note that sits under the textarea and is pointed at by `aria-describedby`.
@@ -73,6 +91,20 @@ function resolveDraft(message: Message | null): string {
   return message.editedContent ?? message.generatedContent ?? "";
 }
 
+/**
+ * One row, with the key this component selects and renders it by.
+ *
+ * A persisted row is keyed by its `messageId`, which is also what deduplicates the
+ * prop against rows rewritten in this session. An unpersisted draft has no id, so it
+ * gets a positional key that lives only in this component: it is enough for the
+ * selector and for React, and it is never sent anywhere, so nothing can mistake it
+ * for a `message_id`.
+ */
+interface Row {
+  key: string;
+  message: Message;
+}
+
 export function MessageComposer({
   brandId,
   versions,
@@ -84,28 +116,39 @@ export function MessageComposer({
   const textareaId = useId();
   const counterId = useId();
   const noteId = useId();
+  const unsavedNoteId = useId();
   const selectorId = useId();
 
   // Rows the server rewrote during this session, merged over the prop by id. A
   // regenerate lands here before the page refetches, so the new version is
   // selectable immediately without this component owning the list outright.
-  const [persisted, setPersisted] = useState<Record<string, Message>>({});
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [rewritten, setRewritten] = useState<Record<string, Message>>({});
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   // `null` means "not editing". An empty string is a legitimate draft, so the
   // editing flag cannot be `draft !== ""`.
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "save" | "regenerate">(null);
 
-  const rows = useMemo(() => {
-    const byId = new Map<string, Message>();
-    versions.forEach((row) => byId.set(row.messageId, row));
-    Object.values(persisted).forEach((row) => byId.set(row.messageId, row));
-    return [...byId.values()].sort((a, b) => b.version - a.version);
-  }, [versions, persisted]);
+  const rows = useMemo<Row[]>(() => {
+    const byKey = new Map<string, Message>();
+    let unsavedCount = 0;
+    const add = (message: Message) => {
+      // Only an id can deduplicate. An unpersisted draft is keyed by position, so two
+      // of them both reporting `version: 1` stay two rows rather than collapsing into
+      // one — they are different text, and neither has an identity to claim otherwise.
+      byKey.set(message.messageId ?? `unsaved-${(unsavedCount += 1)}`, message);
+    };
+    versions.forEach(add);
+    Object.values(rewritten).forEach(add);
+    return [...byKey.entries()]
+      .map(([key, message]) => ({ key, message }))
+      .sort((a, b) => b.message.version - a.message.version);
+  }, [versions, rewritten]);
 
   // Selection falls back to the head rather than to nothing: a version that
   // disappeared from the payload must not blank the composer.
-  const active = rows.find((row) => row.messageId === selectedId) ?? rows[0] ?? null;
+  const activeRow = rows.find((row) => row.key === selectedKey) ?? rows[0] ?? null;
+  const active = activeRow?.message ?? null;
   const resolved = resolveDraft(active);
   const isEditing = draft !== null;
   const shown = isEditing ? (draft as string) : resolved;
@@ -122,15 +165,17 @@ export function MessageComposer({
 
   const merge = useCallback(
     (row: Message | null) => {
-      if (!row) return;
-      setPersisted((prior) => ({ ...prior, [row.messageId]: row }));
+      // A row that came back without an id is not something this map can hold, and it
+      // is not something either write route can return: both address a row by id.
+      if (!row?.messageId) return;
+      setRewritten((prior) => ({ ...prior, [row.messageId as string]: row }));
       onMessagePersisted?.(row);
     },
     [onMessagePersisted],
   );
 
   const onSave = useCallback(async () => {
-    if (!active || draft === null) return;
+    if (!active?.messageId || draft === null) return;
     setBusy("save");
     try {
       // `saveEdit` PATCHes `edited_content` and nothing else, so
@@ -144,14 +189,14 @@ export function MessageComposer({
   }, [active, brandId, draft, merge]);
 
   const onRegenerate = useCallback(async () => {
-    if (!active) return;
+    if (!active?.messageId) return;
     setBusy("regenerate");
     try {
       // A new version. The predecessor is left alone and stays in the selector.
       const row = await gtmAPI.regenerate(brandId, active.messageId);
-      if (row) {
+      if (row?.messageId) {
         merge(row);
-        setSelectedId(row.messageId);
+        setSelectedKey(row.messageId);
         setDraft(null);
       }
     } finally {
@@ -174,7 +219,7 @@ export function MessageComposer({
     }
   };
 
-  if (!active) {
+  if (!activeRow || !active) {
     return (
       <div className={cn("rounded-lg border border-zinc-200 bg-zinc-50/60 p-4", className)}>
         <p className="text-[13px] text-slate-500">No draft has been prepared yet.</p>
@@ -183,6 +228,10 @@ export function MessageComposer({
   }
 
   const locked = disabled || busy !== null;
+  // R5.6 — no row, therefore no id, therefore no route for Edit or Regenerate to
+  // address. Keyed on the server's own claim rather than on the missing id, so a
+  // response that reported one without the other would still be read correctly.
+  const unsaved = !active.persisted;
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -193,19 +242,19 @@ export function MessageComposer({
           </label>
           <select
             id={selectorId}
-            value={active.messageId}
+            value={activeRow.key}
             disabled={locked}
             onChange={(event) => {
-              setSelectedId(event.target.value);
+              setSelectedKey(event.target.value);
               setDraft(null);
             }}
             className="h-8 rounded-md border border-input bg-background px-2 text-[13px] ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
           >
             {rows.map((row) => (
-              <option key={row.messageId} value={row.messageId}>
-                {`Version ${row.version}`}
-                {row.editedContent !== null ? " (edited)" : ""}
-                {row.sentContent !== null ? " (seen in LinkedIn)" : ""}
+              <option key={row.key} value={row.key}>
+                {`Version ${row.message.version}`}
+                {row.message.editedContent !== null ? " (edited)" : ""}
+                {row.message.sentContent !== null ? " (seen in LinkedIn)" : ""}
               </option>
             ))}
           </select>
@@ -232,7 +281,10 @@ export function MessageComposer({
             readOnly={!isEditing}
             aria-readonly={!isEditing}
             aria-invalid={overLimit}
-            aria-describedby={`${counterId} ${noteId}`}
+            // The unsaved note is part of the field's description: a screen-reader user
+            // hears that this text is not being kept while they are still in it, not
+            // after they have moved past the controls that would have saved it.
+            aria-describedby={unsaved ? `${counterId} ${noteId} ${unsavedNoteId}` : `${counterId} ${noteId}`}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={onKeyDown}
           />
@@ -250,35 +302,46 @@ export function MessageComposer({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {isEditing ? (
-          <>
-            <Button type="button" size="sm" onClick={() => void onSave()} disabled={locked}>
-              {busy === "save" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-              {GTM_ACTION_LABELS.SAVE}
+      {unsaved ? (
+        /* R5.6 — the sentence that stands in for the two withheld controls. It says why
+           they are absent, what to do about it now, and what activation would buy
+           instead. Not a refusal: the draft above is complete and copyable. */
+        <p id={unsavedNoteId} data-gtm-note="unpersisted-draft" className="text-[11.5px] leading-relaxed text-slate-600">
+          {CONTACT_DIRECTLY_LABELS.unpersistedNote}
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditing ? (
+            <>
+              <Button type="button" size="sm" onClick={() => void onSave()} disabled={locked}>
+                {busy === "save" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {GTM_ACTION_LABELS.SAVE}
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setDraft(null)} disabled={locked}>
+                {GTM_ACTION_LABELS.CANCEL}
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setDraft(resolved)}
+              disabled={locked || generationFailed}
+            >
+              {GTM_ACTION_LABELS.EDIT}
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setDraft(null)} disabled={locked}>
-              {GTM_ACTION_LABELS.CANCEL}
-            </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setDraft(resolved)}
-            disabled={locked || generationFailed}
-          >
-            {GTM_ACTION_LABELS.EDIT}
-          </Button>
-        )}
+          )}
 
-        {/* R7.6 — Edit and Regenerate are present for every draft this shows. */}
-        <Button type="button" size="sm" variant="outline" onClick={() => void onRegenerate()} disabled={locked}>
-          {busy === "regenerate" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-          {GTM_ACTION_LABELS.REGENERATE}
-        </Button>
-      </div>
+          {/* R7.6 — Edit and Regenerate are present for every *persisted* draft. Both
+              address a row by id, so on an unpersisted draft the note above replaces
+              them rather than a disabled pair pretending a route exists. */}
+          <Button type="button" size="sm" variant="outline" onClick={() => void onRegenerate()} disabled={locked}>
+            {busy === "regenerate" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+            {GTM_ACTION_LABELS.REGENERATE}
+          </Button>
+        </div>
+      )}
 
       {/* R7.5 — read-only, and mounted only because the server reported the text
           present in the thread or explicitly confirmed. Nothing in this file writes

@@ -1329,6 +1329,15 @@ export default function Eva() {
             <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-[9px] font-bold uppercase tracking-wider text-emerald-700">
               <SignalIcon className="h-3 w-3" /> Event-driven
             </Badge>
+            {/* The balance, in this page's own chrome (R17.1). It used to sit in the
+                filters strip beside the leads table, which put it inside the branch taken
+                only when the workspace already has qualified leads — so a new workspace,
+                the one state where knowing the balance matters most before pressing Enrich
+                Now, saw no balance at all. In the header it survives loading, the workspace
+                read failing and the cold start. Unconditional on purpose: the badge decides
+                that an unread balance renders nothing, and a `balance && …` guard here is
+                exactly the bug that was just removed (a genuine 0 is a valid read, R17.7). */}
+            <CreditBalanceBadge balance={creditBalance} className="hidden sm:inline-flex" />
             <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full border-zinc-200 text-xs" onClick={() => load(true, true)} disabled={scanning || loading}>
               <RefreshCw className={cn("h-3.5 w-3.5", scanning && "animate-spin")} />
               <span className="hidden sm:inline">Scan channels</span>
@@ -1440,11 +1449,14 @@ export default function Eva() {
                     ))}
                   </div>
                   <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-400">
-                    {/* Two limits, side by side and never merged. The monthly cap is on
-                        enrichment *attempts* and the remedy is to wait for the month to roll
-                        over; the credit balance is purchased and the remedy is to top up.
-                        Showing one number for both would tell the operator to do the wrong
-                        thing about whichever one they had actually hit. */}
+                    {/* Two limits, still never merged — they just live in two places now.
+                        The monthly cap is on enrichment *attempts* and the remedy is to wait
+                        for the month to roll over, so it stays here beside the table those
+                        attempts are spent from. The credit balance is purchased, the remedy
+                        is to top up, and it belongs to the whole page rather than to this
+                        branch — it is in the header, where every state of this page shows it.
+                        Showing one number for both would still tell the operator to do the
+                        wrong thing about whichever one they had actually hit. */}
                     {usage && (
                       <span
                         className="rounded-full border border-zinc-200 bg-white px-2 py-0.5"
@@ -1454,7 +1466,6 @@ export default function Eva() {
                         {usage.remaining} attempts left this month
                       </span>
                     )}
-                    <CreditBalanceBadge balance={creditBalance} />
                     <span>{leads.length} shown</span>
                   </span>
                 </div>

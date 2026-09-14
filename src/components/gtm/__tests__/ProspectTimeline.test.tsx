@@ -6,6 +6,8 @@
 // 1. **The server owns the order.** The rendered `<li>` order is exactly the order
 //    the server sent, and the component holds those entries in the ledger's
 //    canonical ascending order and reverses only to display them (R17.4, R18.6).
+//    Asserted as a *full equality* against whatever order the server chose, not as
+//    "descending by timestamp" — see the block below for why the difference matters.
 // 2. **Every entry is legible and precise.** An `<li>` per entry, a `<time
 //    dateTime>` carrying the machine instant with the absolute value in `title` and
 //    the relative value as text, the server's summary, and the evidence surface and
@@ -20,6 +22,24 @@
 //
 // The transport is stubbed at `fetch` rather than at `gtmAPI`, so the real
 // normaliser runs and claim 4 is a statement about the whole path from wire to DOM.
+//
+// ─── Where this component now sits (R20.8, §15.3) ─────────────────────────────
+//
+// Behaviourally unchanged by the restructure, and that is the point of updating this
+// file: the dossier renders `ProspectTimeline` inside the "Everything that happened"
+// disclosure — `PROSPECT_INTELLIGENCE_SECTIONS.timeline` — whose `children` is a
+// function, so the component is constructed on the first open and holds its own read,
+// its own pager and its own failure exactly as it always did. Nothing about that
+// changes the claims below, because none of them was ever about who mounted it.
+//
+// What the fold-in *does* change is which of these claims is load-bearing. The
+// timeline is now the dossier's whole "what happened" record — the retired page's
+// activity list is gone — so the order the operator reads is this component's order
+// and nothing else re-sorts it downstream. Design §15.3 asks for that as an example
+// here rather than as a second copy of property 21, which
+// `ProspectDossier.labels.test.tsx` owns, and the mounting-and-request half is
+// `ProspectDossier.compose.test.tsx`'s property 6. So this file states the ordering
+// claim and neither of those two.
 
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -93,6 +113,34 @@ function renderedSummaries(): string[] {
   return screen.getAllByRole("listitem").map((item) => item.querySelector("p")?.textContent ?? "");
 }
 
+/**
+ * The `event_id` each rendered entry is carrying, in document order, read inside one
+ * mount rather than off the body.
+ *
+ * `appliedEntry` writes the id into the summary in parentheses, so this is the server's
+ * own identifier for the row and not a position this file assigned.
+ */
+function renderedIds(root: HTMLElement): (string | undefined)[] {
+  return within(root)
+    .getAllByRole("listitem")
+    .map((item) => (item.querySelector("p")?.textContent ?? "").match(/\(([^)]+)\)/)?.[1]);
+}
+
+/**
+ * The machine instant each rendered entry is carrying, in document order.
+ *
+ * The entry's own `event_at`: it is the first `<time>` in the `<li>`, ahead of the
+ * optional evidence instant further down, which is why `querySelector` is the right
+ * reach here. Read alongside `renderedIds` so an ordering claim is made about the
+ * timestamps as well as the identifiers — a component that re-sorted would have to
+ * disagree with one of the two.
+ */
+function renderedInstants(root: HTMLElement): (string | null)[] {
+  return Array.from(root.querySelectorAll("li")).map(
+    (item) => item.querySelector("time")?.getAttribute("dateTime") ?? null,
+  );
+}
+
 beforeEach(() => {
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
@@ -145,6 +193,67 @@ describe("order", () => {
     expect(url).toContain("brand_id=brand-1");
     expect(url).toContain("limit=10");
     expect(url).toContain("newest_first=true");
+  });
+
+  it("renders exactly the sequence the server sent, whatever order that is", async () => {
+    // The claim design §15.3 asks for, stated as an equality rather than as
+    // "descending by timestamp" — and the two are not the same assertion.
+    //
+    // A component that sorted the page itself on `event_at` would still satisfy a
+    // descending-order check, while silently overriding the one thing only the server
+    // can decide: the ledger's keyset walk is what separates two rows and what fixes
+    // their tie-break, and the browser holds nothing it could reconstruct that from.
+    // So the page below is deliberately *not* chronological. `e2` is the oldest row in
+    // it and sits second because that is where the server put it, and `e4`/`e5` share a
+    // millisecond, which no client-side comparator could order at all.
+    //
+    // Now that the dossier's activity list is gone and this component is the whole
+    // "Everything that happened" record, the order an operator reads is this order.
+    const shared = iso(9);
+    const served = [
+      appliedEntry("e1", 2),
+      appliedEntry("e2", 40),
+      appliedEntry("e3", 1),
+      appliedEntry("e4", 9, { event_at: shared }),
+      appliedEntry("e5", 9, { event_at: shared }),
+    ];
+    respondWith(timelinePage(served, null));
+    const { container } = renderTimeline();
+
+    await waitFor(() => expect(within(container).getAllByRole("listitem")).toHaveLength(5));
+
+    // Entry for entry, with no entry dropped, added or moved.
+    expect(renderedIds(container)).toEqual(served.map((entry) => entry.event_id));
+    // And the instants in the same sequence, which is what says no re-sort happened
+    // anywhere between the wire and the `<time>` elements.
+    expect(renderedInstants(container)).toEqual(served.map((entry) => entry.event_at));
+  });
+
+  it("keeps the server's order across a page boundary, appending page two as it arrived", async () => {
+    // Paging is where an ordering guarantee is easiest to lose: the second page is
+    // merged into state the component already holds, and a merge that sorted would
+    // rewrite the first page too. Page two is out of chronological order for the same
+    // reason page one is above.
+    const first = [appliedEntry("p1", 1), appliedEntry("p2", 12)];
+    const second = [appliedEntry("p3", 30), appliedEntry("p4", 90), appliedEntry("p5", 45)];
+
+    respondWith(timelinePage(first, "cursor-1"));
+    const { container } = renderTimeline({ pageSize: 2 });
+
+    await waitFor(() => expect(within(container).getAllByRole("listitem")).toHaveLength(2));
+
+    respondWith(timelinePage(second, null));
+    await userEvent.click(
+      within(container).getByRole("button", { name: "Load earlier activity" }),
+    );
+
+    await waitFor(() => expect(within(container).getAllByRole("listitem")).toHaveLength(5));
+    expect(renderedIds(container)).toEqual(
+      [...first, ...second].map((entry) => entry.event_id),
+    );
+    expect(renderedInstants(container)).toEqual(
+      [...first, ...second].map((entry) => entry.event_at),
+    );
   });
 
   it("puts the entries in an ordered list of list items", async () => {

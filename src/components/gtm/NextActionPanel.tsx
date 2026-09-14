@@ -72,6 +72,7 @@ import {
   GTM_LIFECYCLE_LABELS,
   GTM_NBA_ACTION_LABELS,
   GTM_PRIORITY_TIER_LABELS,
+  GTM_SIGNAL_TYPE_LABELS,
   GTM_UI_LABELS,
   relTime,
   TONE,
@@ -570,6 +571,14 @@ export function ActionCard({
           <ul className="mt-1 space-y-1">
             {whyNow.map((bullet, index) => {
               const termLabel = bullet.term ? FACTOR_LABEL[bullet.term] ?? bullet.term : null;
+              // The event, in a rep's words. This list sits outside every `<details>`, so
+              // the signal type is a primary statement and goes through the same table
+              // `NextBestActionCard` reads it through (R8.3) — one lookup path, and a type
+              // the table has no copy for resolves inside the table, re-cased into its own
+              // words rather than left as `TECH_STACK_CHANGE`.
+              const signalLabel = bullet.signalType
+                ? GTM_SIGNAL_TYPE_LABELS[bullet.signalType] ?? bullet.signalType
+                : null;
               const when = relTime(bullet.eventTimestamp);
               return (
                 <li
@@ -578,8 +587,8 @@ export function ActionCard({
                 >
                   <span aria-hidden="true">·</span>
                   <span className="min-w-0">
-                    {bullet.signalType ?? termLabel ?? ""}
-                    {bullet.signalType && termLabel ? ` · ${termLabel}` : ""}
+                    {signalLabel ?? termLabel ?? ""}
+                    {signalLabel && termLabel ? ` · ${termLabel}` : ""}
                     {when && (
                       <span title={absTime(bullet.eventTimestamp)} className="text-slate-500">
                         {` · ${when}`}

@@ -15,8 +15,13 @@
 // state. `STATE_LABEL` and `SURFACE_LABEL` are dictionaries keyed by the exact
 // enum values `schemas/gtm.py` sends, and `relTime` / `absTime` are formatters over
 // a timestamp the server observed. If a value is missing from a table the caller
-// renders the raw value rather than substituting a plausible one — an unmapped
-// enum is a display gap, not a licence to guess.
+// substitutes no meaning for it — an unmapped enum is a display gap, not a licence
+// to guess. What is allowed is `humanisedIfToken`, reached through
+// `resolveStateValue` and through the four `resolving()` tables, and what it does is
+// spelled out where it is defined: it re-cases and de-underscores the server's token,
+// which is a typographic transformation of the token and not a reading of it. Every
+// other table still returns nothing for a key it does not carry, and its caller still
+// renders the value raw.
 
 import type { ActionType, ConfirmationStatus, SourceSurface } from "@/services/gtmAPI";
 
@@ -186,7 +191,176 @@ export const STATE_LABEL: Record<string, string> = {
   // so it names the absence rather than reading as a verdict on the channel.
   AVAILABLE: "Available",
   UNAVAILABLE: "No contact identifier",
+
+  // ── The three derived profile vocabularies (R8.3) ──
+  //
+  // `seniority`, `icp_match` and `intent_signal` reach the screen through
+  // `ProspectHeader` → `ObservedValue`, which is a *primary* statement and not an
+  // evidence disclosure. Until these keys existed every one of them printed its wire
+  // value there — `C_LEVEL`, `PASSED`, `HIGH_INTENT_LEAD` — so the rule that a primary
+  // statement is made in sales language was broken for every real prospect rather than
+  // for an edge case. The values below are the backend's own, not a guess at them.
+
+  // seniority — `li_gtm_profiles.observed_seniority`, the six `scoring_tables.SENIORITY_*`
+  // bands. A headline nobody could place yields no value at all, which reads "Unknown"
+  // through the shared key above: no band is a stand-in for an unread headline.
+  C_LEVEL: "C-level",
+  FOUNDER: "Founder",
+  VP: "VP",
+  DIRECTOR: "Director",
+  MANAGER: "Manager",
+  IC: "Individual contributor",
+
+  // icp_match — `_qualification_of()`'s verdict. The gate's own two-way answer, used
+  // when the persisted criteria carry no booleans; with booleans the verdict travels as
+  // "3/5 criteria matched", which is already a sentence and needs no key here.
+  PASSED: "Matches your ICP",
+  NOT_PASSED: "Doesn't match your ICP",
+
+  // intent_signal — `sales_leads.intent_class`. Three values reach a lead, because gate 3
+  // of `lead_scorer.run_three_gate_pipeline` admits only the three `INTENT_SCORE_MAP`
+  // scores; the wider comment vocabulary never becomes a lead. Written as what the person
+  // did, in the past tense, for the reason `GTM_SIGNAL_TYPE_LABELS` gives: a signal reads
+  // as an event about someone rather than as a category they were filed under.
+  HIGH_INTENT_LEAD: "Showed buying interest",
+  REFERRAL: "Pointed you to someone else",
+  QUESTION: "Asked about what you do",
 };
+
+// ─── Resolving one dimension value for display (R8.3) ─────────────────────────
+//
+// The two shapes a backend token arrives in, in the same two patterns the R8.3 scan
+// (`pages/__tests__/ProspectDossier.labels.test.tsx`) uses to find one on screen. The
+// shape is the whole gate: `STATE_LABEL` is keyed by the vocabularies `schemas/gtm.py`
+// sends *today*, and the backend grows a vocabulary before this file learns the word.
+
+/**
+ * Two or more upper-snake segments — `NEWLY_DECLARED_STATE`, `PARTNER_INTRO_REQUESTED`.
+ * An underscore between two capitalised segments makes a token, never a sentence.
+ */
+const UPPER_SNAKE_TOKEN = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/;
+
+/**
+ * The single-segment members of the same unions — `SUPERSEDED`, `UNAVAILABLE`.
+ *
+ * Four characters is the floor, and it is the floor the R8.3 scan itself uses: the
+ * acronyms an operator says out loud — `CTA`, `ICP`, `VP`, `IC` — are what a rep calls
+ * the thing, and re-casing one into `Cta` would be a mangling rather than a reading.
+ */
+const LONE_UPPER_TOKEN = /^[A-Z][A-Z0-9]{3,}$/;
+
+/** How the text beside a fact was produced. */
+export type StateValueOrigin =
+  /** A curated string from `STATE_LABEL`. */
+  | "mapped"
+  /** The server's own token, re-cased. Not curated copy — the caller must mark it. */
+  | "humanised"
+  /** The value exactly as it arrived, because it is not a token shape. */
+  | "verbatim";
+
+export interface ResolvedStateValue {
+  /** The text to render. */
+  text: string;
+  /** Where `text` came from, so a caller can keep a humanised value from reading as copy. */
+  origin: StateValueOrigin;
+}
+
+/** `NEWLY_DECLARED_STATE` → `Newly declared state`. Case and underscores, nothing else. */
+function humaniseToken(token: string): string {
+  const spaced = token.split("_").join(" ").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** The humanised form of `value`, or `null` when `value` is not shaped like a token. */
+function humanisedIfToken(value: string): string | null {
+  if (UPPER_SNAKE_TOKEN.test(value) || LONE_UPPER_TOKEN.test(value)) return humaniseToken(value);
+  return null;
+}
+
+/**
+ * The prototype that makes a label table resolve its own miss.
+ *
+ * ── Why a table resolves, rather than each caller ──
+ *
+ * `ObservedValue` is the one primitive allowed to render a fact, and it resolves through
+ * `resolveStateValue` below. Four vocabularies do not reach the screen that way: the
+ * journey position and the intent rows are read straight out of these tables by
+ * `pages/ProspectIntelligence.tsx`, and the action title and the why-now signal by
+ * `NextBestActionCard`, each with the `TABLE[value] ?? value` idiom. Humanising at those
+ * call sites would put the answer in four places, and a reader — including a test — that
+ * asks the table what a value reads as would get a different answer from the screen.
+ * `pages/__tests__/ProspectDossier.labels.test.tsx` does exactly that, in the clause that
+ * checks an intent row still names its meaning: it derives the expected text as
+ * `GTM_INTENT_LABELS[intentType] ?? intentType`. So the table is where the fallback has
+ * to live for the screen and the expectation to agree.
+ *
+ * The trap fires only for a key the table does **not** carry, and only when that key is
+ * token-shaped, so every curated string is returned untouched by an ordinary own-property
+ * read. `Object.keys`, `Object.entries`, spread and `for…in` see the curated keys and
+ * nothing else — which matters, because `IntentPanel` builds its canonical eleven rows
+ * from `Object.keys(GTM_INTENT_LABELS)` and a phantom key would become a phantom row.
+ */
+const RESOLVING_TABLE_PROTO: Record<string, string> = new Proxy(
+  Object.prototype as Record<string, string>,
+  {
+    get(target, key, receiver) {
+      if (typeof key === "string") {
+        const humanised = humanisedIfToken(key);
+        if (humanised !== null) return humanised;
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  }
+);
+
+/**
+ * Mark an open table as resolving: `TABLE[token]` reads `Newly declared state` rather than
+ * `undefined`, for a token the table has no copy for.
+ *
+ * Applied to exactly the four tables a primary statement is read from outside
+ * `ObservedValue`. Every other table in this file is untouched and still returns
+ * `undefined` for a key it does not carry, which is what keeps its callers' raw fallback
+ * meaningful.
+ *
+ * `STATE_LABEL` is deliberately **not** one of them. Its reader is `ObservedValue`, which
+ * needs to know whether the text it is about to render is curated copy or a re-cased
+ * token so it can mark the second case — and a table that resolves silently cannot tell
+ * it. `resolveStateValue` answers that question, and it can only answer it while the
+ * table itself still misses.
+ */
+function resolving<T extends Record<string, string>>(table: T): T {
+  return Object.setPrototypeOf(table, RESOLVING_TABLE_PROTO) as T;
+}
+
+/**
+ * The text for one dimension value: the curated label, else a humanised token, else the
+ * value untouched.
+ *
+ * **Humanising is a typographic transformation of the server's own token, not a guess at
+ * its meaning.** `NEWLY_DECLARED_STATE` becomes `Newly declared state` by lower-casing
+ * five capitals and turning two underscores into two spaces; every word a reader sees is
+ * a word the backend chose. That is the difference between this and the substitution the
+ * tables refuse to make: nothing is inferred, nothing is renamed, and a token whose
+ * meaning we have not written copy for still says only what it said. What it stops is a
+ * rep reading `NEWLY_DECLARED_STATE` in a primary statement (R8.3) — and because the
+ * text is the token and not our reading of it, the honesty the raw fallback protected
+ * survives, provided the caller marks the result. `ObservedValue` does, as visible text
+ * beside the value, next to the `derived` and `stale` markers.
+ *
+ * **The gate is the token's shape, never "the table missed."** Some of the fields that
+ * reach `ObservedValue` carry prose rather than an enum: `_qualification_of()` returns
+ * `"3/5 criteria matched"` for `icp_match` whenever the persisted ICP criteria carry
+ * booleans, and `acv_tier` is persisted lower-case. Neither is in `STATE_LABEL` and
+ * neither is a token, so both pass through as `verbatim` — a miss on the table is not
+ * evidence that a value needs tidying.
+ */
+export function resolveStateValue(value: string): ResolvedStateValue {
+  const mapped = STATE_LABEL[value];
+  if (mapped !== undefined) return { text: mapped, origin: "mapped" };
+  const humanised = humanisedIfToken(value);
+  if (humanised !== null) return { text: humanised, origin: "humanised" };
+  return { text: value, origin: "verbatim" };
+}
 
 /** The tone each dimension value carries. Decoration only — the text carries the meaning. */
 export const STATE_TONE: Record<string, string> = {
@@ -774,8 +948,12 @@ export const GTM_PAGE_LABELS = {
  * `CONNECTION_PENDING`, `AWAITING_REPLY` and `WARMUP_SENT` deliberately reuse the
  * wording `STATE_LABEL` already gives them, so the same situation does not read
  * two different ways on one screen.
+ *
+ * A `resolving()` table: the projection is stated as a chip in the dossier's status band,
+ * which is a primary statement, and a twenty-second value declared server-side reads as
+ * its own token re-cased rather than as `NEWLY_DECLARED_STATE` (R8.3).
  */
-export const GTM_JOURNEY_LABELS: Record<string, string> = {
+export const GTM_JOURNEY_LABELS: Record<string, string> = resolving({
   // Qualification
   NEW: "New",
   IDENTIFIED: "Identified",
@@ -804,7 +982,7 @@ export const GTM_JOURNEY_LABELS: Record<string, string> = {
   NURTURE: "Nurture",
   DORMANT: "Dormant",
   DO_NOT_CONTACT: "Do not contact",
-};
+});
 
 /**
  * The eleven Intent_Types.
@@ -814,8 +992,12 @@ export const GTM_JOURNEY_LABELS: Record<string, string> = {
  * and confidence zero rather than left absent (R5.5), so every key here always has
  * a row to label — a zero is "nothing observed for this intent", which is why the
  * value beside the label needs its confidence to be readable too.
+ *
+ * A `resolving()` table: the strongest three are stated in the dossier's buying-intent
+ * band, which is a primary statement, so a twelfth type reads as its own token re-cased
+ * (R8.3). The eleven canonical rows are still `Object.keys` of this object and only those.
  */
-export const GTM_INTENT_LABELS: Record<string, string> = {
+export const GTM_INTENT_LABELS: Record<string, string> = resolving({
   BUYING: "Buying",
   HIRING: "Hiring",
   FUNDING: "Funding",
@@ -827,7 +1009,7 @@ export const GTM_INTENT_LABELS: Record<string, string> = {
   ENGAGEMENT: "Engagement",
   CONVERSATION: "Conversation",
   MEETING: "Meeting",
-};
+});
 
 /**
  * The thirteen Candidate_Action types, in catalog order.
@@ -842,8 +1024,14 @@ export const GTM_INTENT_LABELS: Record<string, string> = {
  * `WAIT` and `RESEARCH_MORE` are the floor of the catalog, not the absence of a
  * recommendation, so neither reads as an empty state: "do nothing yet" and "find
  * out more" are answers.
+ *
+ * A `resolving()` table: the title of the recommended action is the loudest primary
+ * statement on the dossier, so a fourteenth type reads as its own token re-cased rather
+ * than as `PARTNER_INTRO_REQUESTED` (R8.3). `readActionTypeParam` in
+ * `pages/GTMActionQueue.tsx` guards the URL parameter with `in`, which still answers for
+ * the thirteen keys this object owns and for nothing else.
  */
-export const GTM_NBA_ACTION_LABELS: Record<string, string> = {
+export const GTM_NBA_ACTION_LABELS: Record<string, string> = resolving({
   // Outreach
   CONNECT_LINKEDIN: GTM_ACTION_LABELS.CONNECT,
   SEND_LINKEDIN_WARMUP: "Open LinkedIn & Send a warm-up",
@@ -864,7 +1052,7 @@ export const GTM_NBA_ACTION_LABELS: Record<string, string> = {
   // Retreat
   NURTURE: "Nurture — keep them warm without asking",
   STOP_OUTREACH: "Stop outreach",
-};
+});
 
 /**
  * The nine exclusion reasons.
@@ -1103,6 +1291,17 @@ export const GTM_IDENTITY_LABELS = {
    */
   trackHeadline: "Find out Who, How, and Why Now before reaching out.",
   /**
+   * What the button does when a LinkedIn identity has not been confirmed yet.
+   *
+   * Two facts a rep needs before pressing a control tagged "2 credits": this press does not
+   * spend them, and the lookup is quick and unattended. The charge happens on the track
+   * route and only when intelligence actually starts.
+   */
+  trackFirstStep:
+    "We'll find their LinkedIn profile first — that's free and runs in the background. The 2 credits are only charged when intelligence actually starts.",
+  trackLookingUp: "Finding their profile",
+  trackStarting: "Starting intelligence",
+  /**
    * What activation does, in a rep's words.
    *
    * An earlier version read "continuously monitors this prospect's signals, evolves their
@@ -1118,6 +1317,15 @@ export const GTM_IDENTITY_LABELS = {
   resolveQueued: "Looking for their LinkedIn profile. The result lands on the next read.",
   resolveDeduped: "Already looking — an identical search is queued for this lead.",
   resolveFailed: "Couldn't ask for an identity search",
+  /**
+   * The lookup is taking longer than this page is willing to keep polling for.
+   *
+   * Not a failure and not a timeout of the *job* — only of our watching. The search is still
+   * queued and the verdict will be there next time, so the sentence says that rather than
+   * implying something broke.
+   */
+  resolveStillRunning:
+    "Still looking. The search is queued and will finish in the background — check back and it'll be here.",
 
   /**
    * The state transition, not a receipt.
@@ -1140,6 +1348,23 @@ export const GTM_IDENTITY_LABELS = {
   observationNotQueued:
     "Intelligence is active, but no read could be queued yet — the next sweep will pick them up.",
   trackFailed: "Couldn't activate intelligence for this prospect",
+
+  /**
+   * Identity verification ran and came back without a person, so activation stops here
+   * (R6.3).
+   *
+   * Distinct from `cannotTrack.noMatch`, which is the 409 the *track route* returns when
+   * somebody presses Activate on a lead nobody has resolved. This is the other order of
+   * events — the press started a lookup, the lookup finished unverified, and no track
+   * request was ever issued (R6.4). The second clause exists to say exactly that: the
+   * operator pressed a priced control, and they are owed an explicit statement that nothing
+   * was activated and nothing was charged for it.
+   *
+   * Rendered as a notice in the stage banner under `aria-live="polite"`, because the verdict
+   * arrives on a later poll rather than in the click that asked for it.
+   */
+  activationStopped:
+    "Activation stopped — We couldn't verify this person on LinkedIn. Intelligence was not activated.",
 
   // The url, and the two very different things it can be.
   verifiedUrl: "Verified profile",
@@ -1200,9 +1425,18 @@ export const PROSPECT_STAGE_LABELS: Record<string, { label: string; body: string
     body: "Looking up this person's contact details and confirming who they are.",
   },
   RESOLVING: {
-    label: "Looking them up on LinkedIn",
+    label: "Finding their profile",
+    /**
+     * No made-up duration, and no instruction to wait.
+     *
+     * The lookup is a queued job the LinkedIn worker picks up, and the backend publishes no
+     * SLA for it — so any "about 30 seconds" here would be invented. What removes the "how
+     * long is this going to take" problem is not a number, it is that the rep does not have
+     * to watch: the page re-checks on its own and fills in when the answer lands. Saying that
+     * is both true and more useful than an estimate.
+     */
     body:
-      "Searching for this person's profile. It can take a moment — you can still contact them while it runs.",
+      "Weez is looking for this person on LinkedIn. This runs in the background and the page updates itself — you don't need to wait here.",
   },
   ENRICHED: {
     label: "Ready to decide",
@@ -1210,13 +1444,33 @@ export const PROSPECT_STAGE_LABELS: Record<string, { label: string; body: string
       "You know who this is and how to reach them. Reach out now, or let Weez watch them and tell you when the moment is right.",
   },
   ACTIVATING: {
-    label: "Turning on intelligence",
+    /**
+     * The transition, named as itself (R7.2).
+     *
+     * "Turning on intelligence" described a switch; this describes the thing the rep just
+     * bought being brought up. The body is retained — it is the only sentence that says a
+     * first read of the profile and the activity is already going out.
+     */
+    label: "Activating intelligence…",
     body: "Setting this prospect up and taking a first look at their profile and activity.",
   },
   WAITING: {
     label: "Watching for activity",
-    body:
-      "Weez has started watching this prospect. Nothing has happened yet — as soon as they post, change role or show interest, it appears here with a recommended move.",
+    /**
+     * The one stage that has to survive being empty for a while (R7.3).
+     *
+     * Pinned by the requirement, so it is set verbatim: two clauses, the state and what is
+     * being done about it, and no promise about when. The longer sentence it replaces spelt
+     * out the three things that could land here, which the `ACTIVE` body below already does
+     * once the first one has.
+     *
+     * It says "Weez", the same subject `RESOLVING.body` above and `ACTIVE.body` below use.
+     * R7.3 was first drafted saying "Dextroflow", which would have put two voices in three
+     * adjacent bodies of one banner; the product owner resolved that by **amending the
+     * requirement** — the product has one user-facing name, and it is Weez. So this is still
+     * the requirement's word verbatim, not a re-voicing of a pinned string.
+     */
+    body: "Intelligence is active. Weez is watching for new activity and signals.",
   },
   ACTIVE: {
     label: "Watching · nothing to do yet",
@@ -1228,6 +1482,78 @@ export const PROSPECT_STAGE_LABELS: Record<string, { label: string; body: string
     body: "Weez has a recommended move for this prospect, and the reason for it.",
   },
 };
+
+/**
+ * What the dossier says when there is nothing to show, and when a read failed (R18.1).
+ *
+ * The stage table above says where a prospect *is*. These five sentences cover the places
+ * on an activated prospect's dossier where a section has nothing in it — the next-best-action
+ * slot, the activity band — and the two reads that can fail without taking the page down.
+ *
+ * Three rules hold across every one of them, and they are the reason these live in a table
+ * rather than at the call sites they replace (R18.2, R18.4):
+ *
+ *   **Each says what is absent, not that data is missing.** No entry is "No data available",
+ *   "N/A", an em dash or a blank. A rep cannot act on "N/A"; they can act on "not enough
+ *   evidence yet".
+ *
+ *   **Each carries a next step.** Either what Weez is doing about it — `We're watching`,
+ *   `reads their profile … on a schedule`, `appears here` — or, for the two failures, a retry
+ *   control rendered beside the sentence from `GTM_PAGE_LABELS.retry`. A failure statement
+ *   with no way to try again is a dead end.
+ *
+ *   **Each is distinct.** Two absences that read the same are two absences a reader cannot
+ *   tell apart, and "no recommendation yet" and "no signal worth your attention yet" are
+ *   genuinely different news.
+ *
+ * `noRecommendation` and `noMeaningfulSignal` are pinned exact strings (R9.4, R9.5) and both
+ * stand *in place of* the NBA card rather than inside it: there is no recommendation, so
+ * there is no card, and a card-shaped placeholder would imply one is loading.
+ *
+ * The two `*ReadFailed` sentences are lifted from the strings that were written inline in
+ * `ProspectIntelligence.tsx`. Both name what could not be read *and what that costs* — a
+ * stage we cannot show, a recommendation that may exist and is not on screen — because a
+ * failed read is not the same claim as an absence, and an operator who cannot tell the two
+ * apart will read a gap as a verdict.
+ */
+export const GTM_ABSENCE_LABELS = {
+  /** No recommendation for a tracked prospect (R9.4). In place of the NBA card. */
+  noRecommendation:
+    "Not enough evidence yet. We're watching this prospect. We'll surface a recommendation when there is a meaningful signal.",
+
+  /** Tracked, observed, and nothing observed is worth acting on (R9.5). `ACTIVE` stage. */
+  noMeaningfulSignal:
+    "Watching — Nothing needs your attention yet. We'll tell you when something changes.",
+
+  /**
+   * The ranking read failed. Rendered as an amber line above the NBA slot, with a retry.
+   *
+   * The second clause is the honest part: this is our failure, not an empty queue, so it must
+   * not be mistaken for `noRecommendation` above.
+   */
+  rankingReadFailed:
+    "Couldn't read the next best action for this prospect, so there may be a recommendation we aren't showing.",
+
+  /**
+   * The prospect read failed. Rendered above the dossier bands, with a retry.
+   *
+   * Names both things the failure took with it — the stage and the controls that depend on it
+   * — so a dossier missing its banner and its decision cards reads as one failed read rather
+   * than as several unexplained gaps.
+   */
+  prospectReadFailed:
+    "Couldn't read this prospect's GTM record, so its stage and the actions available on it aren't known.",
+
+  /**
+   * Nothing has been observed on their profile or feed yet. Band 5.
+   *
+   * Says the observation is scheduled rather than absent, because activation queues reads and
+   * a rep who has just paid for one deserves to know it is coming instead of inferring that
+   * nothing happens.
+   */
+  noActivity:
+    "No activity has been observed for this prospect yet. Weez reads their profile and recent posts on a schedule, and anything it finds appears here.",
+} as const;
 
 /**
  * The connection flow's own chrome: one control, one return prompt, one status
@@ -1441,10 +1767,38 @@ export const PROSPECT_DECISION_LABELS = {
 
   activate: {
     label: "Activate Intelligence",
-    tagline: "I don't want to reach out blind.",
-    /** The same two strings the identity block uses, so the pitch cannot drift. */
+    /**
+     * The pinned tagline (R4.4), which is now the card's whole pitch in one line.
+     *
+     * It used to read "I don't want to reach out blind." — the rep's half of the choice,
+     * matching the contact card's voice — with `headline` carrying the promise underneath.
+     * The requirement pins the promise itself, in lowercase, so the two lines would restate
+     * each other and the card drops `headline` from its copy instead.
+     */
+    tagline: "Find out who, how, and why now before reaching out.",
+    /**
+     * The identity block's own headline, kept aliased and no longer on the card.
+     *
+     * `tagline` above now carries this promise in the pinned wording, so rendering both put
+     * the same sentence on the card twice in two capitalisations.
+     */
     headline: GTM_IDENTITY_LABELS.trackHeadline,
+    /** Still on the card, and still the identity block's string so the pitch cannot drift. */
     body: GTM_IDENTITY_LABELS.trackBody,
+    /**
+     * The busy label, and there is only one of it.
+     *
+     * `GTM_IDENTITY_LABELS.trackFirstStep` used to be aliased here as `firstStep` and
+     * rendered under the button whenever the identity was unresolved. It named the
+     * plumbing — a LinkedIn profile lookup — on the one surface where the operator is
+     * choosing between two product outcomes, so it is gone from this table (R4.5, R6.6).
+     * `trackLookingUp` ("Finding their profile") is the same problem in a shorter
+     * sentence, so the card reads `starting` in *both* busy branches and the Activate
+     * copy is identical whatever the identity verdict says (R4.6). `lookingUp` stays
+     * declared for the identity block, which is where naming the lookup belongs.
+     */
+    lookingUp: GTM_IDENTITY_LABELS.trackLookingUp,
+    starting: GTM_IDENTITY_LABELS.trackStarting,
   },
 } as const;
 
@@ -1479,22 +1833,57 @@ export const CONTACT_DIRECTLY_LABELS = {
   openChannel: "Open LinkedIn",
 
   /**
-   * Why generation is unavailable, when it is.
+   * Why Contact Directly cannot be offered, when it cannot.
    *
-   * Two different absences and they need two different sentences, because the operator's
-   * next step differs. `needsActivation` is the `_require_profile` 404: no GTM prospect
-   * record exists, and only Activate Intelligence creates one. `needsConversation` is the
-   * `_require_conversation` 404: the prospect is activated, but the observation layer has
-   * not seen a thread yet, so there is nothing for a draft to attach to.
+   * **There used to be a third sentence here, `needsActivation`, and it is gone.** It read
+   * "Weez needs a GTM record for this prospect before it can draft a message. Activate
+   * Intelligence creates one." That was true while `_require_profile` guarded both contact
+   * routes. It is not true any more: the guard takes `allow_missing` and both
+   * `POST /message/generate` and `POST /action/request` now answer for a lead with no
+   * `li_gtm_profiles` row (§5.3). Contact Directly is independent of activation (R5.5), so
+   * the sentence would be a lie, and a lie left in a label table is a lie somebody reuses.
    *
-   * Both are stated rather than hidden. A control that would 404 is not rendered, and the
-   * reason it is missing is printed where it would have been.
+   * Its two replacements are the *only* two gates that remain, and both are read from
+   * backend-supplied facts rather than from the activation stage:
+   *
+   *   `needsEnrichment` — no `gtmLeadId`, so there is no enrichment assertion for the
+   *   writer to ground a draft in. Enriching is the next step and the sentence says so.
+   *
+   *   `noChannel` — no email address, no `contact.linkedinUrl` and no
+   *   `profile.profileUrl`, so `_lead_destination()` would refund the charge and answer
+   *   `422`. Nothing to open is not the same news as nothing to say, which is why it is a
+   *   second sentence rather than a rewording of the first.
+   *
+   * `needsConversation` is retained and **re-scoped to the tracked path only**: it is the
+   * `_require_conversation` 404 an *activated* prospect still returns when the observation
+   * layer has not seen a thread yet. It no longer speaks for an unactivated prospect —
+   * that one has a draft available and always did after the relaxation.
+   *
+   * Every one of these is stated rather than hidden. A control that would 404 is not
+   * rendered, and the reason it is missing is printed where it would have been (R5.8).
    */
-  needsActivation:
-    "Weez needs a GTM record for this prospect before it can draft a message. Activate Intelligence creates one.",
+  needsEnrichment:
+    "This prospect hasn't been enriched yet, so there's nothing to write from. Enrich them first and the draft will have something to say.",
+  noChannel:
+    "We don't have an email address or a LinkedIn profile for this person yet, so there's no channel to open.",
   needsConversation:
     "No LinkedIn thread has been observed for this prospect yet, so there's nothing for a draft to attach to. This clears once Weez has read their profile.",
   generateFailed: "Couldn't draft a message for this prospect",
+
+  /**
+   * The pre-activation draft is not saved anywhere, and the operator is told before they
+   * lose it (R5.6).
+   *
+   * `_lead_message_out` and `_lead_action_out` return `persisted: false` with a null id, so
+   * `MessageComposer` has no `message_id` to key `PATCH /message/{id}` or
+   * `POST /message/{id}/regenerate` on and hides **Rewrite** and inline **Edit**. This line
+   * takes their place: it says why two controls are absent, it names the one thing to do
+   * about it now — copy the text — and it names what activation would buy instead of
+   * leaving the missing persistence as a mystery. Generate, review, copy and open-channel
+   * are all still live, so this is a note and not a refusal.
+   */
+  unpersistedNote:
+    "This draft isn't saved — copy it before you leave. Activate Intelligence and Weez keeps the thread, the replies and what came of them.",
 } as const;
 
 // Empty-state copy is deliberately NOT centralised into one table here.
@@ -1502,7 +1891,7 @@ export const CONTACT_DIRECTLY_LABELS = {
 // A first pass at this feature added an `EMPTY_STATE_LABELS` block covering all four
 // surfaces, and it was removed before it shipped: every one of those surfaces already
 // owns specific, contextual empty copy — `GTM_PAGE_LABELS.noStateBelief` and
-// `.noIntelligenceRead` here, `ACTION_QUEUE_LABELS.empty` / `.emptyFiltered` in
+// `.noIntelligenceRead` here, `ACTION_QUEUE_LABELS.emptyRankedOnly` / `.emptyFiltered` in
 // `pages/GTMActionQueue.tsx`, and five distinct `EmptyPanel` states in
 // `pages/ProspectIntelligence.tsx` that already tell "discovery has found nothing yet"
 // apart from "discovery found forty accounts and none is enriched". A second table
@@ -1513,7 +1902,7 @@ export const CONTACT_DIRECTLY_LABELS = {
 
 // ─── The deeper intelligence, behind disclosures ──────────────────────────────
 //
-// The four sections below the Next Best Action card on an activated prospect. Each is a
+// The sections below the Next Best Action card on an activated prospect. Each is a
 // `<summary>` an operator opens when they want to understand *why*, which is the second
 // question — the first is "what should I do", and the NBA card answers that above them.
 //
@@ -1522,19 +1911,49 @@ export const CONTACT_DIRECTLY_LABELS = {
 // the content: a heading here would either repeat the panel's name or invent a second name
 // for the same thing.
 //
-// **Three of the four fetch their own data, and are mounted only when opened.** `SignalList`,
-// `StateHistoryPanel` and `ProspectTimeline` each own a collection, a pager and a failure.
-// Mounting them closed would add three requests to every prospect selection for panels
-// nobody asked to see. `StateDimensionGrid` reads no route — it renders the payload the page
-// already holds — so it needs no disclosure and gets none.
+// **Four of them fetch their own data, and are mounted only when opened.** `SignalList`,
+// `StateHistoryPanel`, `ProspectTimeline` and `LearningInsightsPanel` each own a collection,
+// a pager and a failure. Mounting them closed would add four requests to every prospect
+// selection for panels nobody asked to see. The other three read nothing on open:
+// `standing`, `reach` and `relationship` render slices of the `ProspectStateFull` payload the
+// page already holds, so opening one costs nothing. `StateDimensionGrid` reads no route
+// either — it renders the same held payload — so it needs no disclosure and gets none.
 //
-// The order is the order the questions arrive: where do they stand, what moved them, what
-// did we read, and what happened when.
+// `reach` is the one with a caveat: `ChannelRecommendationPanel` issues `recommendChannel`
+// only when the operator presses re-evaluate, never on open, which is why it sits with the
+// free sections rather than the fetching ones.
+//
+// The order is the order the questions arrive: where do they stand, how do we reach them,
+// where does the relationship stand, what moved them, what did we read, what happened when,
+// and what have we learned from prospects like this.
 
 export const PROSPECT_INTELLIGENCE_SECTIONS = {
   /** No disclosure: this one costs nothing to render. */
   state: "Current state",
   stateNote: "Where this prospect stands, on the evidence.",
+
+  /**
+   * `BuyingStagePanel`, `IntentPanel` and `ChannelIntelligencePanel`, folded in from
+   * `GTMProspect`. All three read `detail.state`, so opening this issues no request.
+   *
+   * The summary deliberately names the buyer's position rather than the three panels, which
+   * is why it reads close to `stateNote` above it: that note describes the always-open grid
+   * of dimension values, this one opens onto the argument behind them.
+   */
+  standing: "Where this prospect stands",
+  standingNote:
+    "Their buying stage, what they're interested in, and which channels reach them.",
+
+  /**
+   * `ChannelRecommendationPanel` and `CTAReadinessPanel`. Nothing on open — the channel
+   * recommendation is only recomputed when the operator asks for it.
+   */
+  reach: "How to reach them",
+  reachNote: "Which channel is most likely to work, and whether they're ready for an ask.",
+
+  /** `ConnectionPanel`, reading `detail.state.relationshipState`. No request. */
+  relationship: "Relationship & connection",
+  relationshipNote: "Whether you're connected, and what you've confirmed about it.",
 
   stateHistory: "What changed, and why",
   stateHistoryNote:
@@ -1549,11 +1968,23 @@ export const PROSPECT_INTELLIGENCE_SECTIONS = {
     "The full record for this prospect: changes, drafts, the actions you took and how they turned out.",
 
   /**
+   * `LearningInsightsPanel`, one `/debug` read on open. This is where the retired standalone
+   * learning page lands (R8.12): learning is a property of a prospect, not a destination.
+   *
+   * The summary is the R8.11 heading verbatim. "We've" and not "Weez has" because the
+   * subject is the shared record — what worked across this workspace's prospects — and a rep
+   * reading it is one of the parties that produced it.
+   */
+  learned: "What we've learned",
+  learnedNote:
+    "What worked with prospects like this, and how that shaped the recommendation.",
+
+  /**
    * The heading over the whole region.
    *
-   * "Deeper intelligence" rather than "Details": these are the four answers to "why should
-   * I believe the recommendation above", and calling them details would suggest they are
-   * optional trivia rather than the argument.
+   * "Deeper intelligence" rather than "Details": every section under this heading is an
+   * answer to "why should I believe the recommendation above", and calling them details
+   * would suggest they are optional trivia rather than the argument.
    */
   regionHeading: "Why Weez thinks this",
   regionNote: "Open any of these if you want to check the reasoning. You don't need to.",
@@ -1575,9 +2006,11 @@ export const PROSPECT_INTELLIGENCE_SECTIONS = {
 // than as a category: "Changed jobs", not "Job change". That is what makes a list of these
 // scan as a story about a person.
 //
-// `Record<string, string>` and the raw value on a miss, which is this file's convention
-// throughout: a thirtieth type added server-side renders as itself rather than as blank.
-export const GTM_SIGNAL_TYPE_LABELS: Record<string, string> = {
+// `Record<string, string>` and never a closed union, so a thirtieth type added
+// server-side renders rather than failing to type-check. It renders as the token it is,
+// re-cased: this is one of the four `resolving()` tables, because a why-now bullet is a
+// primary statement (R8.3) and `NextBestActionCard` reads its text straight out of here.
+export const GTM_SIGNAL_TYPE_LABELS: Record<string, string> = resolving({
   // What they did on LinkedIn.
   LINKEDIN_POST: "Posted on LinkedIn",
   LINKEDIN_COMMENT: "Commented on a post",
@@ -1618,4 +2051,191 @@ export const GTM_SIGNAL_TYPE_LABELS: Record<string, string> = {
   ACTION_EXECUTED: "You took an action",
   HUMAN_NOTE: "You recorded a note",
   UNCLASSIFIED: "Something we couldn't classify",
+});
+
+// ─── The attention checklist (R11.9, R13.10, R18.1, R18.2, R18.4) ─────────────
+//
+// The vocabularies the Attention_Feed adds, and the chrome the Action Queue and Nina
+// read them through. Three tables, in the shape every table above is in: a key the
+// server sent, a string a human reads.
+//
+// **Both vocabulary tables are `Record<string, string>`** — the convention this file
+// has followed since the panel tables, and load-bearing here for a specific reason.
+// The nine triggers and the four bands are declared server-side in
+// `backend/api/gtm.py`, and a tenth trigger is a backend change that ships without
+// this file. Keying these to a closed union would fail to type-check the day that
+// happened; keeping them open means the lookup site renders the raw value, so a new
+// trigger reads as `NEW_TRIGGER` rather than as blank. An unmapped key is a display
+// gap, not a licence to invent a friendlier string for a fact nobody here has seen.
+//
+// **The tier's text carries its meaning, not its colour.** A chip built on
+// `CONSEQUENCE_TIER_LABELS` pairs the band's sentence fragment with whatever tone it
+// wears, as every chip on these surfaces does (R18.9) — a reader who cannot see the
+// colour still learns that something needs them now.
+
+/**
+ * The four Consequence_Tiers, named by what the band means to the reader's day.
+ *
+ * Not `IMMEDIATE` / `MATERIAL` / `IMPORTANT` / `OTHER`, which are the server's words for
+ * its own ordering, and not severity words either. `Needs you now` is a claim about the
+ * rep's next ten minutes; `For your awareness` says plainly that nothing is being asked.
+ * That is the difference the ordering exists to convey, so the labels state it rather
+ * than leaving a rank for the reader to interpret.
+ *
+ * The order of the keys is the server's declared band order (`CONSEQUENCE_TIERS`), which
+ * is also the order the feed returns items in. Nothing here sorts — the page preserves
+ * the server's order (R11.4) and this table only names the band it lands in.
+ */
+export const CONSEQUENCE_TIER_LABELS: Record<string, string> = {
+  IMMEDIATE: "Needs you now",
+  MATERIAL: "Could change the outcome",
+  IMPORTANT: "Worth following up",
+  OTHER: "For your awareness",
 };
+
+/**
+ * The nine Attention_Triggers, as the news about the prospect (R11.2).
+ *
+ * Written from the prospect's side and in the perfect tense — `Replied to you`, `Going
+ * cold` — so a checklist of these scans as a list of things that happened to people
+ * rather than as a list of system events. `BUYING_STATE_CHANGED` reads "Buying position
+ * moved" and not "State changed", because a rep does not have a state machine in mind
+ * when they open the page in the morning.
+ *
+ * Two of them are deliberately vaguer than the rest, and honestly so.
+ * `MEANINGFUL_TRANSITION` fires on a transition the engine judged meaningful without
+ * placing it in one of the named categories, so "Something changed" is the whole of what
+ * we know; inventing a specific clause would be a claim the trigger did not make.
+ * `ACTION_MANDATORY` says what is at stake — the recommendation lapses and the prospect
+ * goes quiet — because that is the only trigger where *not* acting is itself the news.
+ *
+ * These label the trigger for a chip or a summary count. The task line's middle clause is
+ * `AttentionItem.reason`, which is server prose over the persisted values, so a task
+ * naming a stage or a signal is naming the one the server actually read.
+ */
+export const ATTENTION_TRIGGER_LABELS: Record<string, string> = {
+  PROSPECT_REPLIED: "Replied to you",
+  BUYING_STATE_CHANGED: "Buying position moved",
+  STAGE_CHANGED: "Moved to a new stage",
+  HIGH_INTENT_SIGNAL: "Showed strong intent",
+  MOVED_TOWARD_CONVERSION: "Moved closer to a deal",
+  AT_RISK_OR_LOSING: "Going cold",
+  WINNING_NEEDS_FOLLOWUP: "Waiting on you",
+  MEANINGFUL_TRANSITION: "Something changed",
+  ACTION_MANDATORY: "Action needed to keep this alive",
+};
+
+/**
+ * The checklist's own chrome: the heading, the list's accessible name, the separator,
+ * the empty state, the failure, and the two relative day headings.
+ *
+ * `pageTitle` is a question the page answers rather than a noun for a container. "Action
+ * queue" described a data structure; "What needs you today" is the promise the surface
+ * makes, and it is the same promise Nina's first block makes from the same feed.
+ *
+ * `list` is the `aria-label` on the single `<ul>` (R11.6, R11.7). It states the ordering
+ * as well as the contents, because the order is meaning here — a screen-reader user
+ * walking the list top to bottom is walking it in consequence order and deserves to know
+ * that without inferring it.
+ *
+ * `taskSeparator` is the arrow in the R11.2 form —
+ * `${prospectName} ${reason} → ${requiredResponse}` — and it lives here rather than in
+ * the JSX for the reason every
+ * string in this file does: it is user-visible text, it is inside the task's accessible
+ * name (R11.10), and a literal in the markup is a string no scan can find.
+ *
+ * `empty` is state 13 of the fifteen (R18.1) and is shared by the Action Queue and by
+ * Nina's blocks 1 and 3 (R11.9, R13.10) — one condition, one sentence, said in one place
+ * so the two surfaces cannot drift. It obeys the three rules the other fourteen do
+ * (R18.2, R18.4): it says what is absent rather than that data is missing, it says what
+ * Weez is doing about it — watching every activated prospect — and it names the
+ * three things that would put a row here, which is the reader's actual next question.
+ *
+ * It is *not* `ACTION_QUEUE_LABELS.emptyRankedOnly`, and the distinction is the whole
+ * point of the retitle. That sentence is about ranked recommendations, which is now one
+ * of nine reasons a prospect can need attention; this one is about the checklist being
+ * genuinely clear. Two different pieces of news, so two different sentences.
+ *
+ * `loadFailed` is a failure and not an absence: the feed could not be read, so the page
+ * shows no list at all rather than a partial one assembled from another source. Its next
+ * step is the retry control rendered beside it (R18.5) from `GTM_PAGE_LABELS.retry`,
+ * which is the same shape `GTM_PAGE_LABELS.loadFailedTitle` uses.
+ *
+ * `today` / `yesterday` are the two relative day headings (R11.3). Every other day heads
+ * with its own date, formatted at the call site from `dueAt` — there is no
+ * "3 days ago" heading, because a date is unambiguous and a rounded interval is not.
+ */
+export const ATTENTION_LABELS = {
+  pageTitle: "What needs you today",
+  list: "Prospects that need a response, most consequential first",
+  taskSeparator: " → ",
+  empty:
+    "Nothing needs you right now. Weez is watching every activated prospect and this list fills the moment one replies, moves stage or shows intent.",
+  loadFailed: "Couldn't read what needs your attention",
+  today: "Today",
+  yesterday: "Yesterday",
+} as const;
+
+// ─── Meetings (R14.7, R14.11, R18.1, R18.2, R18.4) ────────────────────────────
+//
+// Three sentences the Meetings page needs and cannot derive, each covering a place
+// where the GTM record is thinner than a calendar would be. `as const` rather than
+// `Record<string, string>`, matching `ATTENTION_LABELS` above: this is the page's own
+// chrome, not a vocabulary keyed by a value the server sends, so there is no unmapped
+// key to fall back from and nothing here can grow a tenth member behind our back.
+//
+// **Why a meetings surface needs absence copy at all.** A meeting on this page is
+// assembled from persisted GTM state — a conversation state, a cta state, a journey
+// state, a timeline outcome — and none of those is a calendar entry. So the page
+// knows *that* a meeting exists and, for the counts, *how many* were recorded, while
+// the two things a rep reaches for first (when is it, and how did it go) are either
+// somewhere else or not measured yet. Each sentence below names which of those it is,
+// because "we don't hold this" and "nothing has happened" are different news and a
+// dash in a cell says neither.
+
+/**
+ * What the Meetings page says where the record stops short.
+ *
+ * `noScheduledTimes` is the pinned R14.7 statement, and it is the reason the page groups
+ * by status instead of by time. No GTM table holds a meeting's start instant —
+ * `li_gtm_conversations` carries `last_inbound_observed_at` and `last_outbound_observed_at`,
+ * `LinkedInAction` carries `requested_at` and `delivered_at`, and not one of them is when
+ * the meeting is due. Sorting by any of those would present the freshest *observation* as
+ * the soonest *meeting*, which is a fabricated schedule built out of real timestamps. So
+ * the sentence says where the times actually live — the rep's calendar — and then says
+ * what the grouping is instead, which is the honest trade: we cannot tell you when, we can
+ * tell you exactly where each one stands.
+ *
+ * `countsUnavailable` stands in for the booked and completed figures, and covers both ways
+ * they can be missing: the analytics read failed (§13.3), or it succeeded and the metric
+ * was never computable on any day in the window (§9.3, where an absent metric contributes
+ * nothing rather than a zero). One sentence for both, because the rep's position is the
+ * same either way — there is no number to show — and a `0` would be a measurement nobody
+ * took. It names two next steps, a wider window and a retry, and it says the list below is
+ * unaffected so a missing count does not read as a missing page: the counts come from
+ * `/gtm/analytics/daily` and the meetings from the per-prospect reads, and only one of
+ * those two failed.
+ *
+ * `empty` is the pinned R14.11 statement and state 14 of the fifteen (R18.1). It obeys the
+ * three rules the other fourteen do (R18.2, R18.4): it says what is absent rather than
+ * that data is missing, it names what Weez is doing — reading the thread — and it
+ * names the two persisted events that would put a row here, an ask and a confirmation, so
+ * a rep with no meetings learns what one is made of rather than being told to wait. It is
+ * distinct from every other absence on the feature, and pointedly from
+ * `ATTENTION_LABELS.empty` directly above: an empty checklist means nothing needs the rep
+ * right now, an empty meetings page means no thread has produced a meeting yet, and the
+ * two can be true at completely different times.
+ */
+export const MEETING_LABELS = {
+  /** Why there are groups and not times (R14.7). Rendered once, above the groups. */
+  noScheduledTimes:
+    "Weez knows these meetings exist but not when they're scheduled — that lives in your calendar, not in the LinkedIn thread. These are grouped by where each one stands.",
+
+  /** In place of the booked and completed counts, never a zero (R14.3, R14.5). */
+  countsUnavailable:
+    "Booked and completed counts aren't available for this window. Weez adds them up from what it measured day by day, so widening the window or trying the read again is what brings them back — the meetings below stand either way.",
+
+  /** No Meeting_State_Evidence anywhere in the workspace (R14.11). State 14 of fifteen. */
+  empty:
+    "No meetings are recorded yet. A meeting appears here when a prospect asks for one or confirms a time in the thread Weez is reading.",
+} as const;

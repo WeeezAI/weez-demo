@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 import {
   Search, Filter, RefreshCw, Mail, Building2, Users, TrendingUp,
   CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp,
@@ -185,6 +187,12 @@ export default function SalesWorkspace() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [newLeadNotification, setNewLeadNotification] = useState(false);
 
+  // The balance, in chrome, from the provider that already wraps `Routes` (R17.1). This
+  // page spends nothing, so there is nothing to refresh it after. Rendered
+  // unconditionally: `CreditBalanceBadge` is what decides that an unread balance shows
+  // nothing, and a `balance && …` guard here would hide a genuine 0 (R17.7).
+  const { balance } = useCredits();
+
   // Filters
   const [filters, setFilters] = useState<{
     stage?: string;
@@ -353,6 +361,12 @@ export default function SalesWorkspace() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* The tone overrides are this page's own — its header is the dark slate
+                  surface, and the badge's default light chrome would be unreadable on it. */}
+              <CreditBalanceBadge
+                balance={balance}
+                className="hidden border-slate-700/50 bg-slate-700/40 text-slate-100 sm:inline-flex"
+              />
               {newLeadNotification && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm">
                   <Bell className="w-4 h-4" />

@@ -23,18 +23,32 @@
 //    and to stay distinguishable from the observed identity. So the tested property is that
 //    a plain asserted value and an `ObservedFact` never render as the same kind of claim.
 
-import { render, screen, waitFor } from "@testing-library/react";
+// 4. **Property 40 — an unaffordable or blocked control does not execute and says why.**
+//    The two example groups above read one payload at a time; R17.5 and R17.8 are universal
+//    statements over (balance, price) pairs and over every unavailability reason the backend
+//    can send, so they are asserted as a property at the end of this file.
+//
+//    Property 41 — what happens when the *server* refuses a press with a `402` — belongs to
+//    `insufficientCredits.test.tsx` and is not restated here. Property 40 is about the state
+//    before the press: whether the control should be pressable at all, and what stands in its
+//    place when it should not.
+
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import fc from "fast-check";
 
 import gtmAPI, {
   type CandidateAction,
   type CandidateActionType,
   type CreditBalance,
+  type CreditReason,
   type ProspectContact,
   type UnexecutableReason,
 } from "@/services/gtmAPI";
+import { CreditsProvider, useCredits } from "@/hooks/useCredits";
 import { ActionCard, UNEXECUTABLE_REASON_LABELS } from "../NextActionPanel";
 import {
   CREDIT_LABELS,
@@ -45,7 +59,12 @@ import {
 } from "../CreditBalance";
 import { ContactPanel, CONTACT_PANEL_LABELS } from "../ContactPanel";
 import { InsufficientCreditsAlert } from "../InsufficientCreditsAlert";
-import { GTM_NBA_ACTION_LABELS } from "../labels";
+import {
+  NextBestActionCard,
+  NEXT_BEST_ACTION_CARD_LABELS,
+} from "../NextBestActionCard";
+import { ProspectDecision } from "../ProspectDecision";
+import { GTM_NBA_ACTION_LABELS, PROSPECT_DECISION_LABELS } from "../labels";
 
 const BRAND = "brand-1";
 const LEAD = "11111111-2222-3333-4444-555555555555";
@@ -460,4 +479,387 @@ describe("the contact block carries the enrichment without claiming an observati
     );
     expect(await axe(container)).toHaveNoViolations();
   });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 4. Property 40: An unaffordable or blocked control does not execute and says why
+// ══════════════════════════════════════════════════════════════════════════════
+//
+//   *For any* balance and price pair, the control executes if and only if the balance is
+//   known and at least the price, and the shortfall is presented otherwise (R17.5); and
+//   *for any* backend-supplied unavailability reason, that reason is rendered where the
+//   control would be (R17.8).
+//
+// ─── The reference rule, and why "unknown" is not "you cannot afford it" ───────
+//
+// Design §11 states the check as `balance !== null && balance < price`, and the `null` half
+// carries real weight. An unread balance blocks nothing: the workspace may well have the
+// credits, the client simply has not asked, and a client that refused a control on that
+// basis would stop a rep who could afford the action. The same argument applies to an
+// unread *price* — nothing to compare against is not a shortfall. So the rule generated
+// against below is
+//
+//     blocked  ⇔  balance is known ∧ price is known ∧ balance < price
+//
+// and every other combination has to leave the control pressable.
+//
+// ─── The subjects ─────────────────────────────────────────────────────────────
+//
+// Both clauses are read against the components that actually render priced and blocked
+// controls, mounted on their own rather than through a page:
+//
+//   R17.5   `ProspectDecision`, which carries the two priced controls a rep chooses
+//           between — Contact Directly (`CONTACT`) and Activate Intelligence (`ACTIVATE`) —
+//           wired the way §11 prescribes: `priceOf(credits, REASON)` from the workspace
+//           read, never a literal. The balance reaches the surface through
+//           `CreditsProvider`, which is the one place it lives.
+//   R17.8   `ActionCard` and `NextBestActionCard`, the two cards that carry
+//           `unexecutableReason`. "Where the control would be" is read literally: the same
+//           action is rendered twice, once executable and once not, and the reason has to
+//           land at the DOM address the control occupied.
+//
+// ─── Every query is scoped, and every run cleans up after itself ──────────────
+//
+// RTL binds `screen` and the queries on `render`'s return value to `document.body`, not to
+// `container`, so a mount that outlived its run would answer every later query in the file.
+// Every read below goes through the run's own `container`, and `cleanup()` runs in a
+// `finally` at the end of each run — including the failing one, which fast-check re-enters
+// while it shrinks.
+
+/** A real workspace id for the provider. `brandId` is an override, so any id would do. */
+const WORKSPACE = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+
+/** What a `CreditPriceTag` reads for a price the server listed. The reference, stated once. */
+function priceTagText(credits: number): string {
+  return credits === 0 ? CREDIT_LABELS.free : `${credits} ${CREDIT_LABELS.unit(credits)}`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const PRICED_CONTROLS = [
+  {
+    reason: "CONTACT" as CreditReason,
+    label: PROSPECT_DECISION_LABELS.contact.label,
+  },
+  {
+    reason: "ACTIVATE" as CreditReason,
+    label: PROSPECT_DECISION_LABELS.activate.label,
+  },
+] as const;
+
+/**
+ * The decision surface, with both prices read off the workspace payload and nothing else.
+ *
+ * `data-credits-read` is the run's own settling marker: the provider's read lands in a later
+ * commit than the mount, and an assertion taken before it would read an unread surface and
+ * call it a priced one.
+ */
+function DecisionSurface({
+  onContact,
+  onActivate,
+}: {
+  onContact: () => void;
+  onActivate: () => void;
+}) {
+  const { credits } = useCredits();
+  return (
+    <div data-testid="decision-surface" data-credits-read={credits === null ? "no" : "yes"}>
+      <ProspectDecision
+        onContactDirectly={onContact}
+        contactPrice={priceOf(credits, "CONTACT")}
+        onActivate={onActivate}
+        activatePrice={priceOf(credits, "ACTIVATE")}
+      />
+    </div>
+  );
+}
+
+/** The whole surface as one normalised string, for a counterexample message. */
+function surfaceText(root: HTMLElement): string {
+  return (root.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Does the surface state the shortfall?
+ *
+ * A shortfall is the gap between what the workspace holds and what the control costs, so
+ * stating it needs a figure the price tag alone does not carry: the deficit, or the balance
+ * beside the price. The price tags are removed before the figures are collected — a tag says
+ * what the action costs, which is equally true when it can be afforded, and counting it
+ * would let every priced control claim to have explained a gap it never mentioned.
+ */
+function statesShortfall(
+  root: HTMLElement,
+  balance: number,
+  price: number,
+  tagged: readonly (number | null)[]
+): boolean {
+  let text = surfaceText(root);
+  tagged.forEach((listed) => {
+    if (listed !== null) text = text.split(priceTagText(listed)).join(" ");
+  });
+  const figures = new Set(text.match(/\d+/g) ?? []);
+  return (
+    figures.has(String(price - balance)) ||
+    (figures.has(String(balance)) && figures.has(String(price)))
+  );
+}
+
+const affordabilityArb = fc.record({
+  /** `false` — the workspace read failed, so the balance is unread and blocks nothing. */
+  read: fc.boolean(),
+  balance: fc.integer({ min: 0, max: 9 }),
+  /** `null` — the server did not price this action, so there is nothing to compare. */
+  contact: fc.option(fc.integer({ min: 0, max: 9 }), { nil: null }),
+  activate: fc.option(fc.integer({ min: 0, max: 9 }), { nil: null }),
+});
+
+const UNEXECUTABLE_REASONS = Object.keys(UNEXECUTABLE_REASON_LABELS) as UnexecutableReason[];
+const CANDIDATE_TYPES = Object.keys(GTM_NBA_ACTION_LABELS) as CandidateActionType[];
+
+const blockedArb = fc.record({
+  actionType: fc.constantFrom(...CANDIDATE_TYPES),
+  reason: fc.constantFrom(...UNEXECUTABLE_REASONS),
+  /**
+   * A blocked action may still carry its verb — the mapping is permanent, the channel
+   * adapter is not — and `executable` is the only field a control may read. Generated on
+   * both sides so a card that lit up from the verb is caught.
+   */
+  verb: fc.option(fc.constantFrom("SEND_MESSAGE" as const, "CONNECT" as const), { nil: null }),
+});
+
+/** The node's address inside `root`, as its chain of child indices. */
+function slotPath(root: Element, node: Element): number[] {
+  const path: number[] = [];
+  let current: Element | null = node;
+  while (current !== null && current !== root) {
+    const parent: Element | null = current.parentElement;
+    if (parent === null) break;
+    path.unshift(Array.prototype.indexOf.call(parent.children, current));
+    current = parent;
+  }
+  return path;
+}
+
+describe("Feature: sales-workflow-frontend-restructure, Property 40: An unaffordable or blocked control does not execute and says why", () => {
+  // ── R17.5 ───────────────────────────────────────────────────────────────────
+
+  it("puts both priced controls on the decision surface, priced from the server's list", async () => {
+    // The instrument, checked before anything is generated against it. A property that could
+    // not find its controls would pass for reasons that have nothing to do with R17.5.
+    vi.spyOn(gtmAPI, "getCredits").mockResolvedValue(
+      credits({ balance: 9, prices: [{ action: "CONTACT", credits: 1 }, { action: "ACTIVATE", credits: 2 }] })
+    );
+    const { container } = render(
+      <MemoryRouter>
+        <CreditsProvider brandId={WORKSPACE}>
+          <DecisionSurface onContact={() => {}} onActivate={() => {}} />
+        </CreditsProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(within(container).getByTestId("decision-surface").dataset.creditsRead).toBe("yes")
+    );
+    PRICED_CONTROLS.forEach((control) =>
+      expect(
+        within(container).getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(control.label)}`),
+        })
+      ).toBeInTheDocument()
+    );
+  });
+
+  it(
+    "executes a priced control only when a known balance covers the server's price, and states the shortfall otherwise",
+    { timeout: 60_000 },
+    async () => {
+      let served: CreditBalance | Error = new Error("not configured");
+      let reads = 0;
+      vi.spyOn(gtmAPI, "getCredits").mockImplementation(async () => {
+        reads += 1;
+        if (served instanceof Error) throw served;
+        return served;
+      });
+
+      await fc.assert(
+        fc.asyncProperty(affordabilityArb, async (wire) => {
+          const payload = credits({
+            balance: wire.balance,
+            prices: [
+              ...(wire.contact === null
+                ? []
+                : [{ action: "CONTACT" as CreditReason, credits: wire.contact }]),
+              ...(wire.activate === null
+                ? []
+                : [{ action: "ACTIVATE" as CreditReason, credits: wire.activate }]),
+            ],
+          });
+          served = wire.read ? payload : new Error("the balance could not be read");
+          const balance = wire.read ? wire.balance : null;
+          const before = reads;
+
+          const pressed: CreditReason[] = [];
+          const user = userEvent.setup();
+          const { container } = render(
+            <MemoryRouter>
+              <CreditsProvider brandId={WORKSPACE}>
+                <DecisionSurface
+                  onContact={() => pressed.push("CONTACT")}
+                  onActivate={() => pressed.push("ACTIVATE")}
+                />
+              </CreditsProvider>
+            </MemoryRouter>
+          );
+
+          try {
+            await waitFor(() => {
+              expect(reads).toBeGreaterThan(before);
+              expect(
+                within(container).getByTestId("decision-surface").dataset.creditsRead
+              ).toBe(wire.read ? "yes" : "no");
+            });
+
+            for (const control of PRICED_CONTROLS) {
+              const price = wire.read ? priceOf(payload, control.reason) : null;
+              // The rule, restated from §11 rather than read off the component.
+              const blocked = balance !== null && price !== null && balance < price;
+              const button = within(container).queryByRole("button", {
+                name: new RegExp(`^${escapeRegExp(control.label)}`),
+              });
+
+              if (!blocked) {
+                expect(
+                  button,
+                  `${control.label}: no control for an action the workspace can afford (balance=${balance}, price=${price})`
+                ).not.toBeNull();
+                await user.click(button!);
+                expect(
+                  pressed,
+                  `${control.label}: an affordable control did not execute (balance=${balance}, price=${price})`
+                ).toContain(control.reason);
+                continue;
+              }
+
+              // ── Non-executing ──
+              // Pressed on purpose. "Non-executing" is a claim about what a press does, and
+              // a control that is present, enabled and wired to its handler satisfies no
+              // reading of R17.5 however it is styled.
+              if (button !== null) await user.click(button);
+              expect(
+                pressed,
+                `${control.label}: the workspace holds ${balance} and the server prices this at ${price}, and the control executed anyway`
+              ).not.toContain(control.reason);
+
+              // ── And says why ──
+              expect(
+                statesShortfall(container, balance!, price!, [wire.contact, wire.activate]),
+                `${control.label}: ${price! - balance!} credit(s) short — the workspace holds ${balance}, the server prices this at ${price} — and no shortfall was stated. surface=${JSON.stringify(
+                  surfaceText(container)
+                )}`
+              ).toBe(true);
+            }
+          } finally {
+            cleanup();
+          }
+        }),
+        { numRuns: 100 }
+      );
+    }
+  );
+
+  // ── R17.8 ───────────────────────────────────────────────────────────────────
+
+  it(
+    "renders the backend's own unavailability reason where the control would be",
+    { timeout: 60_000 },
+    async () => {
+      harness();
+
+      await fc.assert(
+        fc.property(blockedArb, (wire) => {
+          const blocked = candidate({
+            actionType: wire.actionType,
+            executionVerb: wire.verb,
+            executable: false,
+            unexecutableReason: wire.reason,
+          });
+          // The same recommendation the outreach layer *can* carry out, used only to find
+          // the address the control occupies.
+          const executable = candidate({
+            actionType: wire.actionType,
+            executionVerb: "SEND_MESSAGE",
+            executable: true,
+            unexecutableReason: null,
+          });
+
+          const sentence = UNEXECUTABLE_REASON_LABELS[wire.reason];
+          const title = GTM_NBA_ACTION_LABELS[wire.actionType] ?? wire.actionType;
+
+          const subjects = [
+            {
+              name: "ActionCard",
+              control: title,
+              node: (action: CandidateAction) => (
+                <ActionCard brandId={BRAND} leadId={LEAD} action={action} />
+              ),
+            },
+            {
+              name: "NextBestActionCard",
+              control: NEXT_BEST_ACTION_CARD_LABELS.takeAction,
+              node: (action: CandidateAction) => (
+                <NextBestActionCard action={action} onTakeAction={() => {}} />
+              ),
+            },
+          ] as const;
+
+          subjects.forEach((subject) => {
+            // Where the control sits when the server says the action can be carried out.
+            const live = render(subject.node(executable));
+            let controlPath: number[] = [];
+            try {
+              const button = within(live.container).getByRole("button", {
+                name: new RegExp(`^${escapeRegExp(subject.control)}`),
+              });
+              controlPath = slotPath(live.container, button);
+            } finally {
+              cleanup();
+            }
+
+            const { container } = render(subject.node(blocked));
+            try {
+              // No control, whatever the verb says. Reading the verb instead of
+              // `executable` is exactly the bug this closes off.
+              expect(
+                within(container).queryByRole("button", {
+                  name: new RegExp(`^${escapeRegExp(title)}`),
+                }),
+                `${subject.name}/${wire.actionType}: an open-channel control for an action the server marked unexecutable`
+              ).toBeNull();
+
+              // The backend's own sentence, rendered.
+              const stated = within(container).getByText(sentence);
+              expect(
+                stated,
+                `${subject.name}/${wire.actionType}: the reason ${wire.reason} was not stated`
+              ).toBeInTheDocument();
+
+              // And in the control's place, not tucked somewhere else on the card. Silence
+              // in this slot reads as a broken recommendation; a sentence three sections
+              // away is not an answer to "why can I not act on this".
+              expect(
+                slotPath(container, stated),
+                `${subject.name}/${wire.actionType}: the reason did not land where the control would be`
+              ).toEqual(controlPath);
+            } finally {
+              cleanup();
+            }
+          });
+        }),
+        { numRuns: 100 }
+      );
+    }
+  );
 });

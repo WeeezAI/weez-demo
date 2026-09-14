@@ -4,6 +4,8 @@ import { Link2 } from "lucide-react";
 import { toast } from "sonner";
 import ConversationSidebar from "@/components/ConversationSidebar";
 import ConnectorsView from "@/components/ConnectorsView";
+import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { useCredits } from "@/hooks/useCredits";
 
 /**
  * Standalone Connections page.
@@ -19,6 +21,12 @@ const Connections = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isSetup = params.get("setup") === "true";
+
+  // The balance, in chrome, from the provider that already wraps `Routes` (R17.1). This
+  // page spends nothing, so there is nothing to refresh it after. Rendered
+  // unconditionally: `CreditBalanceBadge` is what decides that an unread balance shows
+  // nothing, and a `balance && …` guard here would hide a genuine 0 (R17.7).
+  const { balance } = useCredits();
 
   useEffect(() => {
     if (isSetup) {
@@ -49,6 +57,8 @@ const Connections = () => {
             </span>
             <span className="text-sm font-semibold text-zinc-900">Manage your connections</span>
           </div>
+
+          <CreditBalanceBadge balance={balance} className="ml-auto hidden sm:inline-flex" />
         </header>
 
         <ConnectorsView brandId={spaceId!} />
