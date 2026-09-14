@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Link2 } from "lucide-react";
-import { toast } from "sonner";
 import ConversationSidebar from "@/components/ConversationSidebar";
-import ConnectorsView from "@/components/ConnectorsView";
+import ConnectorsView, { WEBSITE_CONNECTOR_ANCHOR } from "@/components/ConnectorsView";
 import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
 import { useCredits } from "@/hooks/useCredits";
+import { useWorkspaceSetup, type SetupStepId } from "@/hooks/useWorkspaceSetup";
 
 /**
  * Standalone Connections page.
@@ -15,6 +16,24 @@ import { useCredits } from "@/hooks/useCredits";
  * route (/connections/:spaceId) so the sidebar, the OAuth callback, and the
  * new-space setup flow can link straight here without detouring through the
  * marketing workspace.
+ *
+ * ── The setup rail, and why the welcome stopped being a toast ──
+ *
+ * Creating a workspace sends the founder straight here, which is the right destination —
+ * nothing works until the website is connected. What was missing was an exit. The page
+ * announced itself with a toast, the founder connected their website, the toast was long
+ * gone, and the page went back to looking like a settings screen. There was nothing on it
+ * that said this was step one of anything or where step two lived, so the next move was a
+ * guess.
+ *
+ * The rail replaces the toast because the information is not an announcement, it is state:
+ * a founder needs it after they act, not before, and a toast is gone by then. It names all
+ * three steps, marks the one they just finished, and carries the control for the next one —
+ * which for this page means handing off to Nina, since setting the goal is her job and not
+ * a connector.
+ *
+ * It renders only while the workspace has not launched. Somebody opening Settings to
+ * reconnect a channel mid-campaign is not onboarding and gets the page as it was.
  */
 const Connections = () => {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -28,14 +47,56 @@ const Connections = () => {
   // nothing, and a `balance && …` guard here would hide a genuine 0 (R17.7).
   const { balance } = useCredits();
 
+  const {
+    websiteConnected,
+    goalSet,
+    launched,
+    needsSetup,
+    nextStep,
+    refresh,
+  } = useWorkspaceSetup();
+
+  /**
+   * While the website is still missing, re-read the setup state on a slow poll.
+   *
+   * `ConnectorsView` owns the website form and reports success to itself; this page has no
+   * way to hear about it. Without the poll the rail would keep saying "connect your
+   * website" after the founder just did, which is the exact staleness that made the old
+   * flow feel broken. It stops the moment the answer is `true`, and it never runs for a
+   * workspace that is already set up.
+   */
   useEffect(() => {
-    if (isSetup) {
-      toast.message("Welcome to your new Space!", {
-        description:
-          "Connect your channels so Weez can publish, send outbound email, and book meetings for you.",
-      });
+    if (!needsSetup || websiteConnected !== false) return;
+    const timer = window.setInterval(() => void refresh(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [needsSetup, websiteConnected, refresh]);
+
+  // A founder who connects the website in another tab, or comes back from an OAuth
+  // round trip, should see the rail move rather than a stale step.
+  useEffect(() => {
+    if (!needsSetup) return;
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [needsSetup, refresh]);
+
+  const advance = (step: SetupStepId) => {
+    if (step === "website") {
+      // The form being asked for is already on this page, just below the rail — so this
+      // control puts it on screen rather than navigating somewhere to ask again.
+      document
+        .getElementById(WEBSITE_CONNECTOR_ANCHOR)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
-  }, [isSetup]);
+    // Both remaining steps live on Nina, and `start=goal` opens her intake already
+    // expanded — the founder should never have to find a disclosure to begin.
+    navigate(`/ninna/${spaceId}?start=goal`);
+  };
+
+  // Shown for a new workspace, and also for anyone who arrived through the explicit
+  // `?setup=true` hand-off. Never for a workspace whose workforce is already running.
+  const showRail = needsSetup || (isSetup && launched !== true);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#FAFAFB] font-inter">
@@ -60,6 +121,21 @@ const Connections = () => {
 
           <CreditBalanceBadge balance={balance} className="ml-auto hidden sm:inline-flex" />
         </header>
+
+        {/* Above the connectors and outside their scroll container, so it stays put while
+            the founder works down the list rather than scrolling away from the answer to
+            "what do I do after this". */}
+        {showRail && (
+          <div className="shrink-0 border-b border-zinc-200/70 bg-white/60 px-6 py-5 lg:px-10">
+            <WorkspaceSetupChecklist
+              variant="rail"
+              headingLevel="h2"
+              completed={{ website: websiteConnected, goal: goalSet, launch: launched }}
+              activeStep={nextStep ?? (websiteConnected === true ? "goal" : "website")}
+              onAdvance={advance}
+            />
+          </div>
+        )}
 
         <ConnectorsView brandId={spaceId!} />
       </div>

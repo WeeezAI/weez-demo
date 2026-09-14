@@ -12,8 +12,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/weez-logo.png";
+
+/**
+ * The pill that marks the entry a workspace which has not launched yet should open first.
+ *
+ * The numbering below teaches the *order of the loop*, and for a rep with a running
+ * workspace that is exactly right. For somebody who created their workspace ten minutes
+ * ago it is actively misleading: they read "1 Market Intelligence" as "begin here", open a
+ * page that is discovering nothing because nobody has told it what to look for, and the
+ * one entry that would fix it is numbered last and captioned "start your day here" — a
+ * caption about mornings, not about first runs.
+ *
+ * So while setup is pending, Nina carries this. It is inside the existing entry rather
+ * than a new control of its own, because the entry already goes to the right place; what
+ * was missing was any reason to press it. It disappears the moment the workforce is live.
+ */
+const START_HERE_BADGE = "Start here";
 
 interface ConversationSidebarProps {
   onNewChat: () => void;
@@ -30,6 +47,11 @@ const ConversationSidebar = ({
   const { exitSpace } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Whether this workspace still has to be started. `false` outside the provider and
+  // `false` while any of the three reads is outstanding, so the badge below appears only
+  // when the server has actually said the workforce is not running.
+  const { needsSetup } = useWorkspaceSetup();
 
   const handleBackToSpaces = () => {
     exitSpace();
@@ -122,6 +144,9 @@ const ConversationSidebar = ({
       icon: Sparkles,
       color: "text-indigo-500",
       tint: "bg-indigo-500/10",
+      // The entry a workspace that has not launched yet must open first. Only this one
+      // carries it: setting the goal is what makes the other three have anything to show.
+      startsHere: true,
     },
   ];
 
@@ -190,9 +215,12 @@ const ConversationSidebar = ({
     color: string;
     tint: string;
     alsoActiveFor?: string[];
+    /** Marked as the first thing to open while this workspace has not launched. */
+    startsHere?: boolean;
   }) => {
     const isActive = isActiveItem(item);
     const Icon = item.icon;
+    const showStartHere = Boolean(item.startsHere) && needsSetup;
     return (
       <button
         key={item.label}
@@ -256,6 +284,14 @@ const ConversationSidebar = ({
               </span>
             )}
             {item.label}
+            {/* Not `aria-hidden`: unlike the ordinal, this is not restating the list's own
+                order — it is the only thing on the surface that says which entry to press
+                first, so a screen-reader user needs it as much as anyone. */}
+            {showStartHere && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-primary-foreground">
+                {START_HERE_BADGE}
+              </span>
+            )}
           </span>
           <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
             {item.role}

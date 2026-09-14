@@ -72,6 +72,8 @@ import {
 } from "@/components/gtm/CreditBalance";
 import { InsufficientCreditsAlert } from "@/components/gtm/InsufficientCreditsAlert";
 import { useCredits } from "@/hooks/useCredits";
+import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
+import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
 
 // ─── Tone → tailwind chip classes ────────────────────────────────────────────────
 
@@ -1101,6 +1103,23 @@ export default function Eva() {
   // Enrich Now is priced at 1 credit and this is the page it is pressed on. The balance
   // comes from the workspace-level provider, so this page adds no read for it.
   const { balance: creditBalance, refresh: refreshCredits, priceFor } = useCredits();
+
+  /**
+   * Whether the workspace has been started, from the same workspace-level provider.
+   *
+   * This page is numbered 1 in the sidebar, which makes it the first thing a new founder
+   * opens — and until now its cold start told them Eva was "hunting for your next
+   * customers", with a sweeping radar and a rotating status line, for a workspace where
+   * nobody had told Eva what to hunt. Believable, encouraging, and untrue. The cold start
+   * below now asks which situation this is before it claims anything.
+   */
+  const {
+    needsSetup,
+    websiteConnected,
+    goalSet,
+    launched,
+    nextStep,
+  } = useWorkspaceSetup();
   const enrichPrice = priceFor("ENRICH");
   const [paywall, setPaywall] = useState<string | null>(null);
 
@@ -1404,7 +1423,26 @@ export default function Eva() {
                   // stream in. Potential leads are the companies already on Eva's
                   // map — hiding them made a working scan look like a broken one.
                   <>
-                    <LiveDiscovery icp={ws.icp} />
+                    {needsSetup ? (
+                      // Nothing has been started, so nothing is being hunted. The three
+                      // steps, and a control that goes to the one place they can be done.
+                      // `LiveDiscovery`'s radar would be a live-activity claim about an
+                      // engine that has never been given an ICP to match against.
+                      <WorkspaceSetupChecklist
+                        className="mt-2"
+                        variant="panel"
+                        headingLevel="h2"
+                        completed={{
+                          website: websiteConnected,
+                          goal: goalSet,
+                          launch: launched,
+                        }}
+                        activeStep={nextStep}
+                        onAdvance={() => navigate(`/ninna/${spaceId}?start=goal`)}
+                      />
+                    ) : (
+                      <LiveDiscovery icp={ws.icp} />
+                    )}
                     <SummaryHeader ws={ws} metrics={ws.metrics} />
                     <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/60 p-4">
                       <ChannelsStrip ws={ws} />

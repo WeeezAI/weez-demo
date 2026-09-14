@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useSearchParams, Navigate, useParams } fr
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { CreditsProvider } from "@/hooks/useCredits";
+import { WorkspaceSetupProvider } from "@/hooks/useWorkspaceSetup";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import { TutorialSpotlight } from "./components/tutorial/TutorialSpotlight";
 import { TutorialTooltip } from "./components/tutorial/TutorialTooltip";
@@ -127,6 +128,12 @@ const AppContent = () => {
           from it, and making each of them fetch it would add a request to every page for a
           number that does not change between them. */}
       <CreditsProvider>
+      {/* Whether this workspace has been started yet, read once per workspace for the
+          same reason the balance is: the sidebar, Nina and the connections page all need
+          the same three answers, and none of them is a property of a page. Consumers
+          outside this provider get "unread" and render exactly what they rendered before
+          it existed, so it can never break a surface. */}
+      <WorkspaceSetupProvider>
       <TutorialProvider>
         <TutorialSpotlight />
         <TutorialTooltip />
@@ -218,6 +225,7 @@ const AppContent = () => {
               <Route path="*" element={<NotFound />} />
         </Routes>
       </TutorialProvider>
+      </WorkspaceSetupProvider>
       </CreditsProvider>
     </>
   );

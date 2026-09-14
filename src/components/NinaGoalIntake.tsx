@@ -24,6 +24,7 @@ import {
 import { weezAPI } from "@/services/weezAPI";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
 
 // ── Nina avatar (matches the onboarding component; graceful fallback) ────────
 const NINA_NAME = "Nina";
@@ -105,6 +106,20 @@ export default function NinaGoalIntake({
     const [connectingWebsite, setConnectingWebsite] = useState(false);
     const [rechecking, setRechecking] = useState(false);
 
+    /**
+     * The workspace-level setup state, so this component can report what it just finished.
+     *
+     * This component learns two of the three setup facts before anybody else can: it is the
+     * surface that connects the website, and it is the surface that persists the strategy.
+     * Telling the shared state directly keeps the setup rail beside it from showing a step
+     * as pending for the fifteen seconds until something re-reads the server.
+     *
+     * Safe outside a provider — `useWorkspaceSetup` answers "unread" and these are no-ops —
+     * which is what lets this component keep working on `/autonomous-marketing`, in the
+     * suites that mount it, and anywhere else it is embedded.
+     */
+    const { markWebsiteConnected, markGoalSet } = useWorkspaceSetup();
+
     const checkReadiness = async (opts: { silent?: boolean } = {}) => {
         if (!opts.silent) setPhase("checking");
         try {
@@ -146,6 +161,7 @@ export default function NinaGoalIntake({
         try {
             await weezAPI.connectWebsite(spaceId, url);
             toast.success("Website connected — Nina is analysing your brand.");
+            markWebsiteConnected();
             await checkReadiness({ silent: true });
         } catch (e: any) {
             toast.error(e.message || "Couldn't connect that website");
@@ -218,6 +234,8 @@ export default function NinaGoalIntake({
             }
             setStrategy(res.strategy);
             setPhase("strategy");
+            // The backend persisted it on the way through, so the workspace now has a goal.
+            markGoalSet();
         } catch (e: any) {
             toast.error(e.message || "Couldn't build the strategy");
             setPhase("questions");
@@ -723,14 +741,18 @@ export default function NinaGoalIntake({
                         disabled={proceeding}
                         className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base gap-2 shadow-lg shadow-indigo-500/20"
                     >
+                        {/* Named for what it does rather than for what it produces.
+                            "Proceed — build my GTM plan" describes an artefact; this is the
+                            control that starts the workforce, and a founder deciding whether
+                            to press it needs to know that is what happens. */}
                         {proceeding ? (
-                            <><Loader2 className="w-5 h-5 animate-spin" /> Building your GTM plan…</>
+                            <><Loader2 className="w-5 h-5 animate-spin" /> Starting your campaign…</>
                         ) : (
-                            <>Proceed — build my GTM plan <ArrowRight className="w-5 h-5" /></>
+                            <>Approve &amp; launch my campaign <ArrowRight className="w-5 h-5" /></>
                         )}
                     </Button>
                     <p className="text-[11px] text-zinc-400 text-center">
-                        I'll turn this strategy into EVA's account targeting and MAX's outreach plan. Continuously optimized.
+                        Eva starts discovering accounts that fit this strategy and Max prepares the personalised outreach. Your first prospects show up in Market Intelligence.
                     </p>
                 </div>
             )}

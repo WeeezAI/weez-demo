@@ -806,6 +806,22 @@ export const weezAPI = {
   },
 
   /**
+   * Whether this workspace has a stored GTM goal, and the goal itself.
+   *
+   * `POST /nina/strategy` has always persisted the generated strategy, but nothing
+   * read it back — so no surface could tell a workspace that had never been given a
+   * goal from one that was simply having a quiet morning, and a new founder got the
+   * same four empty blocks as an established one. This is the read that tells them
+   * apart. `exists` is the whole answer for that question; `strategy` is there for a
+   * surface that wants to show the goal it found.
+   */
+  getNinaStrategy: async (brandId: string): Promise<{ exists: boolean; strategy?: any }> => {
+    const response = await fetchWithBypass(`${WEEZ_BASE_URL}/nina/strategy?brand_id=${brandId}`);
+    if (!response.ok) throw new Error("Failed to read the stored GTM goal");
+    return await response.json();
+  },
+
+  /**
    * Proceed step for an OUTBOUND campaign: after the founder reviews Nina's
    * strategy (Eva + Max), start the outbound workforce directly. This does NOT
    * build a LinkedIn content calendar / weekly planner — Eva handles account

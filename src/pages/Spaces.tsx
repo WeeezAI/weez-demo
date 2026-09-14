@@ -112,9 +112,16 @@ const Spaces = () => {
     if (result.success) {
       setNewSpaceName("");
       setIsCreateDialogOpen(false);
-      toast({ title: "Space Created", description: `"${newSpaceName}" is ready.` });
+      toast({
+        title: "Space created",
+        description: `"${newSpaceName}" is ready. Three steps and Weez starts working — the first one is connecting your website.`,
+      });
       // Select the space and send them straight to the Connections page to
       // link their channels first (no longer detours through Autonomous Marketing).
+      //
+      // `?setup=true` is what puts the setup rail on that page. It used to only fire a
+      // toast, which meant that the moment the founder connected their website there was
+      // nothing left on screen saying this was step one of anything or where step two was.
       selectSpace(result.data);
       navigate(`/connections/${result.data.id}?setup=true`);
     }

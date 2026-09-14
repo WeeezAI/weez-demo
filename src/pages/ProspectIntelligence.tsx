@@ -146,6 +146,8 @@ import {
 } from "@/components/gtm/CreditBalance";
 import { InsufficientCreditsAlert } from "@/components/gtm/InsufficientCreditsAlert";
 import { useCredits } from "@/hooks/useCredits";
+import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
+import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
 import {
   CHANNEL_LABEL,
   GTM_ABSENCE_LABELS,
@@ -3312,6 +3314,24 @@ export default function ProspectIntelligence() {
   const contactPrice = priceFor("CONTACT");
   const [paywall, setPaywall] = useState<string | null>(null);
 
+  /**
+   * Whether the workspace has been started, from the workspace-level provider.
+   *
+   * Used by exactly one thing on this page: the outermost empty state, which says "Eva is
+   * discovering your accounts" and asks the operator to wait. That is the right sentence
+   * for a workspace whose discovery is running and has not landed anything yet, and the
+   * wrong one for a workspace where discovery was never started — it asks somebody to wait
+   * for work nobody has commissioned. Read, never derived, and `false` while unread, so
+   * the sentence that shipped is what a failed read falls back to.
+   */
+  const {
+    needsSetup: workspaceNeedsSetup,
+    websiteConnected,
+    goalSet,
+    launched,
+    nextStep: setupNextStep,
+  } = useWorkspaceSetup();
+
   // ── Activate Intelligence ──
   //
   // The one write this page makes against the GTM layer. `activationAck` holds the
@@ -4503,11 +4523,25 @@ export default function ProspectIntelligence() {
                   </span>
                 </div>
 
-                {/* Two different empty states, because they call for two different things.
-                    Collapsing them into "Eva is discovering your accounts" would tell an
-                    operator with forty qualified accounts to wait for discovery — when what
-                    they actually need to do is go and enrich one. */}
-                {qualifiedLeads.length === 0 ? (
+                {/* Three different empty states, because they call for three different
+                    things. Collapsing them into "Eva is discovering your accounts" would
+                    tell an operator with forty qualified accounts to wait for discovery —
+                    when what they actually need to do is go and enrich one — and would tell
+                    an operator whose workspace has never been started to wait for discovery
+                    that nobody has started. */}
+                {workspaceNeedsSetup ? (
+                  <WorkspaceSetupChecklist
+                    variant="panel"
+                    headingLevel="h2"
+                    completed={{
+                      website: websiteConnected,
+                      goal: goalSet,
+                      launch: launched,
+                    }}
+                    activeStep={setupNextStep}
+                    onAdvance={() => navigate(`/ninna/${spaceId ?? ""}?start=goal`)}
+                  />
+                ) : qualifiedLeads.length === 0 ? (
                   <EmptyPanel
                     icon={Target}
                     title="Eva is discovering your accounts"

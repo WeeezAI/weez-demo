@@ -26,6 +26,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
+/**
+ * The DOM id of the website connector card.
+ *
+ * Exported so the setup rail on `pages/Connections.tsx` can scroll to it by name instead
+ * of by a literal that would silently stop matching the day this markup is reorganised.
+ */
+export const WEBSITE_CONNECTOR_ANCHOR = "website-connector";
+
 interface ConnectorsViewProps {
     brandId: string;
 }
@@ -289,6 +297,11 @@ export default function ConnectorsView({ brandId }: ConnectorsViewProps) {
                             const identifier = getIdentifier("website");
                             return (
                                 <div
+                                    // Named so the new-workspace setup rail above this view can
+                                    // put the website form on screen. It is the first step of
+                                    // setup and, on a short viewport, the one thing a founder
+                                    // has to scroll to find.
+                                    id={WEBSITE_CONNECTOR_ANCHOR}
                                     className={cn(
                                         "group relative rounded-[1.75rem] bg-white border p-5 md:p-6 transition-all duration-500",
                                         connected
