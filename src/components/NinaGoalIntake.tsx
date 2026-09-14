@@ -21,6 +21,7 @@ import {
     Send,
     ShieldCheck,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { weezAPI } from "@/services/weezAPI";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -76,13 +77,32 @@ interface Connections {
     connect_actions?: Array<{ type: string; label: string; endpoint: string }>;
 }
 
+/**
+ * The goal-to-launch workflow: connect the website, pick a goal, answer what Nina is
+ * missing, read the strategy, launch the workforce.
+ *
+ * ── `onProceed` is an override, not a switch ──
+ *
+ * The launch control used to be wrapped in `{onProceed && …}`, so a caller that did not pass
+ * the prop got a strategy with no way to act on it. That is a bad shape for the one control
+ * that starts a campaign: forgetting a prop should not be able to delete it, and it did —
+ * Nina mounted this component without `onProceed` for months, which meant a founder could
+ * set a goal, read a full strategy, and reach a dead end with nothing to press.
+ *
+ * So the control always renders and this component owns a working default: activate the
+ * outbound workforce, then go to Market Intelligence, where the result of that actually
+ * shows up. `onProceed` is for a caller that needs to do something *different* — and the
+ * only remaining reason to pass it is to add to the hand-off, not to enable it.
+ */
 export default function NinaGoalIntake({
     spaceId,
     onProceed,
 }: {
     spaceId: string;
+    /** Replaces the built-in launch. Omit it to get the default hand-off. */
     onProceed?: (target: string, strategy: any) => void | Promise<void>;
 }) {
+    const navigate = useNavigate();
     const [phase, setPhase] = useState<Phase>("checking");
     const [proceeding, setProceeding] = useState(false);
     const [goals, setGoals] = useState<Goal[]>([]);
@@ -118,7 +138,7 @@ export default function NinaGoalIntake({
      * which is what lets this component keep working on `/autonomous-marketing`, in the
      * suites that mount it, and anywhere else it is embedded.
      */
-    const { markWebsiteConnected, markGoalSet } = useWorkspaceSetup();
+    const { markWebsiteConnected, markGoalSet, markLaunched } = useWorkspaceSetup();
 
     const checkReadiness = async (opts: { silent?: boolean } = {}) => {
         if (!opts.silent) setPhase("checking");
@@ -260,6 +280,36 @@ export default function NinaGoalIntake({
         setAnswers({});
         setSuggestions({});
         setStrategy(null);
+    };
+
+    /**
+     * Approve the strategy and start the workforce.
+     *
+     * The default path is the whole hand-off — activate, record it locally so the setup rail
+     * and the sidebar are already right on the next surface, then go to Market Intelligence
+     * because that is where the first accounts appear. A caller passing `onProceed` replaces
+     * all of that; nobody has to pass anything for the control to work.
+     */
+    const launch = async (s: any) => {
+        if (proceeding) return;
+        setProceeding(true);
+        try {
+            if (onProceed) {
+                await onProceed(s?.goal?.requested || selectedGoal?.label || "", s);
+                return;
+            }
+            toast.info("Handing off to your workforce — Eva starts on accounts, Max on outreach.");
+            await weezAPI.activateOutboundWorkforce(spaceId);
+            markLaunched();
+            toast.success(
+                "Your campaign is live. Eva is discovering accounts that fit and Max is preparing personalised outreach."
+            );
+            navigate(`/eva/${spaceId}`);
+        } catch (e: any) {
+            toast.error(e?.message || "Couldn't start your workforce just now.");
+        } finally {
+            setProceeding(false);
+        }
     };
 
     // ── Checking connections ──────────────────────────────────────────────────
@@ -726,37 +776,6 @@ export default function NinaGoalIntake({
                 </div>
             )}
 
-            {/* Proceed → kick off the weekly content planner */}
-            {onProceed && (
-                <div className="flex flex-col items-center gap-3 pt-2">
-                    <Button
-                        onClick={async () => {
-                            setProceeding(true);
-                            try {
-                                await onProceed(s.goal?.requested || selectedGoal?.label || "", s);
-                            } finally {
-                                setProceeding(false);
-                            }
-                        }}
-                        disabled={proceeding}
-                        className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base gap-2 shadow-lg shadow-indigo-500/20"
-                    >
-                        {/* Named for what it does rather than for what it produces.
-                            "Proceed — build my GTM plan" describes an artefact; this is the
-                            control that starts the workforce, and a founder deciding whether
-                            to press it needs to know that is what happens. */}
-                        {proceeding ? (
-                            <><Loader2 className="w-5 h-5 animate-spin" /> Starting your campaign…</>
-                        ) : (
-                            <>Approve &amp; launch my campaign <ArrowRight className="w-5 h-5" /></>
-                        )}
-                    </Button>
-                    <p className="text-[11px] text-zinc-400 text-center">
-                        Eva starts discovering accounts that fit this strategy and Max prepares the personalised outreach. Your first prospects show up in Market Intelligence.
-                    </p>
-                </div>
-            )}
-
             <button
                 onClick={reset}
                 disabled={proceeding}
@@ -764,6 +783,39 @@ export default function NinaGoalIntake({
             >
                 <Sparkles className="w-3.5 h-3.5" /> Try a different goal
             </button>
+
+            {/* ── Launch ──
+                Sticky, and unconditional.
+
+                Unconditional because `onProceed` no longer gates it — see the component's
+                own note. Sticky because the strategy above it is long: the realistic target,
+                the ACV playbook, Eva's plan, Max's plan and the risks add up to several
+                screens, and a button at the end of that is a button a founder scrolls past
+                the top of and never sees. Pinned to the bottom of the scroll container it is
+                on screen from the moment the strategy renders and stays there.
+
+                `-mx-4 -mb-4` cancels the wrapper's padding so the bar spans the full width
+                of the column rather than floating inside it. */}
+            <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-zinc-200 bg-white/95 px-4 py-4 backdrop-blur-sm">
+                <Button
+                    onClick={() => void launch(s)}
+                    disabled={proceeding}
+                    className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                    {/* Named for what it does rather than for what it produces.
+                        "Proceed — build my GTM plan" describes an artefact; this is the
+                        control that starts the workforce, and a founder deciding whether
+                        to press it needs to know that is what happens. */}
+                    {proceeding ? (
+                        <><Loader2 className="w-5 h-5 animate-spin" /> Starting your campaign…</>
+                    ) : (
+                        <>Approve &amp; launch my campaign <ArrowRight className="w-5 h-5" /></>
+                    )}
+                </Button>
+                <p className="mt-2 text-[11px] text-zinc-400 text-center">
+                    Eva starts discovering accounts that fit this strategy and Max prepares the personalised outreach. Your first prospects show up in Market Intelligence.
+                </p>
+            </div>
         </div>
     );
 }

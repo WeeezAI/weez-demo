@@ -89,9 +89,8 @@ const Connections = () => {
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    // Both remaining steps live on Nina, and `start=goal` opens her intake already
-    // expanded — the founder should never have to find a disclosure to begin.
-    navigate(`/ninna/${spaceId}?start=goal`);
+    // Both remaining steps are the campaign-creation workflow, which is a place now.
+    navigate(`/gtm-setup/${spaceId}`);
   };
 
   // Shown for a new workspace, and also for anyone who arrived through the explicit

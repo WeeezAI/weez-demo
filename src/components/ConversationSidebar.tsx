@@ -4,6 +4,7 @@ import {
   Signal as SignalIcon,
   Users,
   ListChecks,
+  Rocket,
   Sparkles,
   CalendarCheck,
   BarChart3,
@@ -17,20 +18,26 @@ import { cn } from "@/lib/utils";
 import logo from "@/assets/weez-logo.png";
 
 /**
- * The pill that marks the entry a workspace which has not launched yet should open first.
+ * The card that replaces the positioning line while a workspace has not launched.
  *
- * The numbering below teaches the *order of the loop*, and for a rep with a running
+ * The numbered list below teaches the *order of the loop*, and for a rep with a running
  * workspace that is exactly right. For somebody who created their workspace ten minutes
  * ago it is actively misleading: they read "1 Market Intelligence" as "begin here", open a
- * page that is discovering nothing because nobody has told it what to look for, and the
- * one entry that would fix it is numbered last and captioned "start your day here" — a
- * caption about mornings, not about first runs.
+ * page that is discovering nothing because nobody has told it what to look for, and none of
+ * the seven entries is campaign creation — that is `/gtm-setup`, which is deliberately not
+ * a destination in this list because it is a thing you do once, not a place you work.
  *
- * So while setup is pending, Nina carries this. It is inside the existing entry rather
- * than a new control of its own, because the entry already goes to the right place; what
- * was missing was any reason to press it. It disappears the moment the workforce is live.
+ * So while setup is pending the top card stops being a positioning statement and becomes
+ * the way in. It takes that slot rather than adding an eighth entry for two reasons: the
+ * slot is the most prominent thing in the sidebar, and the positioning line it replaces is
+ * an argument for a product this founder has not started using yet. It disappears the
+ * moment the workforce is live and the positioning line comes back.
  */
-const START_HERE_BADGE = "Start here";
+const START_HERE = {
+  badge: "Start here",
+  title: "Create your campaign",
+  body: "Tell Weez what you want it to go after.",
+} as const;
 
 interface ConversationSidebarProps {
   onNewChat: () => void;
@@ -144,9 +151,6 @@ const ConversationSidebar = ({
       icon: Sparkles,
       color: "text-indigo-500",
       tint: "bg-indigo-500/10",
-      // The entry a workspace that has not launched yet must open first. Only this one
-      // carries it: setting the goal is what makes the other three have anything to show.
-      startsHere: true,
     },
   ];
 
@@ -215,12 +219,9 @@ const ConversationSidebar = ({
     color: string;
     tint: string;
     alsoActiveFor?: string[];
-    /** Marked as the first thing to open while this workspace has not launched. */
-    startsHere?: boolean;
   }) => {
     const isActive = isActiveItem(item);
     const Icon = item.icon;
-    const showStartHere = Boolean(item.startsHere) && needsSetup;
     return (
       <button
         key={item.label}
@@ -284,14 +285,6 @@ const ConversationSidebar = ({
               </span>
             )}
             {item.label}
-            {/* Not `aria-hidden`: unlike the ordinal, this is not restating the list's own
-                order — it is the only thing on the surface that says which entry to press
-                first, so a screen-reader user needs it as much as anyone. */}
-            {showStartHere && (
-              <span className="inline-flex shrink-0 items-center rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-primary-foreground">
-                {START_HERE_BADGE}
-              </span>
-            )}
           </span>
           <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
             {item.role}
@@ -331,14 +324,41 @@ const ConversationSidebar = ({
                 rep what is different about their day. Two lines, no illustration, no dismiss
                 button: it is orientation, not an announcement, so it does not need to be
                 cleared and should not compete with the navigation under it. */}
-            <div className="mx-1 rounded-2xl border border-primary/10 bg-primary/[0.03] px-3 py-2.5">
-              <p className="text-[10.5px] font-semibold leading-snug text-foreground/80">
-                Most tools help you send more.
-              </p>
-              <p className="mt-0.5 text-[10.5px] font-bold leading-snug text-primary">
-                Weez tells you who to contact, how, and why now.
-              </p>
-            </div>
+            {needsSetup ? (
+              /* The way in, while there is nothing to work on yet. See `START_HERE`. */
+              <button
+                type="button"
+                onClick={() => navigate(`/gtm-setup/${spaceId}`)}
+                className="group mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2.5 rounded-2xl border border-primary/30 bg-primary/[0.06] px-3 py-2.5 text-left transition-all hover:border-primary/50 hover:bg-primary/[0.1]"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-transform group-hover:scale-105"
+                >
+                  <Rocket className="h-3.5 w-3.5" />
+                </span>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">
+                    {START_HERE.badge}
+                  </span>
+                  <span className="truncate text-[11.5px] font-bold text-foreground">
+                    {START_HERE.title}
+                  </span>
+                  <span className="truncate text-[9.5px] font-medium text-muted-foreground">
+                    {START_HERE.body}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <div className="mx-1 rounded-2xl border border-primary/10 bg-primary/[0.03] px-3 py-2.5">
+                <p className="text-[10.5px] font-semibold leading-snug text-foreground/80">
+                  Most tools help you send more.
+                </p>
+                <p className="mt-0.5 text-[10.5px] font-bold leading-snug text-primary">
+                  Weez tells you who to contact, how, and why now.
+                </p>
+              </div>
+            )}
 
             {/* The journey, in order. `aria-current="page"` on the active item rather
                 than colour alone, so the highlight is available to a screen reader and

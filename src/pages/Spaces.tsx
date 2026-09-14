@@ -114,16 +114,19 @@ const Spaces = () => {
       setIsCreateDialogOpen(false);
       toast({
         title: "Space created",
-        description: `"${newSpaceName}" is ready. Three steps and Weez starts working — the first one is connecting your website.`,
+        description: `"${newSpaceName}" is ready. Let's set what you want it to go after.`,
       });
-      // Select the space and send them straight to the Connections page to
-      // link their channels first (no longer detours through Autonomous Marketing).
+      // Straight into campaign creation.
       //
-      // `?setup=true` is what puts the setup rail on that page. It used to only fire a
-      // toast, which meant that the moment the founder connected their website there was
-      // nothing left on screen saying this was step one of anything or where step two was.
+      // This used to go to `/connections/:id?setup=true` — the integrations page — on the
+      // reasoning that nothing works until the website is connected. True, but it framed
+      // the first thing a founder does as a settings task: they connected a website, the
+      // page went back to looking like Settings, and nothing said what they had just
+      // finished or what came next. `/gtm-setup` asks the same question inside the
+      // workflow it belongs to, so connecting the website is visibly step one of creating
+      // a campaign rather than a detour on the way to one.
       selectSpace(result.data);
-      navigate(`/connections/${result.data.id}?setup=true`);
+      navigate(`/gtm-setup/${result.data.id}`);
     }
   };
 

@@ -1438,7 +1438,7 @@ export default function Eva() {
                           launch: launched,
                         }}
                         activeStep={nextStep}
-                        onAdvance={() => navigate(`/ninna/${spaceId}?start=goal`)}
+                        onAdvance={() => navigate(`/gtm-setup/${spaceId}`)}
                       />
                     ) : (
                       <LiveDiscovery icp={ws.icp} />

@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, useSearchParams, Navigate, useParams } fr
 import PlatformCallback from "./pages/PlatformCallback";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { CreditsProvider } from "@/hooks/useCredits";
-import { WorkspaceSetupProvider } from "@/hooks/useWorkspaceSetup";
+import { WorkspaceSetupProvider } from "@/hooks/WorkspaceSetupProvider";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import { TutorialSpotlight } from "./components/tutorial/TutorialSpotlight";
 import { TutorialTooltip } from "./components/tutorial/TutorialTooltip";
@@ -21,6 +21,7 @@ import Gallery from "./pages/Gallery";
 import OneClickPost from "./pages/OneClickPost";
 import AutonomousMarketing from "./pages/AutonomousMarketing";
 import Connections from "./pages/Connections";
+import GtmSetup from "./pages/GtmSetup";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import SalesAssistant from "./pages/SalesAssistant";
 import SalesIntelligence from "./pages/SalesIntelligence";
@@ -172,6 +173,10 @@ const AppContent = () => {
               <Route path="/gallery/:spaceId" element={<Gallery />} />
               <Route path="/one-click-post/:spaceId" element={<OneClickPost />} />
               <Route path="/autonomous-marketing/:spaceId" element={<AutonomousMarketing />} />
+              {/* Campaign creation. Where a new workspace lands and where every
+                  "start here" control points. The website is asked for inside the
+                  workflow, so this is the only page a founder needs before Eva runs. */}
+              <Route path="/gtm-setup/:spaceId" element={<GtmSetup />} />
               {/* Standalone Connections page (decoupled from Autonomous Marketing) */}
               <Route path="/connections/:spaceId" element={<Connections />} />
               <Route path="/linkedin-analytics/:spaceId" element={<LinkedInAnalytics />} />

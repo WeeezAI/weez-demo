@@ -119,8 +119,14 @@ export interface WorkspaceSetupChecklistProps {
   /** True while the control for the live step is working. */
   busy?: boolean;
   variant?: "panel" | "rail";
-  /** The heading level for the block's title, so the page outline stays correct. */
-  headingLevel?: "h2" | "h3";
+  /**
+   * The heading level for the block's title, so the page outline stays correct.
+   *
+   * `h1` is included because on `pages/GtmSetup.tsx` this block *is* the page's top-level
+   * heading — the surrounding chrome there is spans, not headings. Everywhere else it sits
+   * under a page heading and takes `h2`.
+   */
+  headingLevel?: "h1" | "h2" | "h3";
   className?: string;
 }
 
@@ -158,7 +164,7 @@ export function WorkspaceSetupChecklist({
           <Heading
             className={cn(
               "mt-1.5 font-black tracking-tight text-gray-900",
-              isRail ? "text-base" : "text-2xl leading-tight"
+              isRail ? "text-lg" : "text-2xl leading-tight"
             )}
           >
             {isRail ? WORKSPACE_SETUP_LABELS.railTitle : WORKSPACE_SETUP_LABELS.title}

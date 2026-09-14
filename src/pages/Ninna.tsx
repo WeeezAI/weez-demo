@@ -24,33 +24,25 @@
 // for ten minutes and route the founder by campaign state, and to hand off to the
 // outbound workforce through `weezAPI.activateOutboundWorkforce`. Both are marketing
 // campaign orchestration rather than GTM sales, and R13.9 keeps them out of this
-// presentation. `NinaGoalIntake` stays — it is the workspace's goal and strategy, and it
-// reads its own readiness — as do Nina's brief, her visit record and her chat.
+// presentation. This page imports `weezAPI` for neither, and for nothing else — creating
+// and launching a campaign is `pages/GtmSetup.tsx`'s job now. `NinaGoalIntake` stays,
+// behind a disclosure, because re-aiming a workspace that already has a goal is a thing a
+// rep does on the page where they read their day; it owns its own launch, so this page
+// still orchestrates nothing.
 //
 // ── First run, and where the four blocks step aside ──
 //
 // The four blocks are the right presentation for a workspace that is running. They were
 // the *only* presentation, which made a workspace that had never been started look like a
 // workspace that had been started and found nobody: four absence statements and a `0`. A
-// founder ten minutes into the product read that as an empty product, went looking for
-// something to press, and the only thing that would have helped — the goal intake — was a
-// small outlined button at the bottom of the page behind a collapsed section.
+// founder ten minutes into the product read that as an empty product and went looking for
+// something to press.
 //
 // So when `useWorkspaceSetup` says the workforce is not running *and* the two GTM reads
-// came back with nothing waiting, the blocks step aside for the three setup steps and
-// Nina's intake, open, with no disclosure to find. The moment there is real work waiting,
-// or the moment the workforce is live, the blocks are back and the setup rail is either a
-// one-line strip above them or gone entirely.
-//
-// **R13.9 still holds.** The clause excludes marketing campaign orchestration from the
-// *GTM sales presentation* — the four blocks — and it still does: no block reads a
-// campaign, and nothing on the page polls campaign state. What is new here is workspace
-// activation, which is the goal intake's own job (it has always carried an `onProceed`,
-// which this page simply never passed) and which is why the intake was left on Nina when
-// the campaign polling was removed. `getActiveCampaignStatus` is read once by the
-// workspace-level provider above the routes, not by this page, and
-// `activateOutboundWorkforce` is only ever called from a founder's click on the strategy
-// they just approved.
+// came back with nothing waiting, the blocks step aside for the three setup steps, whose
+// control goes to `/gtm-setup`. The moment there is real work waiting, or the moment the
+// workforce is live, the blocks are back and the setup rail is either a one-line strip
+// above them or gone entirely.
 //
 // Left: the brief and the four blocks. Right: Nina's conversation, where every message
 // can carry the same interactive cards.
@@ -75,7 +67,6 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -98,7 +89,6 @@ import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
 import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
 import { useCredits } from "@/hooks/useCredits";
 import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
-import { weezAPI } from "@/services/weezAPI";
 import gtmAPI, {
   type ActionQueueItem,
   type ActionQueuePage,
@@ -206,10 +196,6 @@ export const NINA_GTM_LABELS = {
   // `0`, which reads as "Weez looked and found nobody" rather than "nobody has told Weez
   // what to look for". These labels are the second sentence, and they are separate copy
   // because they are a different claim: not an absence of prospects, an absence of a goal.
-  firstRunGoalTitle: "Set your goal with Nina",
-  firstRunGoalNote:
-    "Nina reads your website for your product, your customers and your positioning, asks only for what she is still missing, then shows you the strategy she would run. Approve it and Eva and Max start.",
-
   /**
    * The hero, on a workspace that has never launched.
    *
@@ -226,11 +212,6 @@ export const NINA_GTM_LABELS = {
   firstRunHeadline: "Nothing is running yet — let's start your first campaign.",
   firstRunNarrative:
     "I haven't been given a goal for this workspace yet, so there is nothing for me to report and nobody for Eva to go after. Tell me what you want more of and I'll show you the strategy I would run — then Eva starts finding accounts that fit and Max starts preparing the outreach.",
-
-  launchStarting: "Handing off to your workforce — Eva starts on accounts, Max on outreach.",
-  launchStarted:
-    "Your campaign is live. Eva is discovering accounts that fit and Max is preparing personalised outreach.",
-  launchFailed: "Couldn't start your workforce just now.",
 } as const;
 
 /** One test hook per block, so a suite can address a block without matching its prose. */
@@ -1063,9 +1044,6 @@ export default function Ninna() {
     () => searchParams.get("start") === "goal"
   );
 
-  /** True while the workforce hand-off is in flight, so the launch control can say so. */
-  const [launching, setLaunching] = useState(false);
-
   /**
    * Whether this workspace has been started, from the provider above the routes.
    *
@@ -1074,11 +1052,7 @@ export default function Ninna() {
    * the four blocks exactly as they were. The one thing a stale answer must never do is
    * tell a founder mid-campaign to go start their campaign.
    */
-  const { needsSetup, websiteConnected, goalSet, launched, nextStep, markLaunched } =
-    useWorkspaceSetup();
-
-  /** Where the intake is, so the setup steps can put it on screen. */
-  const goalIntakeRef = useRef<HTMLDivElement>(null);
+  const { needsSetup, websiteConnected, goalSet, launched, nextStep } = useWorkspaceSetup();
 
   /**
    * The two GTM payloads, exactly as the API returned them, and whether the read failed.
@@ -1312,48 +1286,6 @@ export default function Ninna() {
     seededRef.current = true;
   }, [seedText]);
 
-  /** Puts the intake on screen and moves focus into it. */
-  const jumpToGoalIntake = () => {
-    setGoalIntakeOpen(true);
-    // Next frame, so a section that was collapsed a moment ago is in the DOM to scroll to.
-    requestAnimationFrame(() => {
-      goalIntakeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      goalIntakeRef.current?.focus({ preventScroll: true });
-    });
-  };
-
-  /**
-   * Approve the strategy and start the workforce. The step that was missing.
-   *
-   * `NinaGoalIntake` has always taken an `onProceed` and rendered its "Proceed — build my
-   * GTM plan" button only when one was passed. This page never passed one, so a founder
-   * could set a goal, read a strategy, and end at a read-only summary with nothing to
-   * press — the reason the flow dead-ended even for somebody who found the intake.
-   *
-   * `markLaunched()` before navigating so the sidebar badge and the rail are already
-   * correct on the next surface rather than a round trip behind it.
-   */
-  const launchWorkforce = async () => {
-    if (!spaceId || launching) return;
-    setLaunching(true);
-    toast.info(NINA_GTM_LABELS.launchStarting);
-    try {
-      await weezAPI.activateOutboundWorkforce(spaceId);
-      markLaunched();
-      toast.success(NINA_GTM_LABELS.launchStarted);
-      // Market Intelligence is where the first result of this actually appears, and it is
-      // step 1 of the journey — so the hand-off lands the founder at the top of the loop
-      // rather than back on a page that has nothing new to say for a few minutes.
-      navigate(`/eva/${spaceId}`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : NINA_GTM_LABELS.launchFailed
-      );
-    } finally {
-      setLaunching(false);
-    }
-  };
-
   return (
     <div className="flex h-screen bg-[#FDFBFF] overflow-hidden">
       {/* Shared workspace shell — Ninna is a first-class workspace page and the
@@ -1447,12 +1379,12 @@ export default function Ninna() {
                 headingLevel="h2"
                 completed={{ website: websiteConnected, goal: goalSet, launch: launched }}
                 activeStep={nextStep}
-                // Every step is served by the intake below — it carries the website form in
-                // its connect phase, the goal picker and questions in the middle, and the
-                // approve-and-launch control on the strategy it produces. So the control
-                // does not navigate anywhere; it puts that intake on screen and focuses it.
-                onAdvance={jumpToGoalIntake}
-                busy={launching}
+                // Every remaining step is the campaign-creation workflow, and that workflow
+                // is `/gtm-setup` — one canonical place, which is also where a new workspace
+                // lands. Nina keeps the same workflow behind the disclosure below for
+                // re-aiming a running workspace; she does not compete with it for creating
+                // the first campaign.
+                onAdvance={() => navigate(`/gtm-setup/${spaceId}`)}
               />
             )}
 
@@ -1491,58 +1423,41 @@ export default function Ninna() {
               </>
             )}
 
-            {/* The workspace's goal and strategy. Nina's own intake, which reads its own
-                readiness and owns its phases; this page only decides how prominent it is.
+            {/* Re-aiming a workspace that already has a goal.
+                Behind a disclosure, because the day's work comes first. Creating the *first*
+                campaign is not this control's job — that is `/gtm-setup`, which is where the
+                setup panel above sends a founder and where a new workspace lands. This is
+                the same workflow for somebody who wants to change what a running workspace
+                is going after.
 
-                For a running workspace it stays behind a disclosure, because the day's work
-                comes first and the goal is set. On a first run the disclosure is gone: it is
-                open, it is the point of the page, and the founder is told so. That collapsed
-                section was the whole bug — the one control that starts anything was the least
-                visible thing on the product's home page.
-
-                `tabIndex={-1}` on the wrapper is what `jumpToGoalIntake` focuses. Negative,
-                so it takes programmatic focus without joining the tab order and adding a
-                stop in front of the intake's own fields. */}
-            <div ref={goalIntakeRef} tabIndex={-1} className="scroll-mt-6 outline-none">
-              <Section
-                icon={Target}
-                title={firstRun ? NINA_GTM_LABELS.firstRunGoalTitle : NINA_GTM_LABELS.goalTitle}
-                action={
-                  firstRun ? undefined : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      aria-expanded={goalIntakeOpen}
-                      onClick={() => setGoalIntakeOpen((open) => !open)}
-                    >
-                      {goalIntakeOpen ? NINA_GTM_LABELS.goalClose : NINA_GTM_LABELS.goalOpen}
-                    </Button>
-                  )
-                }
-              >
-                {firstRun && (
-                  <p className="mb-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 text-[13px] leading-relaxed text-gray-700">
-                    {NINA_GTM_LABELS.firstRunGoalNote}
-                  </p>
-                )}
-
-                {firstRun || goalIntakeOpen ? (
-                  <NinaGoalIntake
-                    spaceId={spaceId!}
-                    // The hand-off this page never wired. Passing it is what makes the
-                    // intake render its approve-and-launch control at the end of the
-                    // strategy, so setting a goal now finishes somewhere instead of at a
-                    // read-only summary.
-                    onProceed={launchWorkforce}
-                  />
-                ) : (
-                  <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
-                    {NINA_GTM_LABELS.goalNote}
-                  </p>
-                )}
-              </Section>
-            </div>
+                No `onProceed`: the workflow owns its own launch. It used to render its
+                approve-and-launch button only when a caller passed that prop, and this page
+                never did — which is how a founder could set a goal, read a full strategy and
+                find nothing to press. The control is unconditional now, so no caller can
+                delete it by omission. */}
+            <Section
+              icon={Target}
+              title={NINA_GTM_LABELS.goalTitle}
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-expanded={goalIntakeOpen}
+                  onClick={() => setGoalIntakeOpen((open) => !open)}
+                >
+                  {goalIntakeOpen ? NINA_GTM_LABELS.goalClose : NINA_GTM_LABELS.goalOpen}
+                </Button>
+              }
+            >
+              {goalIntakeOpen ? (
+                <NinaGoalIntake spaceId={spaceId!} />
+              ) : (
+                <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
+                  {NINA_GTM_LABELS.goalNote}
+                </p>
+              )}
+            </Section>
 
             <div className="h-4" />
           </div>

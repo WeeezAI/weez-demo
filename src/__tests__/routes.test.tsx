@@ -1026,6 +1026,14 @@ describe("Feature: sales-workflow-frontend-restructure, Property 42: The credit 
     // route added to `App.tsx` is in scope by default, and it fails *here* — forcing the
     // decision to be made and recorded rather than missed.
     expect(authenticatedRoutes()).toEqual([
+      // Campaign creation. In scope, deliberately: it is authenticated, workspace-scoped,
+      // and it is the first surface a new workspace ever renders — the one place a rep must
+      // not lose the balance is the page where they are about to commission work that
+      // spends it. It is not a Primary_ or Supporting_Destination (it is absent from the
+      // sidebar's seven, which `ConversationSidebar.test.tsx` pins) because it is a thing
+      // done once rather than a place worked in, and R17.1's subject is the chrome of the
+      // authenticated application rather than the chrome of the navigation list.
+      "/gtm-setup/:spaceId",
       "/connections/:spaceId",
       "/sales/:spaceId",
       "/leads/:spaceId",

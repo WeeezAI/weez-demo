@@ -4539,7 +4539,7 @@ export default function ProspectIntelligence() {
                       launch: launched,
                     }}
                     activeStep={setupNextStep}
-                    onAdvance={() => navigate(`/ninna/${spaceId ?? ""}?start=goal`)}
+                    onAdvance={() => navigate(`/gtm-setup/${spaceId ?? ""}`)}
                   />
                 ) : qualifiedLeads.length === 0 ? (
                   <EmptyPanel

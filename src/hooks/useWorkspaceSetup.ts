@@ -7,10 +7,8 @@
 // A brand new workspace and a quiet established workspace used to look identical. Both
 // showed Nina's four attention blocks with nothing in them and a `0`, both showed Market
 // Intelligence hunting, both showed an empty action queue. Nothing on any surface said
-// "you have not told Nina what you want yet", and the one control that would fix it — the
-// goal intake — sat at the bottom of Nina's page behind a collapsed disclosure. So the
-// first thing a founder saw after creating a workspace was a product that looked like it
-// was already running and had found nothing.
+// "you have not told Nina what you want yet", and the workflow that would fix it sat at the
+// bottom of Nina's page behind a collapsed disclosure.
 //
 // Three facts distinguish the two, and each already had an endpoint nobody was joining:
 //
@@ -21,11 +19,25 @@
 //
 // ── Why a provider rather than a per-page hook ──
 //
-// The same three answers are wanted by the sidebar, by Nina, and by the connections page,
-// and they are properties of the workspace rather than of a page. Read once above the
-// routes, exactly as `useCredits` reads the balance, and for the same reason: three surfaces
-// each fetching three endpoints would be nine requests for an answer that does not change
-// between them.
+// The same three answers are wanted by the sidebar, by Nina, by Market Intelligence, by the
+// dossier and by the connections page, and they are properties of the workspace rather than
+// of a page. Read once above the routes, exactly as `useCredits` reads the balance, and for
+// the same reason: five surfaces each fetching three endpoints would be fifteen requests for
+// an answer that does not change between them.
+//
+// ── Why the provider is not in this file ──
+//
+// This module is the *consumer* half: the vocabulary, the context and the hook, and nothing
+// that talks to a network. `WorkspaceSetupProvider.ts` is the producer half, and it is the
+// only one that imports `weezAPI`.
+//
+// The split is not tidiness. Everything that reads this state is a page or a component that
+// renders — `ConversationSidebar`, `WorkspaceSetupChecklist`, four pages — and several of
+// them make no API calls of their own. With the read in this file, importing the hook
+// dragged the whole API client into their module graphs: `pages/ProspectIntelligence.tsx`
+// picked up `weezAPI` transitively despite never calling it, which is a real cost in the
+// bundle and a measurable one in the suites that mount it. Consumers now import a module
+// whose only dependency is React.
 //
 // ── Fail open, always ──
 //
@@ -42,21 +54,7 @@
 // Which is why `needsSetup` requires all three answers to have actually landed. `null` is
 // not `false` here: `false` means the server said no, `null` means nobody knows.
 
-import {
-  createContext,
-  createElement,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { useLocation } from "react-router-dom";
-
-import { weezAPI } from "@/services/weezAPI";
-import { brandIdFromPath } from "@/hooks/useCredits";
+import { createContext, useContext } from "react";
 
 /** The three things that have to be true before Weez can work. In order. */
 export type SetupStepId = "website" | "goal" | "launch";
@@ -97,7 +95,7 @@ export interface WorkspaceSetupState {
   /**
    * Record a step locally, without waiting for a re-read.
    *
-   * The intake knows it just persisted a strategy and the launch handler knows it just
+   * The workflow knows it just persisted a strategy and the launch handler knows it just
    * activated the workforce; making either of them wait a round trip to stop showing
    * "do this next" would leave a completed step looking pending.
    */
@@ -109,7 +107,7 @@ export interface WorkspaceSetupState {
 const NOOP = () => {};
 
 /** The answer outside a provider: nothing is known, nothing is claimed, nothing breaks. */
-const UNREAD: WorkspaceSetupState = {
+export const UNREAD_WORKSPACE_SETUP: WorkspaceSetupState = {
   brandId: undefined,
   websiteConnected: null,
   goalSet: null,
@@ -124,118 +122,36 @@ const UNREAD: WorkspaceSetupState = {
   markLaunched: NOOP,
 };
 
-const WorkspaceSetupContext = createContext<WorkspaceSetupState>(UNREAD);
+/** Shared with the provider module, which is the only thing allowed to write it. */
+export const WorkspaceSetupContext =
+  createContext<WorkspaceSetupState>(UNREAD_WORKSPACE_SETUP);
 
 /** The three raw answers, before any of them mean anything together. */
-interface Answers {
+export interface WorkspaceSetupAnswers {
   website: boolean | null;
   goal: boolean | null;
   launched: boolean | null;
 }
 
-const NOTHING_READ: Answers = { website: null, goal: null, launched: null };
+export const NOTHING_READ: WorkspaceSetupAnswers = {
+  website: null,
+  goal: null,
+  launched: null,
+};
 
 /**
  * The next step, given what is known.
  *
- * Exported and pure so the ordering is testable without mounting a provider. Returns
- * `null` for "unread" and for "finished" alike, because neither is a step — a consumer
- * branches on `needsSetup` first and only then asks what is next.
+ * Pure, and here rather than in the provider, so the ordering is testable without mounting
+ * anything. Returns `null` for "unread" and for "finished" alike, because neither is a step
+ * — a consumer branches on `needsSetup` first and only then asks what is next.
  */
-export function nextStepFrom(answers: Answers): SetupStepId | null {
+export function nextStepFrom(answers: WorkspaceSetupAnswers): SetupStepId | null {
   if (answers.website === null || answers.goal === null || answers.launched === null) return null;
   if (answers.launched) return null;
   if (!answers.website) return "website";
   if (!answers.goal) return "goal";
   return "launch";
-}
-
-export interface WorkspaceSetupProviderProps {
-  children: ReactNode;
-  /** Overrides the path-derived id. For tests and for any non-routed embedding. */
-  brandId?: string;
-}
-
-export function WorkspaceSetupProvider({
-  children,
-  brandId: override,
-}: WorkspaceSetupProviderProps) {
-  const { pathname } = useLocation();
-  const brandId = override ?? brandIdFromPath(pathname);
-
-  const [answers, setAnswers] = useState<Answers>(NOTHING_READ);
-  const [loading, setLoading] = useState(false);
-
-  // Guards an out-of-order response from overwriting a newer one — the same `reqRef`
-  // device `useCredits` and the GTM pages use. A `refresh()` fired right after the
-  // founder connected their website can easily land before the initial read, and the
-  // older answer would put the workspace back on step 1.
-  const reqRef = useRef(0);
-
-  const read = useCallback(async () => {
-    if (!brandId) {
-      reqRef.current += 1; // strand any in-flight read for the previous workspace
-      setAnswers(NOTHING_READ);
-      setLoading(false);
-      return;
-    }
-
-    const seq = ++reqRef.current;
-    setLoading(true);
-
-    // Three independent reads, each with its own catch. One endpoint being down must not
-    // erase the two answers that did arrive — a shared `try` would turn a single 500 into
-    // "nothing is known", and `needsSetup` would go quiet for a workspace that genuinely
-    // needs setup.
-    const [readiness, strategy, campaign] = await Promise.all([
-      weezAPI.getNinaReadiness(brandId).catch(() => null),
-      weezAPI.getNinaStrategy(brandId).catch(() => null),
-      weezAPI.getActiveCampaignStatus(brandId).catch(() => null),
-    ]);
-
-    if (seq !== reqRef.current) return; // a newer read superseded this one
-
-    setAnswers({
-      website: readiness ? Boolean(readiness.connections?.website_connected) : null,
-      goal: strategy ? Boolean(strategy.exists) : null,
-      launched: campaign ? Boolean(campaign.active) : null,
-    });
-    setLoading(false);
-  }, [brandId]);
-
-  // Re-reads when the workspace changes and not when the page does, so moving between
-  // two surfaces of one workspace costs nothing.
-  useEffect(() => {
-    void read();
-  }, [read]);
-
-  const value = useMemo<WorkspaceSetupState>(() => {
-    const allRead =
-      answers.website !== null && answers.goal !== null && answers.launched !== null;
-    const done = allRead
-      ? [answers.website, answers.goal, answers.launched].filter(Boolean).length
-      : null;
-
-    return {
-      brandId,
-      websiteConnected: answers.website,
-      goalSet: answers.goal,
-      launched: answers.launched,
-      loading,
-      needsSetup: allRead && !answers.launched,
-      nextStep: nextStepFrom(answers),
-      completedSteps: done,
-      refresh: read,
-      markWebsiteConnected: () => setAnswers((prev) => ({ ...prev, website: true })),
-      markGoalSet: () => setAnswers((prev) => ({ ...prev, goal: true })),
-      // Launching implies the two steps before it, and the server agrees: the workforce
-      // cannot start without a website and a strategy. Marking all three keeps the rail
-      // from briefly showing a completed run as one step short.
-      markLaunched: () => setAnswers({ website: true, goal: true, launched: true }),
-    };
-  }, [answers, brandId, loading, read]);
-
-  return createElement(WorkspaceSetupContext.Provider, { value }, children);
 }
 
 /** The shared setup state. Answers "unread" outside a provider rather than throwing. */
