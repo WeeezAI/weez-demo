@@ -62,6 +62,60 @@ export type SetupStepId = "website" | "goal" | "launch";
 /** Declared once so a consumer counts steps from here rather than from a literal. */
 export const SETUP_STEP_ORDER: readonly SetupStepId[] = ["website", "goal", "launch"] as const;
 
+/**
+ * The stored GTM goal, narrowed to what a surface actually renders.
+ *
+ * A projection of `GET /nina/strategy`'s document rather than the document itself. The
+ * stored strategy is a large, loosely-typed blob — Eva's plan, Max's plan, guardrails,
+ * risks, ten generations of history — and the workflow that produced it is the right place
+ * to render all of that. What a *summary* needs is the handful of fields below, so those are
+ * what cross this boundary: a page reading `goal.expected` cannot be reaching into an
+ * untyped blob for something the server never promised.
+ *
+ * Every field is nullable and every absence is `null`, never a stand-in. "Nina did not
+ * state a stretch number" and "the stretch number is empty" are different facts and only
+ * one of them is worth printing.
+ */
+export interface WorkspaceGoal {
+  /** What the founder asked for, in their words. */
+  target: string | null;
+  /** When Nina generated this plan, ISO. */
+  generatedAt: string | null;
+  /** The plan's own range. Strings, because Nina states units ("18 meetings"). */
+  conservative: string | null;
+  expected: string | null;
+  stretch: string | null;
+  /** Nina's read on the ask: realistic, aggressive, unrealistic. */
+  verdict: string | null;
+  /** The ACV playbook this plan runs, e.g. "Medium ACV". */
+  acvTier: string | null;
+}
+
+/**
+ * The live campaign, narrowed the same way.
+ *
+ * From `GET /autopilot/campaign/{id}/active-status`. `totalDays` is `null` rather than `0`
+ * for a campaign with no dated window, because the server returns `0` for both "no window"
+ * and its derived `progress`, and "day 1 of 0, 0% complete" is not a statement anybody
+ * should read. The degraded payload the backend returns for a campaign it knows is live but
+ * cannot describe leaves every one of these `null`, which renders as "live" and no stats —
+ * which is exactly what is true.
+ */
+export interface ActiveCampaign {
+  name: string | null;
+  /** What the workforce is doing, in the server's own words. */
+  statusTag: string | null;
+  /** Aggressiveness, e.g. "Medium". */
+  mode: string | null;
+  currentDay: number | null;
+  /** `null` when the campaign has no dated window, never `0`. */
+  totalDays: number | null;
+  daysRemaining: number | null;
+  /** 0–100. A genuine `0` on day one; `null` when there is no window to measure against. */
+  progress: number | null;
+  startedAt: string | null;
+}
+
 export interface WorkspaceSetupState {
   /** The workspace these answers describe, or `undefined` off a workspace-scoped route. */
   brandId?: string;
@@ -72,6 +126,19 @@ export interface WorkspaceSetupState {
   goalSet: boolean | null;
   /** The outbound workforce is live. `null` when unread. */
   launched: boolean | null;
+
+  /**
+   * The stored goal, when there is one.
+   *
+   * `null` covers three cases a surface treats identically: unread, the read failed, and
+   * the workspace genuinely has no goal. `goalSet` is the flag for the third; this is the
+   * content, and a surface that has it can say what the workspace is going after instead of
+   * asking whether anybody has said.
+   */
+  goal: WorkspaceGoal | null;
+
+  /** The live campaign, when one is running. `null` when unread or not running. */
+  campaign: ActiveCampaign | null;
 
   loading: boolean;
 
@@ -112,6 +179,8 @@ export const UNREAD_WORKSPACE_SETUP: WorkspaceSetupState = {
   websiteConnected: null,
   goalSet: null,
   launched: null,
+  goal: null,
+  campaign: null,
   loading: false,
   needsSetup: false,
   nextStep: null,
@@ -126,17 +195,28 @@ export const UNREAD_WORKSPACE_SETUP: WorkspaceSetupState = {
 export const WorkspaceSetupContext =
   createContext<WorkspaceSetupState>(UNREAD_WORKSPACE_SETUP);
 
-/** The three raw answers, before any of them mean anything together. */
+/**
+ * The three raw answers, before any of them mean anything together, plus the two payloads
+ * the second and third reads carried.
+ *
+ * `goal` and `launched` stay booleans and the content sits beside them, so the step logic
+ * below reads the same way it did when the content did not exist: `nextStepFrom` is about
+ * whether each fact is known and true, never about what a payload said.
+ */
 export interface WorkspaceSetupAnswers {
   website: boolean | null;
   goal: boolean | null;
   launched: boolean | null;
+  goalDetail: WorkspaceGoal | null;
+  campaign: ActiveCampaign | null;
 }
 
 export const NOTHING_READ: WorkspaceSetupAnswers = {
   website: null,
   goal: null,
   launched: null,
+  goalDetail: null,
+  campaign: null,
 };
 
 /**

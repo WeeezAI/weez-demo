@@ -36,6 +36,7 @@ import ConversationSidebar from "@/components/ConversationSidebar";
 import NinaGoalIntake from "@/components/NinaGoalIntake";
 import { Button } from "@/components/ui/button";
 import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import { ActiveCampaignSummary } from "@/components/setup/ActiveCampaignSummary";
 import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
@@ -63,7 +64,8 @@ export default function GtmSetup() {
   // here would hide a genuine 0 (R17.7).
   const { balance } = useCredits();
 
-  const { websiteConnected, goalSet, launched, nextStep } = useWorkspaceSetup();
+  const { websiteConnected, goalSet, launched, nextStep, goal, campaign } =
+    useWorkspaceSetup();
 
   const spaceName =
     currentSpace?.name || spaces.find((s) => s.id === spaceId)?.name || "your workspace";
@@ -115,7 +117,7 @@ export default function GtmSetup() {
                 came to re-aim it. Say what is already true, offer the way out, and leave the
                 workflow below usable rather than blocking it. */}
             {launched === true && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+              <div className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                   <div className="min-w-0 flex-1">
@@ -137,6 +139,13 @@ export default function GtmSetup() {
                     </Button>
                   </div>
                 </div>
+
+                {/* What is actually running, so "you already have a campaign" is a statement
+                    a founder can check rather than one they have to take on trust. It also
+                    tells them what they are about to replace. */}
+                {(goal !== null || campaign !== null) && (
+                  <ActiveCampaignSummary goal={goal} campaign={campaign} />
+                )}
               </div>
             )}
 

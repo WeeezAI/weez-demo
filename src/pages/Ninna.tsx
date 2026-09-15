@@ -86,6 +86,10 @@ import {
 import { MEASURE_MEANINGS, measureParts } from "@/components/gtm/measure";
 import { ObservedValue, UNKNOWN_SR_NOTE, UNKNOWN_TEXT } from "@/components/gtm/ObservedValue";
 import { CreditBalanceBadge } from "@/components/gtm/CreditBalance";
+import {
+  ACTIVE_CAMPAIGN_LABELS,
+  ActiveCampaignSummary,
+} from "@/components/setup/ActiveCampaignSummary";
 import { WorkspaceSetupChecklist } from "@/components/setup/WorkspaceSetupChecklist";
 import { useCredits } from "@/hooks/useCredits";
 import { useWorkspaceSetup } from "@/hooks/useWorkspaceSetup";
@@ -1052,7 +1056,31 @@ export default function Ninna() {
    * the four blocks exactly as they were. The one thing a stale answer must never do is
    * tell a founder mid-campaign to go start their campaign.
    */
-  const { needsSetup, websiteConnected, goalSet, launched, nextStep } = useWorkspaceSetup();
+  const {
+    needsSetup,
+    websiteConnected,
+    goalSet,
+    launched,
+    nextStep,
+    goal,
+    campaign,
+    refresh: refreshSetup,
+  } = useWorkspaceSetup();
+
+  /**
+   * Whether this workspace has a goal to describe.
+   *
+   * `goalSet === true` is the flag, and it is deliberately the whole condition — not
+   * `goal !== null`. The workflow marks a goal as set the moment it persists a strategy,
+   * before anything has read the document back, so there is a real window where the flag is
+   * true and the content is not there yet. `ActiveCampaignSummary` states that case; asking
+   * for the content here instead would put "Set your GTM goal" back on screen for a founder
+   * who had just finished setting one.
+   *
+   * `null` — unread, or the read failed — keeps the copy that shipped, for the same
+   * fail-open reason `needsSetup` exists.
+   */
+  const hasGoal = goalSet === true;
 
   /**
    * The two GTM payloads, exactly as the API returned them, and whether the read failed.
@@ -1214,10 +1242,18 @@ export default function Ninna() {
     }
   };
 
-  /** The header control: both of Nina's sources, re-read together. */
+  /**
+   * The header control: every source this page presents, re-read together.
+   *
+   * The setup read is in here because the campaign's day count is on screen now, and a
+   * founder pressing Refresh on a page showing "Day 3 of 30" means that number too. It is
+   * the provider's own `refresh`, so this stays one read per workspace rather than this page
+   * fetching campaign state for itself — which is the thing R13.9 took off this page.
+   */
   const refreshAll = () => {
     loadBrief(true);
     loadGtm();
+    void refreshSetup();
   };
 
   // ── First run ───────────────────────────────────────────────────────────────
@@ -1423,12 +1459,28 @@ export default function Ninna() {
               </>
             )}
 
-            {/* Re-aiming a workspace that already has a goal.
-                Behind a disclosure, because the day's work comes first. Creating the *first*
-                campaign is not this control's job — that is `/gtm-setup`, which is where the
-                setup panel above sends a founder and where a new workspace lands. This is
-                the same workflow for somebody who wants to change what a running workspace
-                is going after.
+            {/* The workspace's goal, and — once there is one — the campaign running against
+                it.
+
+                This section used to say the same thing forever: "Set your GTM goal", over
+                copy describing what Nina *would* do. A founder who had set a full target,
+                launched, and come back the next morning read that as though their campaign
+                did not exist. So when a goal exists the heading, the control's verb and the
+                body all change: the section names what the workspace is going after, states
+                that the campaign is live and where it is in its window, and the control says
+                "Change goal" rather than asking for one that is already set.
+
+                Both new values are read, never derived. `goal` is the strategy this workspace
+                persisted when it was built, which nothing had ever read back; `campaign` is
+                the active-status payload the provider above the routes already fetched to
+                decide a boolean. Neither comes from the dashboard read, so the four blocks
+                above are still sourced exactly as R13.8 requires, and nothing here polls,
+                starts, stops or reconfigures a campaign — it reports one.
+
+                Re-aiming stays behind the disclosure, because the day's work comes first.
+                Creating the *first* campaign is not this control's job — that is
+                `/gtm-setup`, which is where the setup panel above sends a founder and where
+                a new workspace lands.
 
                 No `onProceed`: the workflow owns its own launch. It used to render its
                 approve-and-launch button only when a caller passed that prop, and this page
@@ -1437,7 +1489,15 @@ export default function Ninna() {
                 delete it by omission. */}
             <Section
               icon={Target}
-              title={NINA_GTM_LABELS.goalTitle}
+              // "Your active campaign" only when one is actually running. A workspace that
+              // has a goal but was never launched — the founder read the strategy and closed
+              // the tab — has a goal to show and no campaign to call active, and the setup
+              // rail above is already telling them the launch step is outstanding.
+              title={
+                launched === true
+                  ? ACTIVE_CAMPAIGN_LABELS.sectionTitle
+                  : NINA_GTM_LABELS.goalTitle
+              }
               action={
                 <Button
                   type="button"
@@ -1446,12 +1506,18 @@ export default function Ninna() {
                   aria-expanded={goalIntakeOpen}
                   onClick={() => setGoalIntakeOpen((open) => !open)}
                 >
-                  {goalIntakeOpen ? NINA_GTM_LABELS.goalClose : NINA_GTM_LABELS.goalOpen}
+                  {goalIntakeOpen
+                    ? NINA_GTM_LABELS.goalClose
+                    : hasGoal
+                      ? ACTIVE_CAMPAIGN_LABELS.changeGoal
+                      : NINA_GTM_LABELS.goalOpen}
                 </Button>
               }
             >
               {goalIntakeOpen ? (
                 <NinaGoalIntake spaceId={spaceId!} />
+              ) : hasGoal ? (
+                <ActiveCampaignSummary goal={goal} campaign={campaign} />
               ) : (
                 <p className="rounded-2xl border border-gray-100 bg-white p-5 text-xs leading-relaxed text-gray-500">
                   {NINA_GTM_LABELS.goalNote}
