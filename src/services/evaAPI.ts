@@ -304,8 +304,58 @@ export interface EnrichLeadResult {
    * why it is not one.
    */
   credit?: EnrichCredit | null;
-  /** The `sales_leads.id` the promotion landed on: the id every GTM route keys on. */
+  /**
+   * The `sales_leads.id` the promotion landed on: the id every GTM route keys on.
+   *
+   * **A sibling of `lead`, not a field on it.** The server builds this response as
+   * `{...result, gtmLeadId}` where `result.lead` is the enrichment's own report, written
+   * before the promotion ran — so `lead.gtmLeadId` is always absent here even when the
+   * promotion succeeded. A caller that writes `res.lead` into its own state without merging
+   * this in ends up holding a lead that looks un-promoted, which is what made Eva's
+   * "open this prospect" control dead for the lead just enriched. See `mergePromotion`.
+   */
   gtmLeadId?: string | null;
+  /**
+   * What the promotion did, and whether the prospect is actually reachable.
+   *
+   * `backReferenceWritten: false` is the case worth handling: the `sales_leads` row exists
+   * but the Eva document does not point at it, so Prospect Intelligence — whose population
+   * is exactly the leads carrying `gtmLeadId` — cannot list it. `outcome: "UNRESOLVABLE"`
+   * means no row was created at all, because nothing in the record identified a person.
+   * Both used to be reported as plain success.
+   */
+  gtmPromotion?: {
+    outcome: string;
+    leadId?: string | null;
+    created?: boolean;
+    resolvedKeyKind?: string | null;
+    mergeCandidateId?: string | null;
+    backfilled?: string[];
+    reason?: string | null;
+    /** `null` when no promotion was attempted. */
+    backReferenceWritten?: boolean | null;
+  } | null;
+}
+
+/**
+ * The enriched lead as it should be stored, with the promotion merged in.
+ *
+ * `gtmLeadId` arrives beside `lead` rather than inside it (see above), and
+ * `isEnrichedProspect` — the predicate that decides whether a lead is workable at all —
+ * reads it off the lead. So every caller that puts `res.lead` into state has to do this
+ * merge, and doing it here means none of them can forget.
+ *
+ * Returns `null` when the response carried no lead, so a caller can leave its state alone
+ * rather than writing an empty one.
+ */
+export function mergePromotion(res: EnrichLeadResult): QualifiedLead | null {
+  const lead = res.lead;
+  if (!lead) return null;
+  const promoted = (res.gtmLeadId ?? "").trim();
+  // Only when the server actually returned one. Preserving whatever the lead already
+  // carried otherwise: a re-click that failed to promote must not erase a pointer an
+  // earlier click established.
+  return promoted ? { ...lead, gtmLeadId: promoted } : lead;
 }
 
 export interface EvaWorkspace {

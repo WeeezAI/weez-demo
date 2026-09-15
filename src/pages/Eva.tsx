@@ -28,6 +28,7 @@ import {
   Layers,
   ArrowRight,
   Ban,
+  Link2,
   Sparkles,
   Signal as SignalIcon,
   Zap,
@@ -65,7 +66,7 @@ import {
   type WaterfallStep,
   type ScanStage,
 } from "@/services/evaAPI";
-import { isInsufficientCredits, isEnrichedProspect } from "@/services/evaAPI";
+import { isInsufficientCredits, isEnrichedProspect, mergePromotion } from "@/services/evaAPI";
 import {
   CreditBalanceBadge,
   CreditPriceTag,
@@ -661,6 +662,34 @@ function LeadRow({ lead, onAction, onEnrich, onOpenProspect, enrichPrice = null 
   // prospect that has no GTM record and would 404 the moment it was opened.
   const enriched = isEnrichedProspect(lead);
 
+  /**
+   * A contact was resolved but the lead was never promoted — so it is not on Prospect
+   * Intelligence and there was, until now, nothing on screen to do about it.
+   *
+   * Two ways to arrive here. A lead can carry an email it *arrived* with (the LinkedIn VM
+   * or the research engine), which was never an enrichment and never a promotion. Or the
+   * promotion happened and its pointer was lost — a discovery sweep used to publish a
+   * minutes-old snapshot over the top of it, which is the bug `_merge_side_writes` closes
+   * server-side. Either way the row showed the email and, in the action column, the words
+   * "Enrich to continue" — a hint, not a control, and the Email cell renders no button once
+   * an email is present. The operator could see the contact and had no way to finish.
+   *
+   * Re-running the enrichment is the fix and it is free: the service reports
+   * `attempted: false` for a lead that already has an email, so the credit charge is
+   * reversed, and the route promotes on that same response. So this is a real repair, not a
+   * second chance to spend.
+   */
+  const needsPromotion = Boolean(lead.contact?.email) && !enriched;
+  const [linking, setLinking] = useState(false);
+  const finishLinking = async () => {
+    setLinking(true);
+    try {
+      await onEnrich(lead);
+    } finally {
+      setLinking(false);
+    }
+  };
+
   return (
     <tr className={cn("border-t border-zinc-100 transition-colors hover:bg-zinc-50/70", handed && "bg-violet-50/25")}>
       {/* Company */}
@@ -765,12 +794,34 @@ function LeadRow({ lead, onAction, onEnrich, onOpenProspect, enrichPrice = null 
               >
                 <Ban className="h-3.5 w-3.5" />
               </button>
-              {/* Where the one primary CTA for this row actually is, so the column is not
-                  simply empty. Not a second button: two controls that both start
-                  enrichment is two things to decide between for one action. */}
-              <span className="hidden whitespace-nowrap text-[10.5px] font-medium text-zinc-400 xl:inline">
-                Enrich to continue
-              </span>
+              {needsPromotion ? (
+                /* The repair, for a lead that has a contact and no GTM record. This is the
+                   one case where the Email cell offers nothing — it renders the address
+                   once there is one — so without a control here the row is a dead end.
+                   Secondary styling and no price tag, because it costs nothing. */
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={linking}
+                  onClick={finishLinking}
+                  title="This lead has a contact but no prospect record yet, so it isn't on Prospect Intelligence. Finishing costs no credits."
+                  className="h-7 shrink-0 gap-1 whitespace-nowrap border-amber-200 bg-amber-50 px-2.5 text-[11px] font-semibold text-amber-700 hover:border-amber-300 hover:bg-amber-100"
+                >
+                  {linking ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Link2 className="h-3.5 w-3.5" />
+                  )}
+                  Finish linking
+                </Button>
+              ) : (
+                /* Where the one primary CTA for this row actually is, so the column is not
+                   simply empty. Not a second button: two controls that both start
+                   enrichment is two things to decide between for one action. */
+                <span className="hidden whitespace-nowrap text-[10.5px] font-medium text-zinc-400 xl:inline">
+                  Enrich to continue
+                </span>
+              )}
             </>
           )}
         </div>
@@ -1236,7 +1287,15 @@ export default function Eva() {
       // A charge landed, so the badge is stale. Only when something was actually charged: a
       // repeat click on the same lead comes back `charged: false`.
       if (res.credit?.charged) void refreshCredits();
-      const updated = res.lead;
+      // `mergePromotion`, not `res.lead`.
+      //
+      // The promoted id comes back *beside* `lead`, not on it, so writing `res.lead`
+      // straight into state left the lead looking un-promoted: `isEnrichedProspect` said
+      // no, the "open this prospect" control below stayed dead for the lead that had just
+      // been enriched, and the row kept offering Enrich Now as though nothing had happened.
+      // The email showed up regardless — it *is* on `res.lead` — which is what made this
+      // look like a Prospect Intelligence problem rather than a state-merge one here.
+      const updated = mergePromotion(res);
       if (updated) {
         setWs((prev) => prev ? { ...prev, leads: prev.leads.map((l) => l.id === lead.id ? updated : l) } : prev);
       }
@@ -1269,6 +1328,29 @@ export default function Eva() {
               }
             : undefined
         );
+
+        // ── When the email arrived but the prospect did not ──
+        //
+        // Two ways that happens, and both used to look like plain success: the email is on
+        // the response either way, so the operator saw it, went to Prospect Intelligence,
+        // and found nothing — with no statement anywhere about why.
+        //
+        //   UNRESOLVABLE            nothing in the record identified a *person* (a company
+        //                           and a domain do not), so no `sales_leads` row was
+        //                           created and there is nothing to work on yet.
+        //   backReferenceWritten    the row was created but the pointer back onto Eva's
+        //     === false             document did not persist, so the page cannot find it.
+        //                           Re-clicking Enrich Now repairs it and is not billed
+        //                           again — the charge is keyed on the lead.
+        if (res.gtmPromotion?.outcome === "UNRESOLVABLE") {
+          toast.info(
+            `${lead.company}: found the email, but not enough to identify the person yet — so there's no prospect to work on. A name or a LinkedIn URL is what's missing.`
+          );
+        } else if (res.gtmPromotion?.backReferenceWritten === false) {
+          toast.warning(
+            `${lead.company} was promoted but didn't finish linking, so it isn't listed on Prospect Intelligence yet. Click Enrich Now again to finish it — you won't be charged twice.`
+          );
+        }
       } else if (res.status === "limit_reached") {
         toast.error("This month's enrichment credits are used up.");
       } else if (res.status === "unresolved_company") {
