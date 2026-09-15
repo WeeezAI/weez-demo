@@ -699,17 +699,65 @@ export function isInsufficientCredits(error: unknown): boolean {
   return error instanceof EvaApiError && error.status === 402;
 }
 
-async function evaFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+/**
+ * How long any one Eva request may hang before it is treated as failed.
+ *
+ * `fetch` has no timeout of its own, and that was enough to strand the whole product: a
+ * single slow reply to `/eva/workspace` left `getWorkspace` awaiting forever, so
+ * `ProspectIntelligence`'s `loading` never cleared and the page sat on "Building your
+ * prospect dossiers" past every deadline in the polling code — no error, no retry, no empty
+ * state, just a spinner counting upwards. The poll loop below has always had a deadline; the
+ * *first* request did not, and that is the one that hung.
+ *
+ * A ceiling, not a latency target. Every Eva read is either a Cosmos document fetch or a
+ * status check that returns immediately by design — the channel sweep runs in the background
+ * and is polled for — so 25 seconds is far beyond healthy and still short enough that a
+ * human notices a failure rather than a hang.
+ */
+const EVA_REQUEST_TIMEOUT_MS = 25_000;
+
+/**
+ * The enrichment waterfall is the one call that is legitimately slow: Apollo, then Hunter,
+ * then PDL, each a real provider round-trip. It gets its own ceiling so the tight one above
+ * cannot abort a paid action mid-flight — which would charge a credit and discard the answer.
+ */
+const EVA_ENRICH_TIMEOUT_MS = 120_000;
+
+async function evaFetch<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs: number = EVA_REQUEST_TIMEOUT_MS
+): Promise<T> {
   const token = sessionStorage.getItem("token");
-  const res = await fetch(`${EVA_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "69420",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  // `AbortSignal.timeout` where the browser has it, an explicit controller otherwise, so
+  // this works in the test environment and in older Safari.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${EVA_BASE_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "69420",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (e) {
+    // An abort is a timeout here, and it is reported as one: "Eva took too long" is
+    // actionable and "The user aborted a request" is not.
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new EvaApiError(
+        `Eva didn't respond within ${Math.round(timeoutMs / 1000)}s. It may still be working — try again in a moment.`,
+        504
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     let detail = `Eva backend error ${res.status}`;
     try {
@@ -924,10 +972,11 @@ export const evaAPI = {
     // and nothing to fabricate. Report it as "no email" rather than a contradictory
     // "enriched but not found".
     if (!isRealBrandId(spaceId)) return { status: "no_email", found: false };
-    return evaFetch<EnrichLeadResult>(`/lead/enrich?brand_id=${encodeURIComponent(spaceId)}`, {
-      method: "POST",
-      body: JSON.stringify({ lead_id: leadId }),
-    });
+    return evaFetch<EnrichLeadResult>(
+      `/lead/enrich?brand_id=${encodeURIComponent(spaceId)}`,
+      { method: "POST", body: JSON.stringify({ lead_id: leadId }) },
+      EVA_ENRICH_TIMEOUT_MS
+    );
   },
 
   getEnrichmentUsage: async (spaceId: string | undefined): Promise<EnrichmentUsage | null> => {

@@ -1324,6 +1324,22 @@ export const GTM_IDENTITY_LABELS = {
    * queued and the verdict will be there next time, so the sentence says that rather than
    * implying something broke.
    */
+  /**
+   * No address on the lead, and nothing in this deployment that can go and find one.
+   *
+   * A real terminal state, and it used to be indistinguishable from a running search: the
+   * resolve route queued a job whatever happened, so the client said "we're looking", the
+   * bounded poll timed out, and `resolveStillRunning` claimed a background search would
+   * finish — about a job with no consumer. It never would.
+   *
+   * The route now answers `NOT_QUEUED` / `NO_RESOLVER` for that case and this is what the
+   * dossier says about it. It names what is missing and what changes it, per R18.4, and it
+   * hands the rep no identity task: re-running Enrich Now is a product action they already
+   * know, and Weez confirming an address the provider returns is Weez's own work.
+   */
+  resolveNoResolver:
+    "Weez has no confirmed LinkedIn address for this person yet, and can't go looking for one on this workspace — so intelligence can't be activated. Re-run Enrich Now; when a provider returns their address, Weez confirms it and this opens up.",
+
   resolveStillRunning:
     "Still looking. The search is queued and will finish in the background — check back and it'll be here.",
 

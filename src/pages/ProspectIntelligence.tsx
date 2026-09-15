@@ -226,6 +226,7 @@ import {
 import {
   evaAPI,
   isEnrichedProspect,
+  mergePromotion,
   isInsufficientCredits,
   ACTION_META,
   ENRICHMENT_META,
@@ -1232,13 +1233,34 @@ function scanStepIndex(stage: ScanStage | null): number {
   return i === -1 ? 0 : i;
 }
 
-function ResearchProgress({ stage }: { stage: ScanStage | null }) {
+/** After this long on the loading screen, offer a way out instead of only a counter. */
+const SLOW_LOAD_AFTER_S = 20;
+
+function ResearchProgress({
+  stage,
+  onRetry,
+}: {
+  stage: ScanStage | null;
+  /** Re-runs the workspace read. Absent when the caller has nothing to retry with. */
+  onRetry?: () => void;
+}) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(t);
   }, []);
   const current = scanStepIndex(stage);
+  /**
+   * Whether this has gone on long enough to be a problem rather than a wait.
+   *
+   * The counter used to be the only thing that changed on this screen, which meant a load
+   * that never finished looked exactly like one that was about to: a spinner, a stage name,
+   * and a number going up. A founder watched it pass a hundred seconds with no error, no
+   * explanation and nothing to press. The read has a hard timeout now, so this is the
+   * backstop rather than the fix — but a screen that can be waited on forever should always
+   * say so and always offer a way out.
+   */
+  const slow = elapsed >= SLOW_LOAD_AFTER_S;
   return (
     <div className="flex h-[62vh] flex-col items-center justify-center gap-6 text-center">
       <div className="relative">
@@ -1301,6 +1323,30 @@ function ResearchProgress({ stage }: { stage: ScanStage | null }) {
           );
         })}
       </div>
+
+      {slow && (
+        <div
+          aria-live="polite"
+          className="w-full max-w-md rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-left"
+        >
+          <p className="text-[13px] font-semibold text-zinc-800">This is taking longer than usual</p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-zinc-600">
+            Eva is still sweeping channels in the background, and your prospects appear here as
+            soon as that lands. Nothing is lost while you wait — anything you have already
+            enriched is saved.
+          </p>
+          {onRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRetry}
+              className="mt-3 h-8 gap-1.5 rounded-full border-zinc-200 text-xs"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Try again
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2298,6 +2344,12 @@ function Dossier({
         {detail && (
           <ProspectHeader
             profile={detail.profile}
+            // `contact` is the same payload's asserted block — `sales_leads.name/company/
+            // role`, written by Enrich Now. Passed so that a prospect no LinkedIn page has
+            // been read for shows what is actually known instead of six "Unknown"s under a
+            // header carrying the person's name. The component keeps the two claims
+            // separate; it does not fall back one to the other.
+            contact={detail.contact}
             headingAs="h2"
             className="mt-4 rounded-xl border-zinc-100 p-4 shadow-none"
           />
@@ -3937,6 +3989,18 @@ export default function ProspectIntelligence() {
         await onActivateIntelligence();
         return;
       }
+      // A job was queued and nothing in this deployment consumes it. A terminal answer, so
+      // it is stated and the poll is **not** armed — watching for a verdict that cannot
+      // land is what produced two minutes of spinner followed by "the search is queued and
+      // will finish in the background" about a job with no consumer.
+      //
+      // `=== false` and not `!resolverAvailable`: `null` means the server did not say, and
+      // an unknown is not a "no". Only an explicit denial suppresses the watch.
+      if (resolution.resolverAvailable === false) {
+        setActivationNotice(GTM_IDENTITY_LABELS.resolveNoResolver);
+        await loadSelected(true);
+        return;
+      }
       setActivationNotice(
         resolution.deduped
           ? GTM_IDENTITY_LABELS.resolveDeduped
@@ -4336,8 +4400,11 @@ export default function ProspectIntelligence() {
       // a repeat click on the same lead comes back `charged: false`, and an email that was
       // already on file comes back with no `credit` at all.
       if (res.credit?.charged) void refreshCredits();
-      if (res.lead) {
-        const updated = res.lead;
+      // `mergePromotion`, not `res.lead`: the promoted id arrives beside the lead rather
+      // than on it, and this row's controls read it off the lead. The same merge Eva's
+      // Enrich Now does, for the same reason.
+      const updated = mergePromotion(res);
+      if (updated) {
         setWs((prev) =>
           prev
             ? {
@@ -4350,7 +4417,11 @@ export default function ProspectIntelligence() {
       }
       const remaining = res.usage ? ` · ${res.usage.remaining} left this month` : "";
       if (res.found && res.email) {
-        toast.success(`Email found — ${res.email}. Handed to Max${remaining}.`);
+        // No "Handed to Max" any more, because it no longer is. Enrich Now answers who this
+        // person is and how to reach them; drafting a message is Contact Directly's job and
+        // happens when the operator asks for it. Claiming a hand-off that does not happen is
+        // exactly the kind of thing that leaves somebody wondering what the system did.
+        toast.success(`Email found — ${res.email}${remaining}.`);
       } else {
         toast(`No email found for ${lead.company}. That counts as one enrichment${remaining}.`);
       }
@@ -4419,7 +4490,7 @@ export default function ProspectIntelligence() {
         <div className="relative flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1500px] space-y-5 px-6 pb-10 pt-6 lg:px-8">
             {loading ? (
-              <ResearchProgress stage={stage} />
+              <ResearchProgress stage={stage} onRetry={refreshAll} />
             ) : error && !ws ? (
               <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
@@ -4697,11 +4768,29 @@ export default function ProspectIntelligence() {
                             // `cannotTrack.noAddress` for ever. The resolve response carries
                             // `sales_leads.linkedin_url`, which is the address the track route
                             // itself reads, so it is the fallback for both fields.
+                            // **`detail.contact.linkedinUrl` is the address the track route
+                            // itself reads**, and leaving it out of this chain was the bug
+                            // that made Activate Intelligence unpressable.
+                            //
+                            // `profile.profileUrl` is `li_gtm_profiles`', and that row is
+                            // created *by* activation — so before the first activation it is
+                            // always null. `identity?.linkedinUrl` only exists once this page
+                            // has run an identity lookup in this session. With just those two,
+                            // a prospect whose identity was already VERIFIED read as
+                            // `cannotTrack.noAddress`, `needsIdentity` went true inside
+                            // `ProspectDecision`, and the single button routed the press to
+                            // the identity search instead of to activation — for ever, on a
+                            // prospect that needed no search at all.
+                            //
+                            // `contact` is `_contact_out(lead)`: `sales_leads.linkedin_url`,
+                            // the exact column the track route gates on. It is on the payload
+                            // the selection already holds, so this asks nothing new.
                             activateUnavailableReason: trackRefusal(
                               selected.detail?.profile.linkedinVerificationStatus ??
                                 identity?.verificationStatus ??
                                 null,
                               selected.detail?.profile.profileUrl ??
+                                selected.detail?.contact?.linkedinUrl ??
                                 identity?.linkedinUrl ??
                                 null
                             ),

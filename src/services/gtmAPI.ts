@@ -1114,6 +1114,17 @@ export interface IdentityResolution {
   jobId: number | null;
   deduped: boolean;
   reason: string | null;
+  /**
+   * Whether anything in this deployment consumes a queued identity job, or `null` when
+   * nothing was queued so the question does not arise.
+   *
+   * The field that stops this payload over-promising. `gtm_identity_resolution_worker` runs
+   * in the LinkedIn VM process behind its own flag, so on an API-only deployment the job row
+   * is written and never picked up. With only `outcome` to read, a client could only say
+   * "we're looking" — which is how the dossier came to watch for two minutes and then
+   * promise a background search that was never going to run.
+   */
+  resolverAvailable: boolean | null;
 
   // The verdict half, off `sales_leads`. All four null before any attempt.
   verificationStatus: LinkedInVerificationStatus | null;
@@ -2649,6 +2660,7 @@ interface WireIdentityResolution {
   job_id?: number | null;
   deduped?: boolean;
   reason?: string | null;
+  resolver_available?: boolean | null;
   verification_status?: LinkedInVerificationStatus | null;
   verified_at?: string | null;
   match_confidence?: number | null;
@@ -3301,6 +3313,9 @@ function toIdentityResolution(raw?: WireIdentityResolution | null): IdentityReso
   return {
     outcome: raw?.outcome ?? "ENQUEUED",
     jobId: raw?.job_id ?? null,
+    // `?? null` and never `?? true`: "we did not say" is not "a resolver is running", and
+    // defaulting it optimistically would put the over-promising sentence straight back.
+    resolverAvailable: raw?.resolver_available ?? null,
     deduped: raw?.deduped ?? false,
     reason: raw?.reason ?? null,
     verificationStatus: raw?.verification_status ?? null,

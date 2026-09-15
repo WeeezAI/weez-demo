@@ -1301,10 +1301,13 @@ export default function Eva() {
       }
       if (res.status === "enriched" && (res.email || updated?.contact?.email)) {
         const addr = res.email || updated?.contact?.email;
+        // No "Max is writing the outreach now" branch any more, because he isn't.
+        // Enrich Now answers who the person is and how to reach them; drafting a message is
+        // a separate decision, made per prospect through Contact Directly on the dossier.
+        // This used to queue an email on every enrichment, before the operator had even seen
+        // the prospect.
         toast.success(
-          res.maxHandoff?.status === "curating"
-            ? `${lead.company}: ${addr} — Max is writing the outreach now`
-            : `${lead.company}: ${addr}`,
+          `${lead.company}: ${addr}`,
           // Where the prospect went. `gtmLeadId` is the promoted row, so it is also the
           // proof the prospect is now on Prospect Intelligence — offered only when the
           // server actually returned one rather than on a hopeful assumption.
