@@ -29,7 +29,13 @@ import { Badge } from "@/components/ui/badge";
 import type { ObservedFact } from "@/services/gtmAPI";
 import { SURFACE_LABEL, absTime, relTime, resolveStateValue } from "./labels";
 
-/** The one spelling of absence on this screen. */
+/**
+ * The default spelling of absence, and the fallback for any fact with nothing truer to say.
+ *
+ * Still exported and still the default, because a great many callers and assertions are
+ * written against it. What changed is that it is no longer the *only* thing an absence can
+ * say: see the `absence` prop, and `ABSENCE_LABEL` in `labels.ts`.
+ */
 export const UNKNOWN_TEXT = "Unknown";
 
 /**
@@ -51,10 +57,56 @@ export const UNKNOWN_SR_NOTE = " (not yet observed)";
  */
 export const AS_REPORTED_TEXT = "as reported";
 
+/**
+ * Whether a fact carries nothing a reader could act on.
+ *
+ * The one rule, exported because three surfaces were each spelling it inline and a
+ * fourth got it wrong. `isUnknown` alone is not enough — the server also flags a fact
+ * whose value arrived without provenance — and `value == null` alone is not enough
+ * either, so both halves are required and the disjunction is the whole test.
+ *
+ * `== null` is loose on purpose: it catches `undefined` from a payload that dropped the
+ * key as well as an explicit `null`.
+ */
+export function isFactUnknown(fact: Pick<ObservedFact, "isUnknown" | "value">): boolean {
+  return fact.isUnknown || fact.value == null;
+}
+
 export interface ObservedValueProps {
   /** The fact's name, e.g. "Relationship". Always rendered. */
   label: string;
   fact: ObservedFact;
+  /**
+   * What to say when the fact carries nothing — e.g. "No conversation recorded".
+   *
+   * ── Why this exists ──
+   *
+   * Every absence on this surface said the same word, so a dossier for a real prospect with
+   * real company signals rendered "Unknown" a dozen times in one column. Each one was
+   * literally true and the column as a whole read as "Weez knows nothing about this person",
+   * which is the opposite of what the page is for — and a rep's fair reaction to it is "then
+   * why am I looking at this prospect".
+   *
+   * The distinction worth keeping is between *kinds* of absence, which one word cannot make:
+   *
+   *     not observed     nobody has looked yet          "No activity observed"
+   *     not recorded     looked, and there is no such   "No conversation recorded"
+   *                      event on file
+   *     not determined   evidence exists, and it does   "Not determined yet"
+   *                      not place them yet
+   *     not requested    nothing has been asked for     "Nothing requested yet"
+   *
+   * Each of those tells the rep something different about what to do next; "Unknown" tells
+   * them nothing about any of them.
+   *
+   * **It must never read as a claim.** "Not connected" would assert a fact nobody observed —
+   * an unobserved relationship is not a negative relationship. So the phrasings say what the
+   * record does *not* contain, never what is false about the prospect. `ABSENCE_LABEL` in
+   * `labels.ts` is the table, and its comment carries the same rule.
+   *
+   * Defaults to `UNKNOWN_TEXT`, so a caller that passes nothing renders exactly as before.
+   */
+  absence?: string;
   /**
    * `definition` (the default) renders `<dt>`/`<dd>` and must sit inside a `<dl>`
    * — that is how `StateDimensionGrid` uses it. `inline` renders plain elements for
@@ -74,19 +126,24 @@ export interface ObservedValueProps {
 export function ObservedValue({
   label,
   fact,
+  absence = UNKNOWN_TEXT,
   variant = "definition",
   hideProvenance = false,
   className,
   children,
 }: ObservedValueProps) {
-  const isUnknown = fact.isUnknown || fact.value == null;
+  const isUnknown = isFactUnknown(fact);
   // One resolution for the value, so the text and the marker that qualifies it cannot
   // disagree about how that text was produced.
   const shown = isUnknown ? null : resolveStateValue(fact.value as string);
 
   const body: ReactNode = isUnknown ? (
+    // `UNKNOWN_SR_NOTE` rides along whatever the visible wording is. The note says the
+    // value was not observed, which stays true of every phrasing in `ABSENCE_LABEL` — and a
+    // screen-reader user has to be able to tell an absence from a value however it is
+    // worded, which a phrase like "Nothing requested yet" does not do on its own.
     <span className="text-[13px] font-medium text-slate-500">
-      {UNKNOWN_TEXT}
+      {absence}
       <span className="sr-only">{UNKNOWN_SR_NOTE}</span>
     </span>
   ) : (

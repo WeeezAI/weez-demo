@@ -134,7 +134,17 @@ export type SourceSurface =
   | "LINKEDIN_API_ORG_SOCIAL"
   | "HUMAN_CONFIRMATION"
   | "CALENDAR_BOOKING"
-  | "WEEZ_UI_CLICK";
+  | "WEEZ_UI_CLICK"
+  /**
+   * Eva's discovery layer, reading the public web: a funding round, a product launch, a
+   * job posting, a leadership hire.
+   *
+   * A company-level observation, and the only surface here that is not about the person.
+   * The server admits it to no evidence allow-list, so it can support an intent and can
+   * never move the relationship, the conversation, the activity level or the buying
+   * stage — a press release is not evidence about whether somebody replied.
+   */
+  | "EVA_DISCOVERY";
 
 export type Confidence = "LOW" | "MEDIUM" | "HIGH";
 

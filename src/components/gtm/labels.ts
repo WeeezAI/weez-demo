@@ -407,6 +407,12 @@ export const STATE_TONE: Record<string, string> = {
  * `WEEZ_UI_CLICK` is deliberately blunt — "Your click in Weez" is evidence that a
  * request was made and nothing more, and the label refuses to let it read like an
  * observation of LinkedIn.
+ *
+ * `EVA_DISCOVERY` says "company news" rather than naming Eva, for the reason the whole
+ * surface vocabulary is phrased this way: a rep recognises where a fact came from, and
+ * "Eva" is the name of one of our agents rather than a place they can picture. It is also
+ * the one surface here describing the *company* rather than the person, which is why it
+ * does not read like something we saw them do.
  */
 export const SURFACE_LABEL: Record<SourceSurface, string> = {
   LINKEDIN_PROFILE_PAGE: "LinkedIn profile",
@@ -417,7 +423,94 @@ export const SURFACE_LABEL: Record<SourceSurface, string> = {
   HUMAN_CONFIRMATION: "You confirmed it",
   CALENDAR_BOOKING: "Calendar booking",
   WEEZ_UI_CLICK: "Your click in Weez",
+  EVA_DISCOVERY: "Company news",
 };
+
+// ─── What an absent fact says, per dimension ──────────────────────────────────
+
+/**
+ * The wording `ObservedValue` uses when a fact carries nothing, keyed by field.
+ *
+ * ── Why this table exists ──
+ *
+ * Every absence used to say "Unknown". A dossier for a real prospect — one with a funding
+ * round, a product launch and a hiring signal on file — therefore rendered "Unknown" a dozen
+ * times down one column. Each was literally true, and the column as a whole said "Weez knows
+ * nothing about this person", which invites exactly one question from a rep: then why am I
+ * looking at them?
+ *
+ * The fix is not to invent values. It is to say *which kind of nothing* each field holds,
+ * because they are operationally different: nobody has looked yet, there is no such event on
+ * file, the evidence does not place them yet, nothing has been asked for. A rep can act on
+ * each of those differently and cannot act on "Unknown" at all.
+ *
+ * ── The rule every entry follows ──
+ *
+ * **An absence states what the record does not contain. It never states what is false about
+ * the prospect.**
+ *
+ * So `relationship_state` reads "No connection recorded" and *not* "Not connected". The
+ * second is a claim: an unobserved relationship is not a negative relationship, and on this
+ * surface — where the whole vocabulary exists to keep an assertion apart from an observation
+ * — printing it would be the same mistake as filling the value in. Every phrasing below is
+ * about the file, not about the person.
+ *
+ * A key with no entry falls back to `UNKNOWN_TEXT`, so this table is opt-in and adding a
+ * dimension does not require an entry before it can render.
+ */
+export const ABSENCE_LABEL: Record<string, string> = {
+  // ── The four dimensions and the stage projection ──
+  relationship_state: "No connection recorded",
+  conversation_state: "No conversation recorded",
+  conversation_stage: "No conversation recorded",
+  // "Last requested action". Nothing has been asked for, which is a fact about our own
+  // queue rather than about the prospect — so this one can be definite.
+  execution_state: "Nothing requested yet",
+  activity_level: "No activity observed",
+
+  // ── The dimensions the state engine adds ──
+  // "Not determined yet" rather than "No buying stage": the engine did evaluate and the
+  // evidence does not place them, which is a different answer from never having looked.
+  buying_stage: "Not determined yet",
+  engagement_trend: "No trend yet",
+  activity_trend_flag: "No trend yet",
+  // One row per channel, keyed `channel_availability_<CHANNEL>` by `StateDimensionGrid`.
+  // Matched by prefix in `absenceFor` so a channel added later needs no entry here.
+  channel_availability: "Not checked yet",
+  do_not_contact: "Nothing recorded",
+  timezone: "Not resolved",
+
+  // ── Observed identity, which only a LinkedIn read fills ──
+  // "Not read yet" names the missing step. These sit beside the "From enrichment" block,
+  // which carries what is actually known, so this half is explicitly the unread half.
+  name: "Not read yet",
+  headline: "Not read yet",
+  company: "Not read yet",
+  role: "Not read yet",
+  location: "Not read yet",
+  seniority: "Not read yet",
+
+  // ── Eva's qualification ──
+  icp_match: "Not scored yet",
+  intent_signal: "None detected yet",
+  acv_tier: "Not set",
+};
+
+/**
+ * The absence wording for a field, or `undefined` so `ObservedValue` keeps its default.
+ *
+ * The prefix fallback is for the per-channel availability rows, which
+ * `StateDimensionGrid` keys `channel_availability_LINKEDIN` and so on — one row per
+ * channel, never a blend. Matching the prefix means a fourth channel reads correctly
+ * without an entry, and it cannot accidentally match anything else: the table has no other
+ * key that is a prefix of a different key.
+ */
+export function absenceFor(key: string): string | undefined {
+  const exact = ABSENCE_LABEL[key];
+  if (exact) return exact;
+  if (key.startsWith("channel_availability_")) return ABSENCE_LABEL.channel_availability;
+  return undefined;
+}
 
 // ─── Confirmation status labels (R5.4, R5.5, R13.5, R13.6, R12.4) ─────────────
 

@@ -23,8 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ProspectContact, ProspectProfile } from "@/services/gtmAPI";
 import { DerivedScore } from "./DerivedScore";
-import { ObservedValue } from "./ObservedValue";
-import { FIELD_LABEL, GTM_UI_LABELS, TONE, absTime, relTime } from "./labels";
+import { ObservedValue, isFactUnknown } from "./ObservedValue";
+import { FIELD_LABEL, GTM_UI_LABELS, TONE, absTime, absenceFor, relTime } from "./labels";
 
 /**
  * What the asserted block says about itself.
@@ -104,11 +104,35 @@ export function ProspectHeader({
    * clearly marked and clearly separate — which is the distinction the vocabulary exists to
    * preserve, rather than a fallback that erases it.
    *
-   * Keyed on `profileId` rather than on the facts: the profile row is what makes an
-   * observation possible, and a tracked prospect whose first read has not landed yet should
-   * show the observed grid with its honest unknowns rather than fall back to enrichment.
+   * ── Why this reads the facts and no longer reads `profileId` ──
+   *
+   * It was keyed on `profileId === null`, on the reasoning that the profile row is what
+   * makes an observation possible. The row is created *by activation*, and the LinkedIn read
+   * that fills `observed_*` is a separate, asynchronous, VM-only step. So on any deployment
+   * where the LinkedIn VM is not running — which is the deployment this ships to —
+   * activation flipped `profileId` non-null while every `observed_*` column stayed NULL, and
+   * the effect was backwards:
+   *
+   *     before activation   profileId null   → assertion shown, name and company legible
+   *     after activation    profileId set    → assertion hidden, six "Unknown"s and nothing
+   *
+   * Pressing the button that is supposed to start the intelligence made the page show
+   * strictly *less* than it did beforehand, under a header still displaying the person's
+   * name. That is the "it says Unknown inside the box" report.
+   *
+   * So the question is asked of the evidence rather than of the row: the assertion appears
+   * while nothing has actually been observed, and retires the moment any real observation
+   * lands. `isFactUnknown` is `ObservedValue`'s own rule, imported rather than restated, so
+   * this block cannot disagree with the grid beneath it about what "observed" means.
    */
-  const nothingObserved = profile.profileId === null;
+  const nothingObserved = [
+    profile.name,
+    profile.headline,
+    profile.company,
+    profile.role,
+    profile.location,
+    profile.seniority,
+  ].every(isFactUnknown);
   const asserted: Array<{ label: string; value: string }> = !nothingObserved
     ? []
     : ([
@@ -200,11 +224,27 @@ export function ProspectHeader({
 
       {/* Observed identity. A `<dl>`, so `ObservedValue` can stay in its default
           `<dt>`/`<dd>` variant and the pairing is real markup rather than layout. */}
+      {/* `absence` names the missing step — "Not read yet" — rather than saying "Unknown"
+          four times under a header carrying the person's name. The wording is deliberately
+          about the unread LinkedIn page and not about the person: what *is* known sits in
+          the enrichment block above, and these four are explicitly the unread half. */}
       <dl className="mt-4 grid grid-cols-1 gap-4 border-t border-zinc-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-        <ObservedValue label={FIELD_LABEL.company} fact={profile.company} />
-        <ObservedValue label={FIELD_LABEL.role} fact={profile.role} />
-        <ObservedValue label={FIELD_LABEL.location} fact={profile.location} />
-        <ObservedValue label={FIELD_LABEL.seniority} fact={profile.seniority} />
+        <ObservedValue
+          label={FIELD_LABEL.company}
+          fact={profile.company}
+          absence={absenceFor("company")}
+        />
+        <ObservedValue label={FIELD_LABEL.role} fact={profile.role} absence={absenceFor("role")} />
+        <ObservedValue
+          label={FIELD_LABEL.location}
+          fact={profile.location}
+          absence={absenceFor("location")}
+        />
+        <ObservedValue
+          label={FIELD_LABEL.seniority}
+          fact={profile.seniority}
+          absence={absenceFor("seniority")}
+        />
       </dl>
 
       {/* Eva's qualification (R18.1). Chips, but chips that keep their provenance:
@@ -216,6 +256,11 @@ export function ProspectHeader({
             key={key}
             label={FIELD_LABEL[key] ?? key}
             fact={fact}
+            // "Not scored yet" / "None detected yet" / "Not set". All three read Unknown for
+            // every prospect promoted by Enrich Now, because `lead_promotion` is forbidden
+            // from writing the gate columns these come from — so the honest reading is that
+            // the gate has not run, and that is what these now say.
+            absence={absenceFor(key)}
             className={cn(
               "rounded-md border px-3 py-2",
               TONE[QUALIFICATION_TONE[key] ?? "zinc"] ?? TONE.zinc,

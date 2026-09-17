@@ -68,6 +68,7 @@ import {
   GTM_UI_LABELS,
   STATE_TONE,
   TONE,
+  absenceFor,
 } from "./labels";
 
 export interface StateDimensionGridProps {
@@ -326,6 +327,9 @@ export function StateDimensionGrid({ state, stateFull, className }: StateDimensi
               key={key}
               label={FIELD_LABEL[key] ?? key}
               fact={fact}
+              // What this particular nothing is, rather than the word "Unknown" five times
+              // down one column. See `ABSENCE_LABEL` for the rule each phrasing follows.
+              absence={absenceFor(key)}
               className={cn("rounded-md border px-3 py-2", toneFor(fact))}
             >
               {confidenceChipFor(fact, typeof confidence === "number" ? confidence : null)}
@@ -345,6 +349,7 @@ export function StateDimensionGrid({ state, stateFull, className }: StateDimensi
             key={row.key}
             label={row.label}
             fact={row.fact}
+            absence={absenceFor(row.key)}
             hideProvenance={row.fact.sourceSurface == null && row.fact.observedAt == null}
             className={cn("rounded-md border px-3 py-2", toneFor(row.fact))}
           >

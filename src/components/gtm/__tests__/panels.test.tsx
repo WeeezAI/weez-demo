@@ -126,9 +126,10 @@ import { SignalList, SIGNAL_LIST_LABELS } from "../SignalList";
 import { StateDimensionGrid } from "../StateDimensionGrid";
 import { StateHistoryPanel, STATE_HISTORY_LABELS } from "../StateHistoryPanel";
 import { TimingPanel, TIMING_PANEL_LABELS } from "../TimingPanel";
-import { UNKNOWN_TEXT } from "../ObservedValue";
+import { UNKNOWN_SR_NOTE, UNKNOWN_TEXT } from "../ObservedValue";
 import {
   CHANNEL_AVAILABILITY_LABEL,
+  ABSENCE_LABEL,
   CHANNEL_LABEL,
   FIELD_LABEL,
   GTM_IDENTITY_LABELS,
@@ -1079,11 +1080,37 @@ describe("StateDimensionGrid", () => {
     expect(chip?.className).not.toContain(TONE.emerald);
   });
 
-  it("reads Unknown for every unobserved dimension, with no substitute value", () => {
+  it("names what each unobserved dimension is missing, with no substitute value", () => {
+    // ── What changed here, and what deliberately did not ──
+    //
+    // This asserted `getAllByText("Unknown")).toHaveLength(5)`. Five dimensions each said
+    // the same word, and on a real dossier that column read "Weez knows nothing about this
+    // person" — beside a company with a funding round and a product launch on file. So each
+    // dimension now names *which* nothing it holds, from `ABSENCE_LABEL`.
+    //
+    // The forbidden stand-ins below are untouched, because they are the actual property and
+    // it still holds. `Not connected` and `Not started` in particular: those are *claims*
+    // about the prospect, and an unobserved relationship is not a negative relationship.
+    // Every phrasing in `ABSENCE_LABEL` says what the record does not contain instead — "No
+    // connection recorded" — which is why this assertion passes unchanged rather than being
+    // relaxed to accommodate the new copy.
     const { container } = render(<StateDimensionGrid state={UNKNOWN_STATE} />);
     const text = container.textContent ?? "";
 
-    expect(screen.getAllByText("Unknown")).toHaveLength(5);
+    // One absence per dimension, each the wording for that dimension.
+    for (const key of [
+      "relationship_state",
+      "conversation_state",
+      "conversation_stage",
+      "execution_state",
+      "activity_level",
+    ] as const) {
+      const wording = ABSENCE_LABEL[key];
+      expect(wording, `${key} has no ABSENCE_LABEL entry`).toBeTruthy();
+      expect(text).toContain(wording);
+    }
+    // And no dimension fell back to the shared default, which would mean a missing entry.
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
     expect(screen.getByText(GTM_UI_LABELS.noSummary)).toBeInTheDocument();
 
     // None of the forbidden stand-ins for a fact nobody has observed.
@@ -1093,6 +1120,17 @@ describe("StateDimensionGrid", () => {
     expect(text).not.toContain("Not connected");
     expect(text).not.toContain("Not started");
     expect(text).not.toContain("Inactive");
+  });
+
+  it("keeps the screen-reader absence note whatever the visible wording is", () => {
+    // The wording is now per-dimension, so the note is the one thing that still tells a
+    // screen-reader user "this is an absence, not a value" — "Nothing requested yet" does
+    // not carry that on its own.
+    const { container } = render(<StateDimensionGrid state={UNKNOWN_STATE} />);
+    const notes = Array.from(container.querySelectorAll("span.sr-only")).filter((node) =>
+      (node.textContent ?? "").includes(UNKNOWN_SR_NOTE.trim()),
+    );
+    expect(notes.length).toBeGreaterThanOrEqual(5);
   });
 });
 
