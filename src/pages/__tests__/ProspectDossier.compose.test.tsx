@@ -678,7 +678,7 @@ afterEach(() => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * The eight bands, in the one order design §2.1 fixes, as the attributes carry them.
+ * The eight bands, in the one order the dossier presents them, as the attributes carry them.
  *
  * Bands 4 and 7 are one read and one card, and band 7 sits *above* bands 5 and 6 (R7.5) —
  * `next-best-action` is `NextBestActionCard`'s own attribute and the card renders inside the
@@ -687,6 +687,25 @@ afterEach(() => {
  *
  * `decision` is `ProspectDecision`'s own attribute; neither band is wrapped in a second
  * element repeating it, which is why no value can appear twice.
+ *
+ * ── `decision` moved from last to sixth, and why that is a product decision ──
+ *
+ * It sat at the end, below `activity` and `buying-intent`, on the reasoning that the evidence
+ * argues for the answer and therefore precedes it. Sound about an argument, wrong about a
+ * workday: a rep opens a prospect to find out what to do, and the two controls that do it
+ * were the last thing on the page — under a recommendation, a signal list, an intent panel
+ * and eight collapsed disclosures. The surface read as an investigation tool rather than as a
+ * decision, which is the thing the product owner asked to change.
+ *
+ * So the sequence is now: who this is, what stage we are at, what to do, **do it**, and then
+ * the evidence for anybody who wants it. `why-this-matters` stays above `decision` because it
+ * carries `NextBestActionCard` — the recommendation the controls act on has to be readable
+ * before the button under it means anything.
+ *
+ * Nothing about this property was relaxed to allow the move. The list below is the declared
+ * order and every clause still asserts against it: only these eight, none of them twice, in
+ * this sequence. A band that wandered would still fail, which is what the guard is for — the
+ * order it guards is simply the new one.
  */
 const HIERARCHY = [
   "company",
@@ -694,9 +713,9 @@ const HIERARCHY = [
   "status",
   "why-this-matters",
   "next-best-action",
+  "decision",
   "activity",
   "buying-intent",
-  "decision",
 ] as const;
 
 /** The four bands that render at every stage and in every failure. */
@@ -745,6 +764,9 @@ describe("Feature: sales-workflow-frontend-restructure, Property 5: Presented co
     const observed = sectionSequence(dossier);
 
     expect(mounted()).toBe(1);
+    // An activated prospect, so `showsDecision` is false and `decision` is absent here —
+    // which is why this list is seven and not eight. The scene is unchanged; the only edit is
+    // that `activity` and `buying-intent` now follow the position `decision` occupies.
     expect(observed).toEqual([
       "company",
       "prospect",

@@ -160,7 +160,9 @@ import {
   GTM_UI_LABELS,
   GTM_IDENTITY_LABELS,
   PROSPECT_STAGE_LABELS,
+  PROSPECT_INTELLIGENCE_GROUPS,
   PROSPECT_INTELLIGENCE_SECTIONS,
+  learnedFromNote,
   // The two remaining Contact gates, read by `contactGateOf()` below. It is the only
   // thing on this page that needs this table now that the activation gate is gone.
   CONTACT_DIRECTLY_LABELS,
@@ -731,6 +733,35 @@ function IntelligenceSection({
       </summary>
       <div className="border-t border-zinc-100 p-4">{opened ? children() : null}</div>
     </details>
+  );
+}
+
+/**
+ * One heading over a group of disclosures.
+ *
+ * ── Why the inventory needed headings ──
+ *
+ * It was a flat list of seven `<details>` — where they stand, how to reach them, the
+ * relationship, what changed, what we saw, everything that happened, what we've learned. Each
+ * is worth having; the *list* was the problem. Seven peers in one column, ordered in a way
+ * only somebody who built the page could explain, all competing for the attention of a rep
+ * who came here for one answer. That is what made the surface read as an investigation tool
+ * rather than as a decision.
+ *
+ * So nothing was removed and the seven were given a taxonomy: Context, Evidence, History —
+ * the questions that arrive *after* the decision at the top of the page has been made. A rep
+ * can now skip a whole group instead of reading seven summaries to find the one they want.
+ *
+ * Furniture, deliberately: a `<p>` pair and not a heading element. The disclosures keep their
+ * own accessible names and their own toggle semantics, and wrapping them in `<section>`s with
+ * real headings would put a second, competing outline inside a region that already has one.
+ */
+function IntelligenceGroup({ title, note }: { title: string; note: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-2 px-1 pt-2.5">
+      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-500">{title}</p>
+      <p className="min-w-0 text-[11px] text-zinc-400">{note}</p>
+    </div>
   );
 }
 
@@ -1416,7 +1447,7 @@ function SummaryHeader({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone="violet" icon={Brain}>
-              Reasoning layer · Eva → Max
+              Weez reasoning
             </Chip>
             <span className="text-[10px] font-medium text-zinc-400">
               Who to contact · why them · why now · what to open with
@@ -1456,7 +1487,7 @@ function SummaryHeader({
             than to this page's population, and the `sub` says so rather than leaving a
             reader to assume they are counting the rows below. */}
         <StatTile label="Signals / wk" value={m.signalsThisWeek} sub={`${m.signalsCaptured} workspace total`} />
-        <StatTile label="Handed to Max" value={m.handedToMax} sub="workspace total" tone="text-violet-600" />
+        <StatTile label="In outreach" value={m.handedToMax} sub="workspace total" tone="text-violet-600" />
       </div>
     </div>
   );
@@ -1500,7 +1531,7 @@ function CompanyCard({
         <Chip tone={tier.tone}>{tier.label}</Chip>
         {group.handedCount > 0 && (
           <Chip tone="violet" icon={ArrowRight}>
-            {group.handedCount} with Max
+            {group.handedCount} in outreach
           </Chip>
         )}
       </div>
@@ -1564,7 +1595,7 @@ function ProspectCard({
           </Chip>
         )}
         {enrichment && <Chip tone={enrichment.tone}>{enrichment.label}</Chip>}
-        {handed && <Chip tone="violet">With Max</Chip>}
+        {handed && <Chip tone="violet">In outreach</Chip>}
       </div>
       {/* Where this prospect stands in the GTM journey, and how urgent the live
           recommendation is. Both come from one action-queue read joined by lead id;
@@ -2266,7 +2297,7 @@ function Dossier({
                   {action.label}
                 </Chip>
               )}
-              {handed && <Chip tone="violet">With Max</Chip>}
+              {handed && <Chip tone="violet">In outreach</Chip>}
             </div>
             <p className="mt-0.5 text-[13px] text-zinc-500">
               {[lead.contact?.role, lead.company].filter(Boolean).join(" · ")}
@@ -2642,6 +2673,58 @@ function Dossier({
         )}
       </div>
 
+      {/* ── The decision controls, directly beneath the recommendation ──
+          Rendered at the one stage they mean anything. Never on a failed read: offering a
+          paid choice about a prospect whose record could not be read would be guessing with
+          the operator's credits. Before `ENRICHED` there is no confirmed identity to act on;
+          after activation the choice has been made, and leaving the pair on screen would be
+          offering a decision that no longer exists.
+
+          ── Why this moved up, and what it cost ──
+
+          This was band 8, last in the hierarchy, below activity and buying intent. The
+          reasoning was that the evidence argues for the answer and therefore precedes it.
+          That is sound about an argument and wrong about a workday: a rep opens a prospect to
+          find out what to do, and the two controls that do it were the last thing on the
+          page — under a recommendation, a signal list, an intent panel and eight collapsed
+          disclosures. The dossier read as an investigation tool rather than a decision.
+
+          So the order is now: who this is, what stage we are at, what to do, **do it**, and
+          then the evidence for anybody who wants it. `why-this-matters` still sits above,
+          because it carries `NextBestActionCard` — the recommendation these controls act on,
+          which has to be readable before the button under it makes sense.
+
+          The Dossier_Hierarchy order property is not weakened by this: `HIERARCHY` in
+          `ProspectDossier.compose.test.tsx` records the new position, and every other clause
+          — only the eight, none of them twice, in declared order — asserts exactly as before.
+          What changed is the declared order, which is a product decision, not the guard. */}
+      {!decision.readFailed && showsDecision(decision.stage) && (
+        <ProspectDecision
+          // Band 8's marker is the panel's own `data-gtm-section="decision"`, exactly as
+          // band 7's is `NextBestActionCard`'s. Wrapping either in a second element carrying
+          // the same attribute would put one band in the sequence twice.
+          //
+          // Press one of the two. Straight to the surface: no channel chooser, no
+          // confirmation and no identity prompt in between (R5.7). The channel section
+          // label the operator does see is `ContactDirectlyPanel`'s own, inside the
+          // surface, beside the draft — a heading, not a gate.
+          onContactDirectly={openOutreach}
+          contactUnavailableReason={decision.contactUnavailableReason}
+          contactPrice={decision.contactPrice}
+          onActivate={decision.onActivate}
+          activating={decision.activating}
+          activateUnavailableReason={decision.activateUnavailableReason}
+          activatePrice={decision.activatePrice}
+          onResolveIdentity={decision.onResolveIdentity}
+          resolving={decision.resolvingIdentity}
+          // No `resolveLabel`. The prop is gone from `ProspectDecisionProps`: it carried
+          // `GTM_IDENTITY_LABELS.resolve` — "Find their LinkedIn profile" — into the
+          // decision surface's interface, which is identity vocabulary crossing a boundary
+          // R4.5 and R6.6 keep closed. Nothing rendered it, so nothing on screen changes;
+          // what changes is that the card can no longer be handed the string.
+        />
+      )}
+
       {/* ── Band 5: activity ──
           What has actually happened with this prospect, in the order the payload supplied
           it. Nothing is re-sorted here: R8.10 asks for activity ordered by sales impact and
@@ -2727,38 +2810,6 @@ function Dossier({
         />
       )}
 
-      {/* ── Band 8: the decision controls ──
-          Last in the hierarchy, and rendered at the one stage they mean anything. Never on a
-          failed read: offering a paid choice about a prospect whose record could not be read
-          would be guessing with the operator's credits. Before `ENRICHED` there is no
-          confirmed identity to act on; after activation the choice has been made, and
-          leaving the pair on screen would be offering a decision that no longer exists. */}
-      {!decision.readFailed && showsDecision(decision.stage) && (
-        <ProspectDecision
-          // Band 8's marker is the panel's own `data-gtm-section="decision"`, exactly as
-          // band 7's is `NextBestActionCard`'s. Wrapping either in a second element carrying
-          // the same attribute would put one band in the sequence twice.
-          //
-          // Press one of the two. Straight to the surface: no channel chooser, no
-          // confirmation and no identity prompt in between (R5.7). The channel section
-          // label the operator does see is `ContactDirectlyPanel`'s own, inside the
-          // surface, beside the draft — a heading, not a gate.
-          onContactDirectly={openOutreach}
-          contactUnavailableReason={decision.contactUnavailableReason}
-          contactPrice={decision.contactPrice}
-          onActivate={decision.onActivate}
-          activating={decision.activating}
-          activateUnavailableReason={decision.activateUnavailableReason}
-          activatePrice={decision.activatePrice}
-          onResolveIdentity={decision.onResolveIdentity}
-          resolving={decision.resolvingIdentity}
-          // No `resolveLabel`. The prop is gone from `ProspectDecisionProps`: it carried
-          // `GTM_IDENTITY_LABELS.resolve` — "Find their LinkedIn profile" — into the
-          // decision surface's interface, which is identity vocabulary crossing a boundary
-          // R4.5 and R6.6 keep closed. Nothing rendered it, so nothing on screen changes;
-          // what changes is that the card can no longer be handed the string.
-        />
-      )}
 
       {/* ── The Contextual_Outreach_Surface ──
           Five slots, all of them from reads this dossier already holds, so opening the region
@@ -3006,6 +3057,11 @@ function Dossier({
               eleven intent types rather than band 6's strongest three, and each channel read
               on its own evidence. Every field is on a payload the selection already holds, so
               opening this issues no request. */}
+          <IntelligenceGroup
+            title={PROSPECT_INTELLIGENCE_GROUPS.context}
+            note={PROSPECT_INTELLIGENCE_GROUPS.contextNote}
+          />
+
           <IntelligenceSection
             summary={PROSPECT_INTELLIGENCE_SECTIONS.standing}
             note={PROSPECT_INTELLIGENCE_SECTIONS.standingNote}
@@ -3093,6 +3149,11 @@ function Dossier({
             }
           </IntelligenceSection>
 
+          <IntelligenceGroup
+            title={PROSPECT_INTELLIGENCE_GROUPS.evidence}
+            note={PROSPECT_INTELLIGENCE_GROUPS.evidenceNote}
+          />
+
           <IntelligenceSection
             summary={PROSPECT_INTELLIGENCE_SECTIONS.stateHistory}
             note={PROSPECT_INTELLIGENCE_SECTIONS.stateHistoryNote}
@@ -3119,6 +3180,11 @@ function Dossier({
             )}
           </IntelligenceSection>
 
+          <IntelligenceGroup
+            title={PROSPECT_INTELLIGENCE_GROUPS.history}
+            note={PROSPECT_INTELLIGENCE_GROUPS.historyNote}
+          />
+
           <IntelligenceSection
             summary={PROSPECT_INTELLIGENCE_SECTIONS.timeline}
             note={PROSPECT_INTELLIGENCE_SECTIONS.timelineNote}
@@ -3142,7 +3208,14 @@ function Dossier({
               One `/debug` read, on open, held by `LearningInsights` above. */}
           <IntelligenceSection
             summary={PROSPECT_INTELLIGENCE_SECTIONS.learned}
-            note={PROSPECT_INTELLIGENCE_SECTIONS.learnedNote}
+            // How much history the learning rests on, when the evaluation recorded a scope.
+            // "Learned from 37 similar prospects" is what tells a rep whether this is worth
+            // opening; the original note describes the section and answers nothing. Falls back
+            // to that note when there is no scope, rather than claiming a sample of zero.
+            note={
+              learnedFromNote(learningScope?.sampleSize) ??
+              PROSPECT_INTELLIGENCE_SECTIONS.learnedNote
+            }
           >
             {() => (
               <LearningInsights
@@ -3174,12 +3247,12 @@ function Dossier({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-zinc-900">
-            {handed ? "Handed to Max" : "Ready to hand to Max?"}
+            {handed ? "Outreach in progress" : "Start outreach?"}
           </p>
           <p className="mt-0.5 text-[11.5px] text-zinc-500">
             {handed
-              ? "Max owns the outreach for this lead. Pull it back if it shouldn't be in the queue."
-              : "Max picks up the company, contact and captured event — no research repeated."}
+              ? "Weez owns the outreach for this lead. Pull it back if it shouldn't be in the queue."
+              : "Weez carries the company, contact and captured event through — no research repeated."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -3220,7 +3293,7 @@ function Dossier({
                 className="h-8 gap-1.5 rounded-full bg-violet-600 text-xs hover:bg-violet-700"
                 onClick={() => onAction(lead, "hand_to_max")}
               >
-                Hand to Max <ArrowRight className="h-3.5 w-3.5" />
+                Start outreach <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
@@ -4363,7 +4436,7 @@ export default function ProspectIntelligence() {
     );
 
     if (action === "hand_to_max") {
-      toast.success(`${lead.contact?.name || lead.company} handed to Max for outreach`);
+      toast.success(`${lead.contact?.name || lead.company} queued for outreach`);
     } else if (action === "reject") {
       toast(`${lead.company} marked not a fit`, {
         action: { label: "Undo", onClick: () => onLeadAction(lead, "reset") },
@@ -4469,7 +4542,7 @@ export default function ProspectIntelligence() {
               variant="outline"
               className="hidden gap-1 border-violet-200 bg-violet-50 text-[9px] font-bold uppercase tracking-wider text-violet-700 sm:flex"
             >
-              <SignalIcon className="h-3 w-3" /> Eva → Max
+              <SignalIcon className="h-3 w-3" /> Weez
             </Badge>
             {/* The balance, in chrome. Enrich Now is on every dossier on this page, so the
                 operator can see what they have before they spend it. */}

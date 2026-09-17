@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CandidateAction, PriorityTier } from "@/services/gtmAPI";
 import { ActionExplanation, WhyNowList } from "./ActionExplanation";
+import { UNKNOWN_TEXT } from "./ObservedValue";
 import {
   UNEXECUTABLE_REASON_LABELS,
   PRIORITY_TIER_LABELS,
@@ -53,6 +54,30 @@ import {
 export const NEXT_BEST_ACTION_CARD_LABELS = {
   eyebrow: "Next best action",
   whyNow: "Why now?",
+  /**
+   * The two facts a rep needs beside the action, each under its own label.
+   *
+   * The channel used to be appended to the heading as `· LinkedIn`, which reads as part of
+   * the action's name rather than as an answer to "where do I do this". Labelling it costs
+   * one row and makes the card answer the brief's four questions in order: what to do, why
+   * now, through which channel, and when.
+   */
+  channel: "Channel",
+  timing: "Timing",
+  /**
+   * The recommendation is live and nothing is holding it. Deliberately a word and not a
+   * date: "Now" is the answer to "when", and a rep who wants the computation has the
+   * evidence drawer.
+   */
+  timingNow: "Now",
+  /** There is a deadline on it. Suffixed with the relative time the server sent. */
+  timingBefore: "Before",
+  /**
+   * Not executable, so there is no "when" to give. The reason is already rendered below as
+   * the server's own sentence, and repeating a timing here would imply a schedule for
+   * something that is not scheduled.
+   */
+  timingNotScheduled: "Not scheduled",
   /** The disclosure. Named for what it reveals rather than "Show more". */
   viewWhy: "View why",
   takeAction: "Take action",
@@ -72,6 +97,25 @@ export const NEXT_BEST_ACTION_CARD_LABELS = {
    * true; naming a type would not be.
    */
   somethingObserved: "Something we observed",
+  /**
+   * How much evidence stands behind the recommendation, as a count.
+   *
+   * ── Why a count and not the list ──
+   *
+   * The card showed the single strongest why-now bullet and then a bare "View why". A rep
+   * reading that cannot tell a recommendation resting on one stale signal from one resting on
+   * four fresh ones — and that difference is most of what decides whether to trust it. The
+   * count is the cheapest possible summary of the thing they actually want to know, and it
+   * costs no request: `explanation.whyNow` is already on the payload the card renders.
+   *
+   * Singular and plural are separate entries rather than a composed string with a conditional
+   * "s", because this table is the one place a reader looks to find out what the screen can
+   * say.
+   */
+  supportOne: "1 signal supports this",
+  supportMany: "signals support this",
+  /** Nothing was persisted to count. Distinct from a count of zero, which cannot happen. */
+  supportNone: "No supporting signals were recorded",
 } as const;
 
 export interface NextBestActionCardProps {
@@ -136,7 +180,6 @@ export function NextBestActionCard({
         className="mt-1.5 text-[19px] font-semibold leading-tight tracking-tight text-zinc-900"
       >
         {title}
-        {channel && <span className="text-zinc-400"> · {channel}</span>}
       </h2>
 
       {/* ── Why now, as a sentence ──
@@ -193,6 +236,44 @@ export function NextBestActionCard({
         </div>
       </div>
 
+      {/* ── Channel and timing, each under its own label ──
+          The other two of the four questions this card answers. Both read straight off the
+          persisted candidate: `action.channel` is the evaluation's own winner, and the timing
+          is `expiresAt` when the server set a deadline and "Now" when it did not.
+
+          Nothing is computed. "Now" is not a judgement this card makes — it is what an
+          executable recommendation with no expiry means, and a recommendation the server
+          calls unexecutable gets no timing at all rather than a schedule we invented for it. */}
+      <dl className="mt-3.5 grid grid-cols-2 gap-3 border-t border-violet-100 pt-3">
+        <div className="min-w-0">
+          <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+            {NEXT_BEST_ACTION_CARD_LABELS.channel}
+          </dt>
+          <dd className="mt-0.5 text-[13.5px] font-semibold text-zinc-900">
+            {channel ?? UNKNOWN_TEXT}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+            {NEXT_BEST_ACTION_CARD_LABELS.timing}
+          </dt>
+          <dd className="mt-0.5 text-[13.5px] font-semibold text-zinc-900">
+            {!action.executable ? (
+              NEXT_BEST_ACTION_CARD_LABELS.timingNotScheduled
+            ) : action.expiresAt ? (
+              <>
+                {NEXT_BEST_ACTION_CARD_LABELS.timingBefore}{" "}
+                <time dateTime={action.expiresAt} title={absTime(action.expiresAt)}>
+                  {relTime(action.expiresAt)}
+                </time>
+              </>
+            ) : (
+              NEXT_BEST_ACTION_CARD_LABELS.timingNow
+            )}
+          </dd>
+        </div>
+      </dl>
+
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
         {action.executable ? (
           <Button
@@ -216,16 +297,31 @@ export function NextBestActionCard({
         )}
       </div>
 
-      {/* The evidence, one interaction away. Mounted only when opened: `ActionExplanation`
-          renders four sections and there is no reason to build them for a card nobody has
-          asked to expand. */}
+      {/* The evidence, one interaction away — with how much of it there is on the summary.
+          Mounted only when opened: `ActionExplanation` renders four sections and there is no
+          reason to build them for a card nobody has asked to expand.
+
+          The count sits *beside* the control rather than inside the drawer, and that is the
+          point of it: a rep decides whether to open the drawer at all from "4 signals support
+          this" versus "1 signal supports this", and neither of those was previously knowable
+          without opening it. It is a length, not a judgement — `whyNow` is the persisted
+          reference list and nothing here weighs or filters it. */}
       <details className="group mt-3 border-t border-violet-100 pt-3">
-        <summary className="inline-flex cursor-pointer items-center gap-1 rounded text-[11.5px] font-semibold text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-          {NEXT_BEST_ACTION_CARD_LABELS.viewWhy}
-          <ArrowRight
-            className="h-3 w-3 transition-transform group-open:rotate-90"
-            aria-hidden="true"
-          />
+        <summary className="flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded text-[11.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <span className="inline-flex items-center gap-1 font-semibold text-violet-700">
+            {NEXT_BEST_ACTION_CARD_LABELS.viewWhy}
+            <ArrowRight
+              className="h-3 w-3 transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            />
+          </span>
+          <span className="min-w-0 font-medium text-slate-500">
+            {whyNow.length === 0
+              ? NEXT_BEST_ACTION_CARD_LABELS.supportNone
+              : whyNow.length === 1
+                ? NEXT_BEST_ACTION_CARD_LABELS.supportOne
+                : `${whyNow.length} ${NEXT_BEST_ACTION_CARD_LABELS.supportMany}`}
+          </span>
         </summary>
         <div className="mt-2.5 space-y-3">
           {whyNow.length > 1 && <WhyNowList bullets={whyNow} />}

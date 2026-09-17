@@ -400,7 +400,7 @@ export const SIGNAL_META: Record<SignalType, { label: string; tone: string }> = 
 
 export const ACTION_META: Record<EvaAction, { label: string; tone: string; desc: string }> = {
   auto_sequence: { label: "Auto-sequence", tone: "emerald", desc: "Auto-enrolled — Eva runs it, humans handle exceptions." },
-  queued_review: { label: "Queued for SDR", tone: "amber", desc: "Drafted and queued for a human to review before send." },
+  queued_review: { label: "Queued for review", tone: "amber", desc: "Drafted and queued for a human to review before send." },
   brief_only: { label: "Brief only", tone: "indigo", desc: "Logged to the account brief as context — not automated." },
   ae_alert: { label: "AE alert", tone: "rose", desc: "Active alert raised for AE/founder attention." },
   monitor: { label: "Monitoring", tone: "zinc", desc: "Tracked but not yet actioned." },

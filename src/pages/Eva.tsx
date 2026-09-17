@@ -325,7 +325,7 @@ function SummaryHeader({ ws, metrics }: { ws: EvaWorkspace; metrics: EvaMetrics 
         <div>
           <div className="flex items-center gap-2">
             <Chip tone="emerald" icon={Radar}>Lead analyst · event-driven</Chip>
-            <span className="text-[10px] font-medium text-zinc-400">ICP-first discovery → qualify → enrich → hand to Max</span>
+            <span className="text-[10px] font-medium text-zinc-400">ICP-first discovery → qualify → enrich → outreach</span>
           </div>
           {ws.icp && (
             <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-zinc-500">
@@ -341,7 +341,7 @@ function SummaryHeader({ ws, metrics }: { ws: EvaWorkspace; metrics: EvaMetrics 
         <StatTile label="Orgs tracked" value={metrics.orgsTracked} sub={`${metrics.potentialLeads ?? 0} potential`} />
         <StatTile label="Qualified" value={metrics.qualifiedLeads} sub={`L${metrics.byTier.low} · M${metrics.byTier.medium} · H${metrics.byTier.high}`} />
         <StatTile label="Emails found" value={metrics.emailsFound} sub={`${metrics.enrichedLeads} enriched`} tone="text-emerald-600" />
-        <StatTile label="Handed to Max" value={metrics.handedToMax} sub="for outreach" tone="text-violet-600" />
+        <StatTile label="In outreach" value={metrics.handedToMax} sub="queued to send" tone="text-violet-600" />
       </div>
     </div>
   );
@@ -770,7 +770,7 @@ function LeadRow({ lead, onAction, onEnrich, onOpenProspect, enrichPrice = null 
                 </button>
               ) : (
                 <button
-                  title="Hand to Max for outreach"
+                  title="Queue this lead for outreach"
                   onClick={() => onAction(lead, "hand_to_max")}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-violet-50 hover:text-violet-600"
                 >
@@ -1412,7 +1412,7 @@ export default function Eva() {
         handoffState: action === "hand_to_max" ? "handed_to_max" : action === "reject" ? "held" : "enriched",
       } : l),
     } : prev);
-    if (action === "hand_to_max") toast.success(`${lead.company} handed to Max for outreach`);
+    if (action === "hand_to_max") toast.success(`${lead.company} queued for outreach`);
     void evaAPI.leadAction(spaceId, lead.id, action);
   };
 

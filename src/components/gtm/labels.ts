@@ -497,6 +497,32 @@ export const ABSENCE_LABEL: Record<string, string> = {
 };
 
 /**
+ * How much history the learning rests on, as one clause for a disclosure note.
+ *
+ * ── Why this belongs on the summary and not inside the drawer ──
+ *
+ * "What we've learned" described itself as "What worked with prospects like this, and how that
+ * shaped the recommendation" — which says what the section is *about* and nothing about
+ * whether it is worth opening. A rep deciding that wants one number: learned from four
+ * prospects is a hint, learned from four hundred is a reason.
+ *
+ * It costs no request. `explanation.scope.sampleSize` rides on the ranking payload the
+ * selection already holds; the `/debug` read behind the panel still happens only on open.
+ *
+ * `null` when the evaluation recorded no scope or an empty one, so the section keeps its
+ * original note rather than claiming a sample of zero — which is a different thing from a
+ * small one, and the distinction this layer exists to keep.
+ */
+export function learnedFromNote(sampleSize: number | null | undefined): string | null {
+  if (typeof sampleSize !== "number" || !Number.isFinite(sampleSize) || sampleSize <= 0) {
+    return null;
+  }
+  return sampleSize === 1
+    ? "Learned from 1 similar prospect."
+    : `Learned from ${sampleSize} similar prospects.`;
+}
+
+/**
  * The absence wording for a field, or `undefined` so `ObservedValue` keeps its default.
  *
  * The prefix fallback is for the per-channel availability rows, which
@@ -2035,6 +2061,41 @@ export const CONTACT_DIRECTLY_LABELS = {
 // The order is the order the questions arrive: where do they stand, how do we reach them,
 // where does the relationship stand, what moved them, what did we read, what happened when,
 // and what have we learned from prospects like this.
+
+/**
+ * The three groups the disclosure inventory is read under.
+ *
+ * ── Why grouping rather than deleting ──
+ *
+ * The inventory was a flat list of seven disclosures — where they stand, how to reach them,
+ * the relationship, what changed, what we saw, everything that happened, what we've learned.
+ * Each is worth having and the *list* was the problem: seven peers in one column, in an order
+ * only somebody who built it could explain, competing for the attention of a rep who wanted
+ * one answer. It made the surface read as an investigation tool.
+ *
+ * So the seven are kept and given a taxonomy. Three questions, in the order they arrive after
+ * the decision at the top of the page has already been made:
+ *
+ *     Context    why this prospect, why now
+ *     Evidence   what Weez actually observed
+ *     History    what happened, and what we learned from it
+ *
+ * "Decision" is deliberately not a group here. It is not a drawer — it is the top of the
+ * page, where `NextBestActionCard` and the two controls now sit. A fourth heading over an
+ * empty group would imply the decision was filed away with the evidence.
+ *
+ * A separate table from `PROSPECT_INTELLIGENCE_SECTIONS` on purpose: that one is keyed by
+ * disclosure and several suites iterate its values, and a group heading is a different kind
+ * of string — furniture over the list rather than a section in it.
+ */
+export const PROSPECT_INTELLIGENCE_GROUPS = {
+  context: "Context",
+  contextNote: "Why this prospect, and why now.",
+  evidence: "Evidence",
+  evidenceNote: "What Weez actually observed.",
+  history: "History",
+  historyNote: "What happened, and what it taught us.",
+} as const;
 
 export const PROSPECT_INTELLIGENCE_SECTIONS = {
   /** No disclosure: this one costs nothing to render. */

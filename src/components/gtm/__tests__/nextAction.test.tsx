@@ -41,6 +41,7 @@ import { NextActionPanel, actionCardTestId } from "../NextActionPanel";
 import { NextBestActionCard, NEXT_BEST_ACTION_CARD_LABELS } from "../NextBestActionCard";
 import {
   CONTACT_DIRECTLY_LABELS,
+  CHANNEL_LABEL,
   GTM_ACTION_LABELS,
   GTM_ACTION_TOASTS,
   GTM_NBA_ACTION_LABELS,
@@ -695,7 +696,19 @@ describe("the unpersisted pre-activation draft", () => {
 // A future edit that made either component fetch its own copy of the ranking fails here.
 describe("band 7: the decision card beside the execution panel", () => {
   const NBA_TITLE = GTM_NBA_ACTION_LABELS.SEND_LINKEDIN_WARMUP;
-  const CARD_HEADING = `${NBA_TITLE} · LinkedIn`;
+  /**
+   * The card's accessible name is the action, and no longer `"<action> · LinkedIn"`.
+   *
+   * The channel was appended to the heading, which made it read as part of the action's
+   * *name* — and an accessible name of "Open LinkedIn & Send a warm-up · LinkedIn" says the
+   * channel twice while answering "where do I do this" nowhere in particular. It is now a
+   * labelled field beside a labelled timing, which is what the card is for: what to do, why
+   * now, through which channel, when.
+   *
+   * The channel is still asserted below, as the value under its own label, so this file did
+   * not stop checking that the card reports it.
+   */
+  const CARD_HEADING = NBA_TITLE;
   const SIGNAL_AT = "2024-04-28T09:00:00.000Z";
 
   function candidate(overrides: Partial<CandidateAction> = {}): CandidateAction {
@@ -808,6 +821,11 @@ describe("band 7: the decision card beside the execution panel", () => {
     expect(
       within(decision).getByRole("button", { name: NEXT_BEST_ACTION_CARD_LABELS.takeAction }),
     ).toBeInTheDocument();
+    // The channel and the timing, each under its own label — the two answers that used to be
+    // a suffix on the heading and a thing the card did not say at all.
+    expect(within(decision).getByText(NEXT_BEST_ACTION_CARD_LABELS.channel)).toBeInTheDocument();
+    expect(within(decision).getByText(CHANNEL_LABEL.LINKEDIN)).toBeInTheDocument();
+    expect(within(decision).getByText(NEXT_BEST_ACTION_CARD_LABELS.timing)).toBeInTheDocument();
 
     // The execution, beside it: the same recommendation by id, plus the panel's own
     // recommendation sentence, its composer and its primary control, all still here.
