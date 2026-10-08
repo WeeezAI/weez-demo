@@ -87,6 +87,8 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
         agrandir: ["Agrandir", "system-ui", "sans-serif"],
         poppins: ["Poppins", "system-ui", "sans-serif"],
+        geist: ["Geist", "Inter", "system-ui", "sans-serif"],
+        "geist-mono": ["'Geist Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       keyframes: {
         "accordion-down": {
