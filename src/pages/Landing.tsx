@@ -1,15 +1,12 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import type { NetworkPhase } from "@/components/stealth/GTMNetworkCanvas";
 import StackNetwork from "@/components/stealth/StackNetwork";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
+import ComplaintWall from "@/components/landing/ComplaintWall";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
-
-// The hero canvas is the heaviest thing on the page; let the type paint first.
-const GTMNetworkCanvas = lazy(() => import("@/components/stealth/GTMNetworkCanvas"));
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -124,23 +121,8 @@ const Nav = ({ onAccess }: { onAccess: () => void }) => {
 
 /* ───────────────────────── hero ───────────────────────── */
 
-const PHASES = ["Fragmentation", "Coordination", "Intelligence"];
-
-const PhaseLegend = ({ phase }: { phase: NetworkPhase }) => (
-  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-geist-mono text-[10.5px] uppercase tracking-[0.16em]" aria-hidden="true">
-    <span className="text-white/25">Fig. 01</span>
-    {PHASES.map((p, i) => (
-      <span key={p} className={`flex items-center gap-2 transition-colors duration-1000 ${i === phase ? "text-white/70" : "text-white/20"}`}>
-        <span className={`h-px transition-all duration-1000 ${i === phase ? "w-6 bg-indigo-200/70" : "w-3 bg-white/15"}`} />
-        {p}
-      </span>
-    ))}
-  </div>
-);
-
 const Hero = ({ onAccess, onFounder }: { onAccess: () => void; onFounder: () => void }) => {
   const reduce = useReducedMotion();
-  const [phase, setPhase] = useState<NetworkPhase>(0);
   const enter = (i: number) =>
     reduce
       ? {}
@@ -173,11 +155,11 @@ const Hero = ({ onAccess, onFounder }: { onAccess: () => void; onFounder: () => 
             {...enter(1)}
             className="mt-6 text-[42px] font-light leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[76px]"
           >
-            The next generation of GTM systems <span className="text-white/35">is being built.</span>
+            We heard you. <span className="text-white/35">Loud and clear.</span>
           </motion.h1>
 
-          <motion.p {...enter(2)} className="mt-7 max-w-[470px] text-[17px] leading-relaxed text-white/55 md:text-lg">
-            We're building something for revenue teams operating across increasingly complex GTM stacks.
+          <motion.p {...enter(2)} className="mt-7 max-w-[500px] text-[17px] leading-relaxed text-white/55 md:text-lg">
+            Tools that disagree on who the customer is. Deals spotted after a competitor already won them. Routing rules nobody trusts. We're building the next generation of GTM systems to fix it.
           </motion.p>
 
           <motion.div {...enter(3)} className="mt-8 flex items-center gap-3 text-[13px] text-white/50">
@@ -191,21 +173,15 @@ const Hero = ({ onAccess, onFounder }: { onAccess: () => void; onFounder: () => 
           </motion.div>
         </div>
 
-        {/* Network: in-flow band on mobile, right-hand field on desktop */}
+        {/* Wall of real RevOps complaints: in-flow band on mobile, right-hand field on desktop */}
         <motion.div
-          initial={reduce ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 2.4, delay: 0.4 }}
-          className="relative -mx-5 mt-14 h-[340px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)] sm:-mx-8 sm:h-[460px] lg:absolute lg:inset-y-0 lg:left-[36%] lg:right-[min(0px,calc(640px-50vw))] lg:mx-0 lg:mt-0 lg:h-auto lg:[mask-image:linear-gradient(to_right,transparent,black_30%,black_92%,transparent),linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]"
+          initial={reduce ? false : { opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.4, delay: 0.5, ease: EASE }}
+          className="relative mb-16 mt-14 h-[440px] sm:h-[520px] xl:absolute xl:bottom-0 xl:left-[52%] xl:right-[min(0px,calc(640px-50vw))] xl:top-20 xl:mt-0 xl:mb-0 xl:h-auto"
         >
-          <Suspense fallback={null}>
-            <GTMNetworkCanvas className="absolute inset-0 h-full w-full" onPhase={setPhase} />
-          </Suspense>
+          <ComplaintWall className="h-full" />
         </motion.div>
-
-        <div className="relative z-10 mt-6 pb-16 lg:absolute lg:bottom-10 lg:left-8 lg:mt-0 lg:pb-0">
-          <PhaseLegend phase={phase} />
-        </div>
       </div>
     </section>
   );

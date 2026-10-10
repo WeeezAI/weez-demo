@@ -48,6 +48,16 @@
   }
 }
 
+@keyframes complaint-scroll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-50% - 0.5rem));
+  }
+}
+
 @keyframes stealth-pulse {
   0%,
   100% {
