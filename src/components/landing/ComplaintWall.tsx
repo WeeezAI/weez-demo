@@ -68,7 +68,7 @@ const ComplaintWall = ({ className = "" }: { className?: string }) => {
   const colB = COMPLAINTS.filter((_, i) => i % 2 === 1);
   return (
     <div className={`relative ${className}`} role="region" aria-label="What RevOps leaders are saying">
-      <div className="h-full overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)] xl:[mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent),linear-gradient(to_right,black_70%,transparent)] xl:[mask-composite:intersect] xl:[-webkit-mask-composite:source-in]">
+      <div className="h-full overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_7%,black_93%,transparent)] xl:[mask-image:linear-gradient(to_bottom,transparent,black_7%,black_93%,transparent),linear-gradient(to_right,black_78%,transparent)] xl:[mask-composite:intersect] xl:[-webkit-mask-composite:source-in]">
         <div className="flex h-full gap-4">
           <Column items={COMPLAINTS} duration={70} className="sm:hidden" />
           <Column items={colA} duration={56} className="hidden sm:block" />
