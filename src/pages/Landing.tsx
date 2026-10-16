@@ -27,9 +27,26 @@ const SOURCES = [
     label: "Salesforce, State of Sales report (2022)",
     href: "https://www.salesforce.com/news/stories/sales-research-2023/",
   },
+  {
+    id: 4,
+    label: "Harvard Business Review, The Short Life of Online Sales Leads (2011), audit of 2,241 US companies",
+    href: "https://hbr.org/2011/03/the-short-life-of-online-sales-leads",
+  },
+  {
+    id: 5,
+    label: "Gartner, AI agents will outnumber sellers 10 to 1 by 2028 (press release, July 2026)",
+    href: "https://www.gartner.com/en/newsroom/press-releases/2026-07-28-gartner-predicts-ai-agents-will-outnumber-sellers-10-to-1-by-2028-yet-fewer-than-40-percent-of-sellers-will-say-agents-improved-productivity",
+  },
+  {
+    id: 6,
+    label: "Gartner, Over 40% of agentic AI projects will be canceled by end of 2027 (press release, June 2025)",
+    href: "https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027",
+  },
 ] as const;
 
-const Cite = ({ n }: { n: 1 | 2 | 3 }) => (
+type SourceId = (typeof SOURCES)[number]["id"];
+
+const Cite = ({ n }: { n: SourceId }) => (
   <a
     href="#sources"
     aria-label={`Source ${n}`}
@@ -130,6 +147,7 @@ const AcceleratorBadge = () => {
 const NAV_LINKS = [
   { href: "#problem", label: "The problem" },
   { href: "#insights", label: "Insights" },
+  { href: "#on-x", label: "Heard on X" },
   { href: "#how", label: "How it works" },
 ];
 
@@ -239,7 +257,7 @@ const Hero = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void
 
 /* ───────────────────────── problem in numbers ───────────────────────── */
 
-const STATS: { value: string; text: ReactNode; cite: 1 | 2 | 3 }[] = [
+const STATS: { value: string; text: ReactNode; cite: SourceId }[] = [
   { value: "80%", text: "of RevOps leaders don't feel they have clean, actionable data. Only 2 in 10 do.", cite: 1 },
   { value: "76%", text: "say less than half of their CRM data is accurate and complete.", cite: 2 },
   { value: "37%", text: "of CRM users reported losing revenue as a direct result of poor data quality.", cite: 2 },
@@ -329,6 +347,72 @@ const Problem = () => (
   </section>
 );
 
+/* ───────────────────────── the numbers (bold band) ───────────────────────── */
+
+const BIG_GROUPS: { label: string; stats: { value: string; text: string; cite: SourceId }[] }[] = [
+  {
+    label: "Speed decides the deal",
+    stats: [
+      { value: "42 hrs", text: "average time for a company to first respond to an inbound lead", cite: 4 },
+      { value: "7×", text: "more likely to qualify a lead when you reach out within the hour", cite: 4 },
+      { value: "23%", text: "of companies never responded to the lead at all", cite: 4 },
+    ],
+  },
+  {
+    label: "Agents are about to multiply it",
+    stats: [
+      { value: "10:1", text: "AI agents to sellers by 2028, Gartner predicts", cite: 5 },
+      { value: "<40%", text: "of sellers will say those agents actually improved productivity", cite: 5 },
+      { value: "40%+", text: "of agentic AI projects will be canceled by 2027, citing unclear value and weak risk controls", cite: 6 },
+    ],
+  },
+];
+
+const BigNumbers = () => (
+  <section className="bg-neutral-50/70 px-5 pb-24 sm:px-8 md:pb-32" aria-labelledby="numbers-title">
+    <div className="mx-auto max-w-6xl">
+      <Reveal>
+        <div className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-12 text-white sm:px-12 sm:py-16">
+          <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[#F26B3A]/20 blur-3xl" />
+          <div className="relative">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F7A27F]">By the numbers</p>
+            <h2 id="numbers-title" className="mt-4 max-w-3xl text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[42px]">
+              Every hour a signal sits unworked, the deal gets colder.
+            </h2>
+            <div className="mt-12 space-y-12">
+              {BIG_GROUPS.map((g) => (
+                <div key={g.label}>
+                  <p className="font-geist-mono text-[12px] uppercase tracking-[0.14em] text-white/40">{g.label}</p>
+                  <div className="mt-5 grid gap-8 sm:grid-cols-3">
+                    {g.stats.map((s) => (
+                      <div key={s.value} className="border-t border-white/15 pt-5">
+                        <p className="text-[52px] font-semibold leading-none tracking-[-0.05em] text-white sm:text-[64px]">{s.value}</p>
+                        <p className="mt-4 text-[15px] leading-relaxed text-white/65">
+                          {s.text}
+                          <a
+                            href="#sources"
+                            aria-label={`Source ${s.cite}`}
+                            className="ml-0.5 align-super text-[10px] font-medium text-white/40 transition hover:text-white"
+                          >
+                            [{s.cite}]
+                          </a>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-12 max-w-2xl text-[16px] leading-relaxed text-white/70">
+              More tools and more agents mean more signals. Without someone checking that each one reached a rep, more of them slip.
+            </p>
+          </div>
+        </div>
+      </Reveal>
+    </div>
+  </section>
+);
+
 /* ───────────────────────── insights ───────────────────────── */
 
 const INSIGHTS: { title: string; body: ReactNode }[] = [
@@ -387,6 +471,122 @@ const Insights = () => (
           </Reveal>
         ))}
       </div>
+    </div>
+  </section>
+);
+
+/* ───────────────────────── heard on X ───────────────────────── */
+
+const X_POSTS: { name: string; handle: string; date: string; tag: string; quote: string; id: string }[] = [
+  {
+    name: "Alton Syn",
+    handle: "WorkflowWhisper",
+    date: "Apr 2026",
+    tag: "Routing",
+    quote: "a client's lead routing was broken for 6 weeks before they called me … 23 deals routed to a dead inbox. $140k in pipeline gone",
+    id: "2039742868185854146",
+  },
+  {
+    name: "Joshua Pi'Rwot",
+    handle: "pirwot",
+    date: "Sep 2026",
+    tag: "Silent failure",
+    quote: "an automation … had been quietly doing nothing for eleven days. It ran on schedule. The dashboard was green. … It failed politely.",
+    id: "2100906487312744726",
+  },
+  {
+    name: "Tech Sales Guy",
+    handle: "TechSalesGuy",
+    date: "Sep 2026",
+    tag: "No owner",
+    quote: "the leads just sat.... and sat there. no owner. no task. no follow up",
+    id: "2102557390440689959",
+  },
+  {
+    name: "Jack",
+    handle: "JackPineRD",
+    date: "Oct 2026",
+    tag: "Handoff",
+    quote: "I've seen solid outbound and content still dump leads into HubSpot with source overwritten and no owner. The gap was the handoff.",
+    id: "2109711708252262883",
+  },
+  {
+    name: "Keith",
+    handle: "keithsalins_",
+    date: "Jul 2026",
+    tag: "Broken workflows",
+    quote: "someone set up a Clay workflow in January / it broke in February, nobody fixed it / 14 Zapier automations that nobody documented",
+    id: "2082126440775217350",
+  },
+  {
+    name: "Jason Lemkin",
+    handle: "jasonlk",
+    date: "Oct 2026",
+    tag: "AI agents",
+    quote: "Never let your AI SDR send its first 1,000 emails without manually reviewing every single one.",
+    id: "2109289938692784499",
+  },
+];
+
+const XLogo = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+    />
+  </svg>
+);
+
+const HeardOnX = () => (
+  <section id="on-x" className="scroll-mt-20 border-t border-neutral-200 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="onx-title">
+    <div className="mx-auto max-w-6xl">
+      <Reveal>
+        <Eyebrow>Heard on X</Eyebrow>
+        <h2 id="onx-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
+          The dashboard says success. The pipeline says otherwise.
+        </h2>
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
+          Operators and founders on X describe the same failure: workflows that run, report green, and quietly drop the leads that
+          matter.
+        </p>
+      </Reveal>
+
+      <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {X_POSTS.map((p, i) => (
+          <Reveal key={p.id} delay={(i % 3) * 0.05}>
+            <a
+              href={`https://x.com/${p.handle}/status/${p.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-300 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26B3A]/50"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-semibold text-neutral-700">
+                    {p.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold text-neutral-950">{p.name}</p>
+                    <p className="truncate text-[13px] text-neutral-500">@{p.handle}</p>
+                  </div>
+                </div>
+                <XLogo className="h-4 w-4 shrink-0 text-neutral-900" />
+              </div>
+              <blockquote className="mt-5 flex-1 text-[16px] leading-relaxed text-neutral-800">“{p.quote}”</blockquote>
+              <div className="mt-6 flex items-center justify-between text-[12px]">
+                <span className="rounded-full border border-[#F26B3A]/25 bg-[#F26B3A]/[0.06] px-2.5 py-0.5 font-medium text-[#C2502A]">{p.tag}</span>
+                <span className="inline-flex items-center gap-1 text-neutral-400 transition group-hover:text-neutral-900">
+                  {p.date} · View on X <ArrowUpRight className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            </a>
+          </Reveal>
+        ))}
+      </div>
+      <p className="mt-6 text-[12px] leading-relaxed text-neutral-400">
+        Public posts on X, quoted in part with links to the originals. The authors are not Dexraflow customers and have not endorsed
+        Dexraflow.
+      </p>
     </div>
   </section>
 );
@@ -571,7 +771,9 @@ const Landing = () => {
       <main id="main">
         <Hero onAccess={openAccess} onAudit={openFounder} />
         <Problem />
+        <BigNumbers />
         <Insights />
+        <HeardOnX />
         <How onAudit={openFounder} />
         <Closing onAccess={openAccess} onFounder={openFounder} />
       </main>
