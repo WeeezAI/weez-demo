@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import ComplaintWall from "@/components/landing/ComplaintWall";
+import { AgentFlow, MissedSignalScene, NoOwnerScene, SilentFailureScene } from "@/components/landing/UseCaseAnimations";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
 
@@ -416,34 +417,10 @@ const BigNumbers = () => (
 
 /* ───────────────────────── use cases ───────────────────────── */
 
-const SCENARIOS: { tag: string; title: string; problem: string; alert: string; shows: string; result: string }[] = [
-  {
-    tag: "No owner",
-    title: "A hot lead nobody owns",
-    problem:
-      "A demo request from a 400-person account lands in HubSpot. Your routing rule needs a Region field that enrichment hasn't filled yet, so the lead sits unassigned. Everyone assumes someone else has it.",
-    alert: "Acme Inc · demo request · no owner for 2h · reply by 3:00 PM",
-    shows: "Dexraflow spots the unowned lead within minutes, works out the right rep from your territory rules, and sends them the alert in Slack with the evidence.",
-    result: "Worked the same day, not found in a report next month.",
-  },
-  {
-    tag: "Silent failure",
-    title: "A workflow that says “success” but did nothing",
-    problem:
-      "Someone renames a field. Your Clay-to-CRM sync keeps running and every run shows green, but it has been writing empty rows for nine days. No error, no alert.",
-    alert: "Clay → HubSpot sync · 0 records written since 12 Oct · field “Region” renamed",
-    shows: "Dexraflow checks that each workflow's result actually exists in the destination, notices the writes stopped while the workflow didn't change, and tells RevOps what broke and when.",
-    result: "Fixed in hours, with a list of the leads that need re-routing.",
-  },
-  {
-    tag: "Missed signal",
-    title: "A buying signal nobody acted on",
-    problem:
-      "Your intent tool shows Acme surging and three people from Acme visited your pricing page. The account owner is on leave, and the signal lives in a tool the rest of the team never opens.",
-    alert: "Acme Inc · intent surging · 3 pricing visits · no touch in 5 days · escalated to manager",
-    shows: "Dexraflow matches signals from every tool to the same account, sees nobody has acted, and escalates to the manager after your response deadline.",
-    result: "The account gets a touch while it's still in-market.",
-  },
+const SCENARIOS: { tag: string; title: string; Scene: () => JSX.Element; result: string }[] = [
+  { tag: "No owner", title: "A hot lead nobody owns", Scene: NoOwnerScene, result: "Worked the same day, not found in a report next month." },
+  { tag: "Silent failure", title: "A workflow that says “success” but did nothing", Scene: SilentFailureScene, result: "Fixed in hours, with a list of leads to re-route." },
+  { tag: "Missed signal", title: "A buying signal nobody acted on", Scene: MissedSignalScene, result: "The account gets a touch while it’s still in-market." },
 ];
 
 const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => void }) => (
@@ -455,8 +432,7 @@ const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => 
           What Dexraflow does for a revenue team
         </h2>
         <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
-          Built for RevOps leaders at B2B SaaS teams running a CRM plus tools like Clay, Apollo, Outreach or 6sense. We don't replace any of
-          them, and we never email your prospects. We make sure nothing slips between them.
+          It sits on top of the tools you already use, catches what slips between them, and never emails your prospects.
         </p>
       </Reveal>
 
@@ -464,49 +440,37 @@ const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => 
       <Reveal className="mt-14">
         <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-10">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-              Available now
-            </span>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Available now</span>
             <span className="text-[13px] text-neutral-500">Use case 1</span>
           </div>
           <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-neutral-950 sm:text-[32px]">
             Catch the leads and deals your GTM tools silently dropped
           </h3>
-          <p className="mt-3 max-w-3xl text-[16px] leading-relaxed text-neutral-600">
-            Dexraflow connects to your CRM and GTM tools read-only, keeps one picture of every account, and watches for three things that
-            quietly cost pipeline. When it finds one, the right person hears about it in Slack, with the reason and a deadline.
-          </p>
 
-          <div className="mt-10 grid gap-4 lg:grid-cols-3">
-            {SCENARIOS.map((s) => (
-              <div key={s.tag} className="flex h-full flex-col rounded-xl border border-neutral-200 bg-neutral-50/70 p-6">
-                <span className="w-fit rounded-full border border-[#F26B3A]/25 bg-[#F26B3A]/[0.06] px-2.5 py-0.5 text-[12px] font-medium text-[#C2502A]">
-                  {s.tag}
-                </span>
-                <h4 className="mt-4 text-[18px] font-semibold leading-snug text-neutral-950">{s.title}</h4>
-                <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.1em] text-neutral-400">What happens today</p>
-                <p className="mt-1.5 text-[15px] leading-relaxed text-neutral-700">{s.problem}</p>
-                <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.1em] text-neutral-400">What Dexraflow shows</p>
-                <p className="mt-1.5 text-[15px] leading-relaxed text-neutral-700">{s.shows}</p>
-                <p className="mt-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 font-geist-mono text-[12px] leading-relaxed text-neutral-800">
-                  {s.alert}
-                </p>
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {SCENARIOS.map(({ tag, title, Scene, result }) => (
+              <div key={tag} className="flex h-full flex-col">
+                <span className="w-fit rounded-full border border-[#F26B3A]/25 bg-[#F26B3A]/[0.06] px-2.5 py-0.5 text-[12px] font-medium text-[#C2502A]">{tag}</span>
+                <h4 className="mb-4 mt-3 min-h-[50px] text-[18px] font-semibold leading-snug text-neutral-950">{title}</h4>
+                <Scene />
                 <div className="flex-1" />
                 <p className="mt-5 flex items-start gap-2 border-t border-neutral-200 pt-4 text-[15px] font-medium text-neutral-950">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F26B3A]" /> {s.result}
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F26B3A]" /> {result}
                 </p>
               </div>
             ))}
           </div>
-
-          <p className="mt-4 text-[12px] text-neutral-400">Examples are illustrative, based on failures RevOps teams and operators have described to us.</p>
+          <p className="mt-6 text-[12px] text-neutral-400">
+            Examples are illustrative, based on failures RevOps teams and operators have described to us. Product names identify the tools we connect
+            to; they are trademarks of their owners.
+          </p>
 
           <div className="mt-8 flex flex-col gap-6 rounded-xl bg-neutral-950 p-6 text-white sm:p-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F7A27F]">How it starts</p>
               <p className="mt-3 text-[16px] leading-relaxed text-white/80">
-                A 14-day Missed Pipeline Audit. You connect your tools read-only, we look back 90 days and show you what slipped, what it was
-                worth and why. If you keep going, the same checks run live with Slack alerts and a weekly recovered-pipeline report.
+                A 14-day Missed Pipeline Audit: connect your tools read-only, and we show you what slipped in the last 90 days, what it was worth and why.
+                Then the same checks run live, with Slack alerts and a weekly recovered-pipeline report.
               </p>
             </div>
             <button
@@ -525,45 +489,20 @@ const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => 
       <Reveal className="mt-6">
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/70 p-6 sm:p-10">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-neutral-200 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-neutral-700">
-              Coming soon
-            </span>
+            <span className="rounded-full bg-neutral-200 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-neutral-700">Coming soon</span>
             <span className="text-[13px] text-neutral-500">Use case 2</span>
           </div>
           <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-neutral-950 sm:text-[32px]">
-            Keep your AI agents from stepping on each other
+            Your AI agents check with Dexraflow before they act
           </h3>
-          <div className="mt-6 grid gap-8 lg:grid-cols-2">
-            <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-neutral-400">The problem</p>
-              <p className="mt-2 text-[16px] leading-relaxed text-neutral-700">
-                Teams now run AI agents from different tools: an AI SDR, a Clay agent, their CRM's built-in agent, a custom agent a GTM
-                engineer built. None of them can see what the others did. So two agents email the same buyer on the same day, one overwrites
-                another's update, or an agent reaches out to someone who's already in an open deal.
-              </p>
-            </div>
-            <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-neutral-400">What Dexraflow will do</p>
-              <ul className="mt-2 space-y-2.5 text-[16px] leading-relaxed text-neutral-700">
-                <li className="flex gap-2">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-[#F26B3A]" /> Any agent connects once (through our MCP server) and, before it
-                  acts, can ask: who owns this account, is there an open deal, who touched it last?
-                </li>
-                <li className="flex gap-2">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-[#F26B3A]" /> It checks your team's rules first, like contact limits or "don't
-                  email accounts in an open deal", and gets a clear yes, no or "ask a human".
-                </li>
-                <li className="flex gap-2">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-[#F26B3A]" /> Every action is logged in one place, so you can see what each agent
-                  did and whether it led to pipeline.
-                </li>
-              </ul>
-            </div>
+          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-neutral-600">
+            Agents from different tools can’t see each other. Connect any agent once, and it asks first: who owns this, is there an open deal, is this allowed.
+          </p>
+          <div className="mt-8">
+            <AgentFlow />
           </div>
           <div className="mt-8 flex flex-col gap-4 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-2xl text-[15px] text-neutral-600">
-              For teams already running AI agents, and for GTM engineers building their own. Works with the tools and agents you already use.
-            </p>
+            <p className="max-w-2xl text-[15px] text-neutral-600">For teams running AI agents, and GTM engineers building their own. Works through MCP.</p>
             <SecondaryCTA onClick={onAccess} className="shrink-0">
               Get early access
             </SecondaryCTA>
