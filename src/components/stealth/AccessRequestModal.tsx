@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,7 @@ const empty = { name: "", email: "", company: "", role: "", linkedin: "", note: 
 type Field = keyof typeof empty;
 
 const fieldClass =
-  "h-11 rounded-lg border-white/10 bg-white/[0.03] text-[15px] text-white placeholder:text-white/25 focus-visible:border-white/25 focus-visible:ring-1 focus-visible:ring-white/15 focus-visible:ring-offset-0";
+  "h-10 rounded-[8px] border-dx-line-strong bg-dx-raised text-[15px] text-dx-ink placeholder:text-dx-ink-muted focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2";
 
 const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
   const [form, setForm] = useState({ ...empty });
@@ -101,12 +101,12 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
   const field = (key: Field, label: string, props: React.InputHTMLAttributes<HTMLInputElement>, optional = false) => (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
-        <Label htmlFor={`access-${key}`} className="text-[13px] font-normal text-white/60">
+        <Label htmlFor={`access-${key}`} className="text-[13px] font-medium text-dx-ink">
           {label}
-          {optional && <span className="ml-1.5 text-white/30">optional</span>}
+          {optional && <span className="ml-1.5 font-normal text-dx-ink-muted">optional</span>}
         </Label>
         {errors[key] && (
-          <span id={`access-${key}-error`} className="text-[12px] text-rose-300/80">
+          <span id={`access-${key}-error`} className="text-[12px] text-dx-danger">
             {errors[key]}
           </span>
         )}
@@ -117,7 +117,7 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
         onChange={set(key)}
         aria-invalid={!!errors[key]}
         aria-describedby={errors[key] ? `access-${key}-error` : undefined}
-        className={`${fieldClass} ${errors[key] ? "border-rose-300/40" : ""}`}
+        className={`${fieldClass} ${errors[key] ? "border-dx-danger" : ""}`}
         {...props}
       />
     </div>
@@ -125,20 +125,20 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
 
   return (
     <Dialog open={!!intent} onOpenChange={handleOpenChange}>
-      <DialogContent className="dark max-h-[92vh] max-w-[480px] gap-0 overflow-y-auto rounded-2xl border-white/10 bg-[#0c0d12] p-0 font-geist text-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] [&>button]:text-white/50 [&>button]:data-[state=open]:bg-transparent [&>button:hover]:text-white">
+      <DialogContent className="max-h-[92vh] max-w-[480px] gap-0 overflow-y-auto rounded-[12px] border-dx-line bg-dx-raised p-0 font-dx-sans text-dx-ink shadow-dx-overlay [&>button]:text-dx-ink-muted [&>button]:data-[state=open]:bg-transparent [&>button:hover]:text-dx-ink">
         {submitted ? (
           <div className="px-8 py-16 text-center" role="status">
-            <div className="mx-auto mb-8 flex h-10 w-10 items-center justify-center rounded-full border border-white/15">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-200 shadow-[0_0_12px_2px_rgba(165,180,252,0.6)]" />
+            <div className="mx-auto mb-8 flex h-10 w-10 items-center justify-center rounded-full bg-dx-success-soft">
+              <Check className="h-5 w-5 text-dx-success" strokeWidth={1.5} aria-hidden="true" />
             </div>
-            <DialogTitle className="text-2xl font-normal tracking-[-0.02em]">Thanks. We'll be in touch.</DialogTitle>
-            <DialogDescription className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-white/45">
+            <DialogTitle className="text-2xl font-semibold tracking-[-0.025em]">Thanks. We'll be in touch.</DialogTitle>
+            <DialogDescription className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-dx-ink-muted">
               Your request is with the team.
             </DialogDescription>
             <button
               type="button"
               onClick={() => handleOpenChange(false)}
-              className="mt-10 h-10 rounded-full border border-white/15 px-6 text-sm text-white/80 transition hover:border-white/30 hover:text-white"
+              className="mt-10 h-10 rounded-[8px] border border-dx-line-strong px-5 text-sm font-medium text-dx-ink transition hover:bg-dx-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2"
             >
               Close
             </button>
@@ -146,8 +146,8 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
         ) : (
           <>
             <DialogHeader className="space-y-2 px-7 pt-8 text-left sm:px-8">
-              <DialogTitle className="text-[22px] font-normal tracking-[-0.02em]">{copy.title}</DialogTitle>
-              <DialogDescription className="text-[15px] leading-relaxed text-white/45">{copy.description}</DialogDescription>
+              <DialogTitle className="text-[22px] font-semibold tracking-[-0.025em]">{copy.title}</DialogTitle>
+              <DialogDescription className="text-[15px] leading-relaxed text-dx-ink-muted">{copy.description}</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} noValidate className="space-y-4 px-7 pb-8 pt-7 sm:px-8">
@@ -160,7 +160,7 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
               {field("linkedin", "LinkedIn", { type: "url", inputMode: "url", placeholder: "linkedin.com/in/…" }, true)}
 
               <div className="space-y-1.5">
-                <Label htmlFor="access-note" className="text-[13px] font-normal text-white/60">
+                <Label htmlFor="access-note" className="text-[13px] font-medium text-dx-ink">
                   {copy.note}
                 </Label>
                 <Textarea
@@ -170,12 +170,12 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
                   maxLength={1000}
                   rows={3}
                   placeholder={copy.notePlaceholder}
-                  className="resize-none rounded-lg border-white/10 bg-white/[0.03] text-[15px] text-white placeholder:text-white/25 focus-visible:border-white/25 focus-visible:ring-1 focus-visible:ring-white/15 focus-visible:ring-offset-0"
+                  className="resize-none rounded-[8px] border-dx-line-strong bg-dx-raised text-[15px] text-dx-ink placeholder:text-dx-ink-muted focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2"
                 />
               </div>
 
               {failure && (
-                <p role="alert" className="text-[13px] text-rose-300/85">
+                <p role="alert" className="text-[13px] text-dx-danger">
                   {failure}
                 </p>
               )}
@@ -183,7 +183,7 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="group mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-[14px] font-medium text-[#08090c] transition hover:bg-white/90 disabled:opacity-60"
+                className="group mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-[8px] bg-dx-brand text-[14px] font-medium text-white transition hover:bg-dx-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2 disabled:opacity-60"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-label="Sending" />
@@ -195,9 +195,9 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
                 )}
               </button>
 
-              <p className="pt-1 text-center text-[12px] text-white/30">
+              <p className="pt-1 text-center text-[12px] text-dx-ink-muted">
                 Prefer email?{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-white/55 underline-offset-4 hover:text-white hover:underline">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-dx-ink-muted underline-offset-4 hover:text-dx-brand hover:underline">
                   {CONTACT_EMAIL}
                 </a>
               </p>

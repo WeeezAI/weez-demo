@@ -5,7 +5,8 @@ import { BRAND_ICONS } from "./brandIcons";
 
 /* ───────────── shared pieces ───────────── */
 
-const ACCENT = "#F26B3A";
+const ACCENT = "#0b6e69"; // brand: flows and active state
+const SIGNAL = "#e8962e"; // signal: the one item moving through the flow
 const INK = "#0a0a0a";
 
 /** Cycles 0..count-1 while in view; the last stage holds for an extra beat. Reduced motion shows the final stage. */
@@ -72,8 +73,8 @@ function Tile({ x, y, w = 84, h = 64, name, brand, icon: Icon, active, row }: Ti
       className={`absolute flex items-center rounded-lg border bg-white ${row ? "flex-row gap-2.5 px-3" : "flex-col justify-center gap-1.5"}`}
       style={{ left: x, top: y, width: w, height: h }}
       animate={{
-        borderColor: active ? ACCENT : "#e5e5e5",
-        boxShadow: active ? "0 0 0 3px rgba(242,107,58,0.15)" : "0 1px 2px rgba(0,0,0,0.04)",
+        borderColor: active ? ACCENT : "#d3dcd9",
+        boxShadow: active ? "0 0 0 3px rgba(11,110,105,0.16)" : "0 1px 2px rgba(0,0,0,0.04)",
       }}
       transition={{ duration: 0.35 }}
     >
@@ -86,8 +87,8 @@ function Tile({ x, y, w = 84, h = 64, name, brand, icon: Icon, active, row }: Ti
 /** A small label pinned to the canvas. */
 function Chip({ x, y, show, tone = "amber", children, w }: { x: number; y: number; show: boolean; tone?: "amber" | "green" | "grey"; children: ReactNode; w?: number }) {
   const tones = {
-    amber: "border-[#F26B3A]/30 bg-[#FFF3EC] text-[#B5461F]",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    amber: "border-dx-signal/40 bg-dx-signal-soft text-dx-signal-ink",
+    green: "border-dx-success/25 bg-dx-success-soft text-dx-success",
     grey: "border-neutral-200 bg-neutral-50 text-neutral-600",
   };
   return (
@@ -124,7 +125,7 @@ function PlaneBar({ show, label = "Dexraflow", w = 320 }: { show: boolean; label
       {show && (
         <motion.span
           className="absolute inset-y-0 w-16"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(242,107,58,0.45), transparent)" }}
+          style={{ background: "linear-gradient(90deg, transparent, rgba(232,150,46,0.55), transparent)" }}
           initial={{ left: -64 }}
           animate={{ left: w }}
           transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
@@ -188,7 +189,7 @@ function Caption({ stage, lines }: { stage: number; lines: string[] }) {
     <div className="mt-3 flex items-center gap-3">
       <div className="flex gap-1">
         {lines.map((_, i) => (
-          <span key={i} className="h-1.5 w-4 rounded-full transition-colors" style={{ background: i <= stage ? ACCENT : "#e5e5e5" }} />
+          <span key={i} className="h-1.5 w-4 rounded-full transition-colors" style={{ background: i <= stage ? ACCENT : "#d3dcd9" }} />
         ))}
       </div>
       <AnimatePresence mode="wait">
@@ -243,7 +244,7 @@ export function NoOwnerScene() {
           {/* the lead */}
           <motion.div
             className="absolute h-3.5 w-3.5 rounded-full"
-            style={{ top: 121, background: ACCENT }}
+            style={{ top: 121, background: SIGNAL }}
             initial={false}
             animate={reduce ? { left: 173, opacity: 0 } : stage === 0 ? { left: [56, 173], opacity: 1 } : { left: 173, opacity: 0 }}
             transition={{ duration: 1.4, ease: "easeInOut" }}
@@ -283,13 +284,13 @@ export function SilentFailureScene() {
           <Tile x={20} y={95} name="Clay" icon={Database} />
           <Tile x={256} y={95} name="HubSpot" brand="hubspot" active={stage === 1 || stage === 3} />
           <svg className="pointer-events-none absolute left-0 top-0" width="360" height="290" aria-hidden="true">
-            <line x1={104} x2={256} y1={127} y2={127} stroke="#d4d4d4" strokeWidth={2} />
+            <line x1={104} x2={256} y1={127} y2={127} stroke="#d3dcd9" strokeWidth={2} />
           </svg>
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
               className="absolute h-3 w-3 rounded-full"
-              style={{ top: 121, border: `2px solid ${ACCENT}`, background: empty ? "white" : ACCENT }}
+              style={{ top: 121, border: `2px solid ${SIGNAL}`, background: empty ? "white" : SIGNAL }}
               animate={reduce ? { left: 180 } : { left: [104, 244] }}
               transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.6, ease: "linear" }}
             />
@@ -364,10 +365,10 @@ export function MissedSignalScene() {
               <motion.div
                 exit={{ opacity: 0 }}
                 className="absolute rounded-lg border bg-white px-3 py-2"
-                style={{ left: 95, top: 160, width: 170, borderColor: stage >= 3 ? ACCENT : "#e5e5e5" }}
+                style={{ left: 95, top: 160, width: 170, borderColor: stage >= 3 ? ACCENT : "#d3dcd9" }}
               >
                 <p className="text-[12px] font-semibold text-neutral-900">Acme Inc</p>
-                <p className={`text-[11px] ${stage >= 1 ? "text-[#B5461F]" : "text-neutral-500"}`}>
+                <p className={`text-[11px] ${stage >= 1 ? "text-dx-signal-ink" : "text-neutral-500"}`}>
                   Owner: Sam {stage >= 1 ? "· out of office" : ""}
                 </p>
                 <p className="text-[11px] text-neutral-500">{stage >= 2 ? "Last touch: 5 days ago" : "Last touch: —"}</p>
@@ -409,7 +410,7 @@ const MCP_STEPS = [
 const HUB = { x: 330, y: 40, w: 260, h: 336 };
 
 function Bubble({ show, from, to, tone, children }: { show: boolean; from: [number, number]; to: [number, number]; tone: "amber" | "green" | "grey"; children: ReactNode }) {
-  const tones = { amber: "bg-[#FFF3EC] text-[#B5461F] border-[#F26B3A]/30", green: "bg-emerald-50 text-emerald-700 border-emerald-200", grey: "bg-white text-neutral-800 border-neutral-200" };
+  const tones = { amber: "bg-dx-signal-soft text-dx-signal-ink border-dx-signal/40", green: "bg-dx-success-soft text-dx-success border-dx-success/25", grey: "bg-white text-neutral-800 border-neutral-200" };
   return (
     <AnimatePresence>
       {show && (
@@ -429,7 +430,7 @@ function Bubble({ show, from, to, tone, children }: { show: boolean; from: [numb
 
 export function AgentFlow() {
   const { ref, stage } = useStage(MCP_STEPS.length, 2600);
-  const lit = (on: boolean) => ({ stroke: on ? ACCENT : "#d4d4d4", strokeWidth: on ? 2 : 1.25 });
+  const lit = (on: boolean) => ({ stroke: on ? ACCENT : "#d3dcd9", strokeWidth: on ? 2 : 1.25 });
   const stepActive = (i: number) => (i === 0 ? stage <= 1 : i === 1 ? stage === 2 || stage === 3 : stage === 4);
   return (
     <div>
@@ -487,13 +488,13 @@ export function AgentFlow() {
                 {stage === 2 && (
                   <motion.div key="rule" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2 text-[12px]">
                     <p className="rounded-md bg-white/10 px-2 py-1.5 font-geist-mono text-[11px] text-white/80">rule: no outreach during an open deal</p>
-                    <p className="rounded-md px-2 py-1.5 font-semibold" style={{ background: "rgba(242,107,58,0.2)", color: "#FFC4A8" }}>Held · asked Priya in Slack</p>
+                    <p className="rounded-md px-2 py-1.5 font-semibold" style={{ background: "rgba(242,162,58,0.18)", color: "#f5b85e" }}>Held · asked Priya in Slack</p>
                   </motion.div>
                 )}
                 {stage === 3 && (
                   <motion.div key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2 text-[12px]">
                     <p className="rounded-md bg-white/10 px-2 py-1.5 font-geist-mono text-[11px] text-white/80">rule: enrichment updates allowed</p>
-                    <p className="rounded-md bg-emerald-500/20 px-2 py-1.5 font-semibold text-emerald-300">Allowed ✓</p>
+                    <p className="rounded-md bg-dx-success-night/20 px-2 py-1.5 font-semibold text-dx-success-night">Allowed ✓</p>
                   </motion.div>
                 )}
                 {stage === 4 && (

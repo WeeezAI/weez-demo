@@ -40,7 +40,7 @@ const SOURCES = [
   },
   {
     id: 6,
-    label: "Gartner, Over 40% of agentic AI projects will be canceled by end of 2027 (press release, June 2025)",
+    label: "Gartner, prediction that over 40% of AI agent projects will be canceled by end of 2027 (press release, June 2025)",
     href: "https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027",
   },
 ] as const;
@@ -51,7 +51,7 @@ const Cite = ({ n }: { n: SourceId }) => (
   <a
     href="#sources"
     aria-label={`Source ${n}`}
-    className="ml-0.5 align-super text-[10px] font-medium text-neutral-400 transition hover:text-neutral-900"
+    className="ml-0.5 align-super text-[10px] font-medium text-dx-ink-muted transition hover:text-dx-ink"
   >
     [{n}]
   </a>
@@ -74,38 +74,59 @@ const Reveal = ({ children, delay = 0, className = "" }: { children: ReactNode; 
   );
 };
 
-const DexraMark = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-    <g fill="currentColor">
-      <circle cx="5" cy="5" r="2.2" />
-      <circle cx="12" cy="5" r="2.2" />
-      <circle cx="19" cy="5" r="2.2" />
-      <circle cx="5" cy="12" r="2.2" />
-      <circle cx="12" cy="12" r="2.2" />
-      <circle cx="5" cy="19" r="2.2" />
-    </g>
-  </svg>
+/** The official lockup from the design system (public/brand). Never retyped or redrawn. */
+const Wordmark = ({ reversed = false, className = "h-7" }: { reversed?: boolean; className?: string }) => (
+  <img
+    src={reversed ? "/brand/dexraflow-lockup-reversed.svg" : "/brand/dexraflow-lockup.svg"}
+    alt="Dexraflow"
+    width={137}
+    height={28}
+    className={`w-auto ${className}`}
+  />
 );
 
-const Wordmark = () => (
-  <span className="flex items-center gap-2">
-    <DexraMark className="h-4 w-4 text-[#F26B3A]" />
-    <span className="text-[15px] font-semibold tracking-[-0.01em] text-neutral-950">Dexraflow</span>
-  </span>
+/** Mono uppercase `eyebrow`, led by a short brand "plane" bar. */
+const Eyebrow = ({ children, dark = false }: { children: ReactNode; dark?: boolean }) => (
+  <p className={`flex items-center gap-2.5 font-dx-mono text-[12px] font-medium uppercase leading-4 tracking-[0.08em] ${dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}`}>
+    <span aria-hidden="true" className={`h-[3px] w-4 rounded-[1px] ${dark ? "bg-dx-brand-night" : "bg-dx-brand"}`} />
+    {children}
+  </p>
 );
 
-const Eyebrow = ({ children }: { children: ReactNode }) => (
-  <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F26B3A]">{children}</p>
+/** Two-tone `display` heading: an ink lead sentence, then an ink-muted continuation. */
+const SectionTitle = ({
+  id,
+  lead,
+  muted,
+  dark = false,
+  className = "",
+}: {
+  id: string;
+  lead: ReactNode;
+  muted?: ReactNode;
+  dark?: boolean;
+  className?: string;
+}) => (
+  <h2
+    id={id}
+    className={`mt-5 max-w-3xl text-[30px] font-semibold leading-[1.14] tracking-[-0.02em] sm:text-[44px] sm:leading-[50px] ${dark ? "text-dx-night-ink" : "text-dx-ink"} ${className}`}
+  >
+    {lead}
+    {muted && <span className={dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}> {muted}</span>}
+  </h2>
 );
+
+/** Focus ring per the system: 2px solid `focus`, 2px offset. */
+const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2";
 
 const PrimaryCTA = ({ onClick, children, className = "" }: { onClick: () => void; children: ReactNode; className?: string }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`group inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-neutral-950 px-5 text-[15px] font-medium text-white shadow-sm transition hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26B3A]/50 focus-visible:ring-offset-2 ${className}`}
+    className={`group inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-dx-brand px-4 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover ${FOCUS} ${className}`}
   >
     {children}
-    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
   </button>
 );
 
@@ -113,9 +134,21 @@ const SecondaryCTA = ({ onClick, children, className = "" }: { onClick: () => vo
   <button
     type="button"
     onClick={onClick}
-    className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-5 text-[15px] font-medium text-neutral-900 transition hover:border-neutral-400 hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26B3A]/50 focus-visible:ring-offset-2 ${className}`}
+    className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-dx-line-strong bg-dx-raised px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-surface ${FOCUS} ${className}`}
   >
     {children}
+  </button>
+);
+
+/** Button for `night` bands: raised ink-on-light. */
+const InverseCTA = ({ onClick, children, className = "" }: { onClick: () => void; children: ReactNode; className?: string }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`group inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-dx-night-ink px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-raised ${FOCUS} focus-visible:ring-dx-brand-night focus-visible:ring-offset-dx-night ${className}`}
+  >
+    {children}
+    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
   </button>
 );
 
@@ -124,20 +157,19 @@ const SecondaryCTA = ({ onClick, children, className = "" }: { onClick: () => vo
  * Drop the official logo at public/brand/draperu-india.png and it is used automatically;
  * until then the badge shows the name as text.
  */
-const AcceleratorBadge = () => {
+const AcceleratorBadge = ({ onBrand = false }: { onBrand?: boolean }) => {
   const [logoOk, setLogoOk] = useState(true);
   return (
-    <span className="inline-flex items-center gap-2.5 rounded-full border border-neutral-200 bg-white py-1.5 pl-3 pr-4 text-[13px] text-neutral-600 shadow-sm">
+    <span
+      className={`inline-flex items-center gap-2.5 rounded-[8px] border py-1.5 pl-3 pr-3.5 text-[13px] font-medium ${
+        onBrand ? "border-white/25 text-white/85" : "border-dx-line bg-dx-raised text-dx-ink-muted"
+      }`}
+    >
       <span>Accelerated by</span>
       {logoOk ? (
-        <img
-          src="/brand/draperu-india.png"
-          alt="DraperU India"
-          className="h-5 w-auto"
-          onError={() => setLogoOk(false)}
-        />
+        <img src="/brand/draperu-india.png" alt="DraperU India" className="h-5 w-auto" onError={() => setLogoOk(false)} />
       ) : (
-        <span className="font-semibold text-neutral-950">DraperU India</span>
+        <span className={`font-semibold ${onBrand ? "text-white" : "text-dx-ink"}`}>DraperU India</span>
       )}
     </span>
   );
@@ -148,53 +180,57 @@ const AcceleratorBadge = () => {
 const NAV_LINKS = [
   { href: "#problem", label: "The problem" },
   { href: "#use-cases", label: "Use cases" },
-  { href: "#insights", label: "Insights" },
-  { href: "#on-x", label: "Heard on X" },
   { href: "#how", label: "How it works" },
+  { href: "#on-x", label: "Heard on X" },
 ];
 
-const Nav = ({ onAccess }: { onAccess: () => void }) => {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300 ${
-        scrolled ? "border-b border-neutral-200 bg-white/85 backdrop-blur-xl" : "border-b border-transparent"
-      }`}
-    >
+const Nav = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void }) => (
+  <header className="fixed inset-x-0 top-0 z-50">
+    {/* announcement bar */}
+    <div className="bg-dx-ink text-dx-night-ink">
+      <button
+        type="button"
+        onClick={onAudit}
+        className="group mx-auto flex h-10 w-full max-w-7xl items-center justify-center gap-2 px-5 text-[13px] font-medium sm:text-[14px]"
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-dx-signal" />
+        <span className="truncate">
+          <span className="sm:hidden">The 14-day Missed Pipeline Audit</span>
+          <span className="hidden sm:inline">The 14-day Missed Pipeline Audit: find $10K of missed pipeline, or you don't pay</span>
+        </span>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+      </button>
+    </div>
+    <div className="border-b border-dx-line bg-dx-surface/90 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8" aria-label="Primary">
-        <Link to="/" aria-label="Dexraflow home" className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26B3A]/50">
-          <Wordmark />
-        </Link>
-        <div className="hidden items-center gap-8 text-[14px] text-neutral-600 md:flex">
-          {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="transition hover:text-neutral-950">
-              {l.label}
-            </a>
-          ))}
+        <div className="flex items-center gap-10">
+          <Link to="/" aria-label="Dexraflow home" className={`rounded ${FOCUS}`}>
+            <Wordmark />
+          </Link>
+          <div className="hidden items-center gap-7 text-[14px] font-medium text-dx-ink-muted lg:flex">
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href} className={`rounded transition hover:text-dx-ink ${FOCUS}`}>
+                {l.label}
+              </a>
+            ))}
+          </div>
         </div>
         <button
           type="button"
           onClick={onAccess}
-          className="h-9 rounded-lg bg-neutral-950 px-4 text-[13px] font-medium text-white transition hover:bg-neutral-800"
+          className={`h-9 rounded-[8px] bg-dx-brand px-3.5 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover ${FOCUS}`}
         >
           <span className="sm:hidden">Early access</span>
           <span className="hidden sm:inline">Request early access</span>
         </button>
       </nav>
-    </header>
-  );
-};
+    </div>
+  </header>
+);
 
 /* ───────────────────────── hero ───────────────────────── */
 
-const Hero = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void }) => {
+const Hero = ({ onAudit }: { onAudit: () => void }) => {
   const reduce = useReducedMotion();
   const enter = (i: number) =>
     reduce
@@ -206,53 +242,71 @@ const Hero = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void
         };
 
   return (
-    <section className="relative isolate overflow-hidden xl:min-h-[100svh]" aria-labelledby="hero-title">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(rgba(10,10,10,0.07)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(60%_60%_at_30%_30%,black,transparent)]"
-      />
-      <div className="relative mx-auto flex max-w-7xl flex-col px-5 pt-28 sm:px-8 md:pt-36 xl:min-h-[100svh] xl:justify-center xl:pb-24 xl:pt-24">
-        <div className="relative z-10 max-w-[600px]">
-          <motion.div {...enter(0)}>
-            <AcceleratorBadge />
-          </motion.div>
+    <section className="relative isolate overflow-hidden" aria-labelledby="hero-title">
+      <div className="mx-auto max-w-7xl px-5 pt-40 text-center sm:px-8 md:pt-48">
+        <motion.div {...enter(0)} className="flex justify-center">
+          <AcceleratorBadge />
+        </motion.div>
 
-          <motion.h1
-            id="hero-title"
-            {...enter(1)}
-            className="mt-7 text-[46px] font-semibold leading-[1.0] tracking-[-0.045em] text-neutral-950 sm:text-[64px] lg:text-[76px]"
-          >
-            We heard you.
-            <br />
-            <span className="text-neutral-400">Loud and clear.</span>
-          </motion.h1>
-
-          <motion.p {...enter(2)} className="mt-6 max-w-[540px] text-[18px] leading-relaxed text-neutral-600">
-            <strong className="font-semibold text-neutral-900">8 in 10 RevOps leaders</strong> don't feel they have clean,
-            actionable data.
-            <Cite n={1} /> Your tools disagree on who the customer is, so high-intent accounts get spotted too late. Dexraflow
-            helps revenue teams <strong className="font-semibold text-neutral-900">recover the pipeline they already own.</strong>
-          </motion.p>
-
-          <motion.div {...enter(3)} className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <PrimaryCTA onClick={onAccess}>Request early access</PrimaryCTA>
-            <SecondaryCTA onClick={onAudit}>Get a free pipeline audit</SecondaryCTA>
-          </motion.div>
-
-          <motion.p {...enter(4)} className="mt-6 text-[13px] text-neutral-500">
-            Built from 1,300+ RevOps community conversations. Real posts shown here, names blurred.
-          </motion.p>
-        </div>
-
-        <motion.div
-          initial={reduce ? false : { opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.4, ease: EASE }}
-          className="relative mb-12 mt-12 h-[440px] sm:h-[520px] xl:absolute xl:bottom-0 xl:left-[52%] xl:right-[min(0px,calc(640px-50vw))] xl:top-20 xl:mb-0 xl:mt-0 xl:h-auto"
+        <motion.h1
+          id="hero-title"
+          {...enter(1)}
+          className="mx-auto mt-7 max-w-6xl text-[40px] font-semibold leading-[1.06] tracking-[-0.025em] text-dx-ink sm:text-[52px] sm:leading-[58px] lg:text-[64px] lg:leading-[68px]"
         >
-          <ComplaintWall className="h-full" />
+          Your GTM tools are dropping deals.{" "}
+          <br className="hidden sm:block" />
+          <span className="text-dx-ink-muted">Silently.</span>
+        </motion.h1>
+
+        <motion.p {...enter(2)} className="mx-auto mt-6 max-w-[640px] text-[18px] leading-[28px] text-dx-ink-muted">
+          Dexraflow connects to the tools you already use, like HubSpot, Salesforce, Clay, Apollo and Outreach, catches the leads and
+          deals that slip between them, and tells the right rep in Slack before they go cold.
+        </motion.p>
+
+        <motion.div {...enter(3)} className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
+          <a
+            href="#use-cases"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("use-cases")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+            }}
+            className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-dx-line-strong bg-dx-raised px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-surface ${FOCUS}`}
+          >
+            See how it works
+          </a>
+          <PrimaryCTA onClick={onAudit}>Book a 14-day audit</PrimaryCTA>
         </motion.div>
       </div>
+
+      {/* Framed "app window": real RevOps community posts, scrolling */}
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 0.45, ease: EASE }}
+        className="mx-auto mt-16 max-w-6xl px-3 sm:px-8 md:mt-20"
+      >
+        <div className="relative">
+          {/* the brand dot grid, behind the visual only (never behind running text) */}
+          <div aria-hidden="true" className="pointer-events-none absolute -inset-x-6 -inset-y-8 bg-[url('/brand/dot-grid-tile.svg')] bg-[length:24px_24px] [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] sm:-inset-x-12" />
+          <div className="relative rounded-[12px] border border-dx-line bg-dx-raised p-1.5 sm:p-2">
+            <div className="overflow-hidden rounded-[8px] border border-dx-night-line bg-dx-night">
+              <div className="flex items-center gap-3 border-b border-dx-night-line px-4 py-3">
+                <span className="flex gap-1.5" aria-hidden="true">
+                  <span className="h-2.5 w-2.5 rounded-full bg-dx-night-line" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-dx-night-line" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-dx-night-line" />
+                </span>
+                <span className="font-dx-mono text-[13px] text-dx-night-ink"># revops-community</span>
+                <span className="ml-auto hidden font-dx-mono text-[12px] text-dx-night-ink-muted sm:inline">real posts · names blurred</span>
+              </div>
+              <ComplaintWall className="h-[420px] px-3 sm:h-[520px] sm:px-4" />
+            </div>
+          </div>
+        </div>
+        <p className="mt-6 text-center text-[13px] text-dx-ink-muted">
+          Built from 1,300+ RevOps community conversations. Real posts shown here, names blurred.
+        </p>
+      </motion.div>
     </section>
   );
 };
@@ -267,25 +321,23 @@ const STATS: { value: string; text: ReactNode; cite: SourceId }[] = [
 ];
 
 const Problem = () => (
-  <section id="problem" className="scroll-mt-20 border-t border-neutral-200 bg-neutral-50/70 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="problem-title">
+  <section id="problem" className="scroll-mt-32 border-t border-dx-line bg-dx-surface px-5 py-24 sm:px-8 md:py-32" aria-labelledby="problem-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
         <Eyebrow>The problem</Eyebrow>
-        <h2 id="problem-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-          Your GTM stack is full of signals. Nobody trusts them enough to act.
-        </h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
-          Intent, enrichment, CRM and sequencer data each hold part of the picture. They rarely agree, so the right account reaches
-          the right rep late, or never.
+        <SectionTitle id="problem-title" lead="Every tool says “success.”" muted="Your pipeline says otherwise." />
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dx-ink-muted">
+          Your CRM, enrichment, intent and outreach tools each keep their own version of the customer. Workflows between them break
+          without an error, leads sit with no owner, and buying signals go unseen. Nobody is checking what falls in between.
         </p>
       </Reveal>
 
       <div className="mt-14 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {STATS.map((s, i) => (
           <Reveal key={s.value} delay={i * 0.06}>
-            <div className="h-full rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-6">
-              <p className="text-[38px] font-semibold leading-none tracking-[-0.04em] text-neutral-950 sm:text-[52px]">{s.value}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-neutral-600 sm:mt-4 sm:text-[15px]">
+            <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-5 sm:p-6">
+              <p className="text-[38px] font-semibold leading-none tracking-[-0.04em] text-dx-ink sm:text-[52px]">{s.value}</p>
+              <p className="mt-3 text-[14px] leading-relaxed text-dx-ink-muted sm:mt-4 sm:text-[15px]">
                 {s.text}
                 <Cite n={s.cite} />
               </p>
@@ -296,50 +348,50 @@ const Problem = () => (
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <Reveal>
-          <div className="h-full rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
-            <p className="text-[15px] font-semibold text-neutral-950">
+          <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-8">
+            <p className="text-[15px] font-semibold text-dx-ink">
               The perception gap
               <Cite n={1} />
             </p>
-            <p className="mt-1 text-[14px] text-neutral-500">"Our data is clean": who agrees?</p>
+            <p className="mt-1 text-[14px] text-dx-ink-muted">"Our data is clean": who agrees?</p>
             <div className="mt-6 space-y-5">
               {[
-                { who: "CROs", pct: 50, tone: "bg-neutral-300" },
-                { who: "RevOps leaders", pct: 20, tone: "bg-[#F26B3A]" },
+                { who: "CROs", pct: 50, tone: "bg-dx-line-strong" },
+                { who: "RevOps leaders", pct: 20, tone: "bg-dx-brand" },
               ].map((r) => (
                 <div key={r.who}>
                   <div className="flex justify-between text-[14px]">
-                    <span className="text-neutral-700">{r.who}</span>
-                    <span className="font-semibold tabular-nums text-neutral-950">{r.pct}%</span>
+                    <span className="text-dx-ink">{r.who}</span>
+                    <span className="font-semibold tabular-nums text-dx-ink">{r.pct}%</span>
                   </div>
-                  <div className="mt-2 h-2.5 rounded-full bg-neutral-100">
-                    <div className={`h-2.5 rounded-full ${r.tone}`} style={{ width: `${r.pct}%` }} />
+                  <div className="mt-2 h-2.5 rounded-[2px] bg-dx-sunken">
+                    <div className={`h-2.5 rounded-[2px] ${r.tone}`} style={{ width: `${r.pct}%` }} />
                   </div>
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-[14px] leading-relaxed text-neutral-600">
+            <p className="mt-6 text-[14px] leading-relaxed text-dx-ink-muted">
               Leadership thinks the data is fine. The people who run the systems know it isn't.
             </p>
           </div>
         </Reveal>
         <Reveal delay={0.06}>
-          <div className="h-full rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
-            <p className="text-[15px] font-semibold text-neutral-950">
+          <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-8">
+            <p className="text-[15px] font-semibold text-dx-ink">
               Tool overload
               <Cite n={3} />
             </p>
             <div className="mt-6 grid grid-cols-2 gap-6">
               <div>
-                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-neutral-950">10</p>
-                <p className="mt-2 text-[14px] text-neutral-600">tools used, on average, to close a deal</p>
+                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-dx-ink">10</p>
+                <p className="mt-2 text-[14px] text-dx-ink-muted">tools used, on average, to close a deal</p>
               </div>
               <div>
-                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-neutral-950">66%</p>
-                <p className="mt-2 text-[14px] text-neutral-600">of reps feel overwhelmed by their tools</p>
+                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-dx-ink">66%</p>
+                <p className="mt-2 text-[14px] text-dx-ink-muted">of reps feel overwhelmed by their tools</p>
               </div>
             </div>
-            <p className="mt-6 text-[14px] leading-relaxed text-neutral-600">
+            <p className="mt-6 text-[14px] leading-relaxed text-dx-ink-muted">
               More tools didn't create more pipeline. It created more places for pipeline to hide.
             </p>
           </div>
@@ -365,36 +417,33 @@ const BIG_GROUPS: { label: string; stats: { value: string; text: string; cite: S
     stats: [
       { value: "10:1", text: "AI agents to sellers by 2028, Gartner predicts", cite: 5 },
       { value: "<40%", text: "of sellers will say those agents actually improved productivity", cite: 5 },
-      { value: "40%+", text: "of agentic AI projects will be canceled by 2027, citing unclear value and weak risk controls", cite: 6 },
+      { value: "40%+", text: "of AI agent projects will be canceled by 2027, citing unclear value and weak risk controls", cite: 6 },
     ],
   },
 ];
 
 const BigNumbers = () => (
-  <section className="bg-neutral-50/70 px-5 pb-24 sm:px-8 md:pb-32" aria-labelledby="numbers-title">
+  <section className="bg-dx-surface px-5 pb-24 sm:px-8 md:pb-32" aria-labelledby="numbers-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <div className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-12 text-white sm:px-12 sm:py-16">
-          <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[#F26B3A]/20 blur-3xl" />
+        <div className="relative overflow-hidden rounded-[12px] bg-dx-night px-6 py-12 text-dx-night-ink sm:px-12 sm:py-16">
           <div className="relative">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F7A27F]">By the numbers</p>
-            <h2 id="numbers-title" className="mt-4 max-w-3xl text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[42px]">
-              Every hour a signal sits unworked, the deal gets colder.
-            </h2>
+            <Eyebrow dark>By the numbers</Eyebrow>
+            <SectionTitle id="numbers-title" dark lead="Every hour a lead waits," muted="the deal gets colder." />
             <div className="mt-12 space-y-12">
               {BIG_GROUPS.map((g) => (
                 <div key={g.label}>
-                  <p className="font-geist-mono text-[12px] uppercase tracking-[0.14em] text-white/40">{g.label}</p>
+                  <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-night-ink-muted">{g.label}</p>
                   <div className="mt-5 grid gap-8 sm:grid-cols-3">
                     {g.stats.map((s) => (
-                      <div key={s.value} className="border-t border-white/15 pt-5">
-                        <p className="text-[52px] font-semibold leading-none tracking-[-0.05em] text-white sm:text-[64px]">{s.value}</p>
-                        <p className="mt-4 text-[15px] leading-relaxed text-white/65">
+                      <div key={s.value} className="border-t border-dx-night-line pt-5">
+                        <p className="text-[52px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink sm:text-[64px]">{s.value}</p>
+                        <p className="mt-4 text-[15px] leading-relaxed text-dx-night-ink-muted">
                           {s.text}
                           <a
                             href="#sources"
                             aria-label={`Source ${s.cite}`}
-                            className="ml-0.5 align-super text-[10px] font-medium text-white/40 transition hover:text-white"
+                            className="ml-0.5 align-super text-[10px] font-medium text-dx-night-ink-muted transition hover:text-dx-night-ink"
                           >
                             [{s.cite}]
                           </a>
@@ -405,8 +454,8 @@ const BigNumbers = () => (
                 </div>
               ))}
             </div>
-            <p className="mt-12 max-w-2xl text-[16px] leading-relaxed text-white/70">
-              More tools and more agents mean more signals. Without someone checking that each one reached a rep, more of them slip.
+            <p className="mt-12 max-w-2xl text-[16px] leading-relaxed text-dx-night-ink-muted">
+              More tools and more AI agents mean more places for leads to slip, and nobody checking the gaps.
             </p>
           </div>
         </div>
@@ -424,85 +473,76 @@ const SCENARIOS: { tag: string; title: string; Scene: () => JSX.Element; result:
 ];
 
 const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => void }) => (
-  <section id="use-cases" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="usecases-title">
+  <section id="use-cases" className="scroll-mt-32 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="usecases-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
         <Eyebrow>Use cases</Eyebrow>
-        <h2 id="usecases-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-          What Dexraflow does for a revenue team
-        </h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
-          It sits on top of the tools you already use, catches what slips between them, and never emails your prospects.
+        <SectionTitle id="usecases-title" lead="What Dexraflow does for a revenue team." />
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dx-ink-muted">
+          Dexraflow sits on top of the tools you already use, catches what slips between them, and never emails your prospects.
         </p>
       </Reveal>
 
       {/* Use case 1: live now */}
       <Reveal className="mt-14">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-10">
+        <div className="rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-10">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Available now</span>
-            <span className="text-[13px] text-neutral-500">Use case 1</span>
+            <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-dx-success-soft px-2 py-1 font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-success"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-dx-success" />Available now</span>
+            <span className="text-[13px] text-dx-ink-muted">Use case 1</span>
           </div>
-          <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-neutral-950 sm:text-[32px]">
+          <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-dx-ink sm:text-[32px]">
             Catch the leads and deals your GTM tools silently dropped
           </h3>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
             {SCENARIOS.map(({ tag, title, Scene, result }) => (
               <div key={tag} className="flex h-full flex-col">
-                <span className="w-fit rounded-full border border-[#F26B3A]/25 bg-[#F26B3A]/[0.06] px-2.5 py-0.5 text-[12px] font-medium text-[#C2502A]">{tag}</span>
-                <h4 className="mb-4 mt-3 min-h-[50px] text-[18px] font-semibold leading-snug text-neutral-950">{title}</h4>
+                <span className="w-fit rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-2 py-0.5 text-[12px] font-medium text-dx-brand">{tag}</span>
+                <h4 className="mb-4 mt-3 min-h-[50px] text-[18px] font-semibold leading-snug text-dx-ink">{title}</h4>
                 <Scene />
                 <div className="flex-1" />
-                <p className="mt-5 flex items-start gap-2 border-t border-neutral-200 pt-4 text-[15px] font-medium text-neutral-950">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F26B3A]" /> {result}
+                <p className="mt-5 flex items-start gap-2 border-t border-dx-line pt-4 text-[15px] font-medium text-dx-ink">
+                  <Check strokeWidth={1.5} className="mt-0.5 h-4 w-4 shrink-0 text-dx-brand" /> {result}
                 </p>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-[12px] text-neutral-400">
+          <p className="mt-6 text-[12px] text-dx-ink-muted">
             Examples are illustrative, based on failures RevOps teams and operators have described to us. Product names identify the tools we connect
             to; they are trademarks of their owners.
           </p>
 
-          <div className="mt-8 flex flex-col gap-6 rounded-xl bg-neutral-950 p-6 text-white sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-8 flex flex-col gap-6 rounded-[8px] bg-dx-night p-6 text-dx-night-ink sm:p-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F7A27F]">How it starts</p>
-              <p className="mt-3 text-[16px] leading-relaxed text-white/80">
+              <Eyebrow dark>How it starts</Eyebrow>
+              <p className="mt-3 text-[16px] leading-relaxed text-dx-night-ink-muted">
                 A 14-day Missed Pipeline Audit: connect your tools read-only, and we show you what slipped in the last 90 days, what it was worth and why.
                 Then the same checks run live, with Slack alerts and a weekly recovered-pipeline report.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onAudit}
-              className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 text-[15px] font-medium text-neutral-950 transition hover:bg-neutral-100"
-            >
-              Book an audit
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
+            <InverseCTA onClick={onAudit}>Book an audit</InverseCTA>
           </div>
         </div>
       </Reveal>
 
       {/* Use case 2: coming soon */}
       <Reveal className="mt-6">
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/70 p-6 sm:p-10">
+        <div className="rounded-[12px] border border-dashed border-dx-line-strong bg-dx-surface p-6 sm:p-10">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-neutral-200 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-neutral-700">Coming soon</span>
-            <span className="text-[13px] text-neutral-500">Use case 2</span>
+            <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-dx-signal-soft px-2 py-1 font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-signal-ink"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-dx-signal" />Coming soon</span>
+            <span className="text-[13px] text-dx-ink-muted">Use case 2</span>
           </div>
-          <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-neutral-950 sm:text-[32px]">
+          <h3 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-dx-ink sm:text-[32px]">
             Your AI agents check with Dexraflow before they act
           </h3>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-neutral-600">
+          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-dx-ink-muted">
             Agents from different tools can’t see each other. Connect any agent once, and it asks first: who owns this, is there an open deal, is this allowed.
           </p>
           <div className="mt-8">
             <AgentFlow />
           </div>
-          <div className="mt-8 flex flex-col gap-4 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-2xl text-[15px] text-neutral-600">For teams running AI agents, and GTM engineers building their own. Works through MCP.</p>
+          <div className="mt-8 flex flex-col gap-4 border-t border-dx-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-2xl text-[15px] text-dx-ink-muted">For teams running AI agents, and GTM engineers building their own. Works through MCP.</p>
             <SecondaryCTA onClick={onAccess} className="shrink-0">
               Get early access
             </SecondaryCTA>
@@ -548,25 +588,23 @@ const INSIGHTS: { title: string; body: ReactNode }[] = [
 ];
 
 const Insights = () => (
-  <section id="insights" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="insights-title">
+  <section id="insights" className="scroll-mt-32 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="insights-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
         <Eyebrow>What we learned</Eyebrow>
-        <h2 id="insights-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-          Six things every revenue leader should know
-        </h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
+        <SectionTitle id="insights-title" lead="Six things every revenue leader should know." />
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dx-ink-muted">
           From 1,300+ posts across two RevOps practitioner communities and 148 CRO Club articles on revenue and sales operations.
         </p>
       </Reveal>
 
-      <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-200 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-14 grid gap-px overflow-hidden rounded-[8px] border border-dx-line bg-dx-line sm:grid-cols-2 lg:grid-cols-3">
         {INSIGHTS.map((it, i) => (
-          <Reveal key={it.title} delay={(i % 3) * 0.05} className="bg-white">
+          <Reveal key={it.title} delay={(i % 3) * 0.05} className="bg-dx-raised">
             <div className="h-full p-7">
-              <span className="font-geist-mono text-[12px] text-[#F26B3A]">0{i + 1}</span>
-              <h3 className="mt-3 text-[18px] font-semibold leading-snug tracking-[-0.01em] text-neutral-950">{it.title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-neutral-600">{it.body}</p>
+              <span className="font-dx-mono text-[12px] font-medium text-dx-brand">0{i + 1}</span>
+              <h3 className="mt-3 text-[18px] font-semibold leading-snug tracking-[-0.01em] text-dx-ink">{it.title}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-dx-ink-muted">{it.body}</p>
             </div>
           </Reveal>
         ))}
@@ -638,14 +676,12 @@ const XLogo = ({ className = "" }: { className?: string }) => (
 );
 
 const HeardOnX = () => (
-  <section id="on-x" className="scroll-mt-20 border-t border-neutral-200 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="onx-title">
+  <section id="on-x" className="scroll-mt-32 border-t border-dx-line px-5 py-24 sm:px-8 md:py-32" aria-labelledby="onx-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
         <Eyebrow>Heard on X</Eyebrow>
-        <h2 id="onx-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-          The dashboard says success. The pipeline says otherwise.
-        </h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
+        <SectionTitle id="onx-title" lead="The dashboard says success." muted="The pipeline says otherwise." />
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dx-ink-muted">
           Operators and founders on X describe the same failure: workflows that run, report green, and quietly drop the leads that
           matter.
         </p>
@@ -658,24 +694,24 @@ const HeardOnX = () => (
               href={`https://x.com/${p.handle}/status/${p.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-300 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26B3A]/50"
+              className="group flex h-full flex-col rounded-[8px] border border-dx-line bg-dx-raised p-6 transition hover:border-dx-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-semibold text-neutral-700">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-dx-sunken text-[13px] font-semibold text-dx-ink">
                     {p.name.charAt(0)}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-neutral-950">{p.name}</p>
-                    <p className="truncate text-[13px] text-neutral-500">@{p.handle}</p>
+                    <p className="truncate text-[14px] font-semibold text-dx-ink">{p.name}</p>
+                    <p className="truncate text-[13px] text-dx-ink-muted">@{p.handle}</p>
                   </div>
                 </div>
-                <XLogo className="h-4 w-4 shrink-0 text-neutral-900" />
+                <XLogo className="h-4 w-4 shrink-0 text-dx-ink" />
               </div>
-              <blockquote className="mt-5 flex-1 text-[16px] leading-relaxed text-neutral-800">“{p.quote}”</blockquote>
+              <blockquote className="mt-5 flex-1 text-[16px] leading-relaxed text-dx-ink">“{p.quote}”</blockquote>
               <div className="mt-6 flex items-center justify-between text-[12px]">
-                <span className="rounded-full border border-[#F26B3A]/25 bg-[#F26B3A]/[0.06] px-2.5 py-0.5 font-medium text-[#C2502A]">{p.tag}</span>
-                <span className="inline-flex items-center gap-1 text-neutral-400 transition group-hover:text-neutral-900">
+                <span className="rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-2 py-0.5 font-medium text-dx-brand">{p.tag}</span>
+                <span className="inline-flex items-center gap-1 text-dx-ink-muted transition group-hover:text-dx-ink">
                   {p.date} · View on X <ArrowUpRight className="h-3.5 w-3.5" />
                 </span>
               </div>
@@ -683,7 +719,7 @@ const HeardOnX = () => (
           </Reveal>
         ))}
       </div>
-      <p className="mt-6 text-[12px] leading-relaxed text-neutral-400">
+      <p className="mt-6 text-[12px] leading-relaxed text-dx-ink-muted">
         Public posts on X, quoted in part with links to the originals. The authors are not Dexraflow customers and have not endorsed
         Dexraflow.
       </p>
@@ -694,50 +730,63 @@ const HeardOnX = () => (
 /* ───────────────────────── how it works ───────────────────────── */
 
 const STEPS = [
-  { n: "1", title: "Match", body: "Every signal is matched to the right account and contacts across your CRM, enrichment and sequencer, with a confidence score." },
-  { n: "2", title: "Prioritize", body: "Accounts are ranked by fit, intent and relationship status, with a plain-English reason for each one." },
-  { n: "3", title: "Route", body: "The right rep gets it in Slack with the evidence and a response-time target. If nobody acts, it escalates." },
-  { n: "4", title: "Prove", body: "Every alert is tracked to meeting, opportunity and pipeline. Leadership gets a weekly recovered-pipeline report." },
+  { n: "1", title: "Connect", body: "Read-only access to your CRM and GTM tools. Setup takes minutes, not a project." },
+  { n: "2", title: "Match", body: "One record per account and contact across every tool, so signals and owners line up." },
+  { n: "3", title: "Catch", body: "Leads with no owner, workflows that say success but wrote nothing, and buying signals nobody acted on." },
+  { n: "4", title: "Alert & prove", body: "The right rep gets it in Slack with the reason and a deadline. You get a weekly report of pipeline recovered." },
 ];
 
 const TOOLS = ["HubSpot", "Salesforce", "Slack", "Apollo", "Outreach", "Salesloft", "Clay"];
 
 const How = ({ onAudit }: { onAudit: () => void }) => (
-  <section id="how" className="scroll-mt-20 border-t border-neutral-200 bg-neutral-50/70 px-5 py-24 sm:px-8 md:py-32" aria-labelledby="how-title">
+  <section id="how" className="scroll-mt-32 border-t border-dx-line bg-dx-surface px-5 py-24 sm:px-8 md:py-32" aria-labelledby="how-title">
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <Eyebrow>What we're building</Eyebrow>
-        <h2 id="how-title" className="mt-4 max-w-3xl text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-          Recover pipeline you already own.
-        </h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-neutral-600">
-          We don't replace your tools or sell you more data. We make the tools you already pay for agree, and make sure someone acts.
+        <Eyebrow>How it works</Eyebrow>
+        <SectionTitle id="how-title" lead="Connect your tools." muted="We catch what slips." />
+        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dx-ink-muted">
+          No new tool to learn and nothing to replace. Read-only by default, and alerts arrive where your team already works: Slack.
         </p>
       </Reveal>
 
-      <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* The brand's signature image: one plane above the tools, one signal moving through. */}
+      <Reveal className="mt-14">
+        <figure className="overflow-hidden rounded-[12px] border border-dx-line bg-dx-raised">
+          <img
+            src="/brand/plane-diagram.svg"
+            alt="Diagram: Dexraflow as one bar sitting above six GTM tools, with a single alert moving down to one of them."
+            width={1200}
+            height={630}
+            loading="lazy"
+            decoding="async"
+            className="block h-auto w-full"
+          />
+        </figure>
+      </Reveal>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((s, i) => (
           <Reveal key={s.title} delay={i * 0.06}>
-            <div className="h-full rounded-2xl border border-neutral-200 bg-white p-6">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950 text-[13px] font-semibold text-white">{s.n}</span>
-              <h3 className="mt-5 text-[18px] font-semibold text-neutral-950">{s.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-neutral-600">{s.body}</p>
+            <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-6">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[4px] bg-dx-brand-soft font-dx-mono text-[13px] font-medium text-dx-brand">{s.n}</span>
+              <h3 className="mt-5 text-[18px] font-semibold text-dx-ink">{s.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-dx-ink-muted">{s.body}</p>
             </div>
           </Reveal>
         ))}
       </div>
 
-      <Reveal className="mt-10 flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
-        <ul className="grid gap-3 text-[15px] text-neutral-700 sm:grid-cols-3 lg:gap-8">
+      <Reveal className="mt-10 flex flex-col gap-6 rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+        <ul className="grid gap-3 text-[15px] text-dx-ink sm:grid-cols-3 lg:gap-8">
           {["Read-only by default", "Writes only 10 essential fields", "Every change logged"].map((t) => (
             <li key={t} className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-[#F26B3A]" /> {t}
+              <Check strokeWidth={1.5} className="h-4 w-4 text-dx-brand" /> {t}
             </li>
           ))}
         </ul>
         <div className="flex flex-wrap gap-2">
           {TOOLS.map((t) => (
-            <span key={t} className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[13px] text-neutral-600">
+            <span key={t} className="rounded-[4px] border border-dx-line bg-dx-surface px-2 py-1 font-dx-mono text-[12px] text-dx-ink-muted">
               {t}
             </span>
           ))}
@@ -746,26 +795,19 @@ const How = ({ onAudit }: { onAudit: () => void }) => (
 
       {/* Audit offer */}
       <Reveal className="mt-4">
-        <div className="relative overflow-hidden rounded-2xl bg-neutral-950 p-8 text-white sm:p-12">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#F26B3A]/25 blur-3xl" />
+        <div className="relative overflow-hidden rounded-[12px] bg-dx-night p-8 text-dx-night-ink sm:p-12">
           <div className="relative grid gap-8 md:grid-cols-[1.5fr_1fr] md:items-end">
             <div>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#F7A27F]">Free for design partners</p>
-              <h3 className="mt-4 text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[36px]">The Missed Pipeline Audit</h3>
-              <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-white/70">
-                We look back 90 days, read-only, and show you the high-intent accounts that never got worked, the ones routed to the
-                wrong owner, and the duplicates hiding them.
+              <Eyebrow dark>Start here</Eyebrow>
+              <h3 className="mt-4 text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[36px]">The 14-day Missed Pipeline Audit</h3>
+              <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-dx-night-ink-muted">
+                Connect your tools read-only. We look back 90 days and show you the high-intent accounts nobody worked, leads routed to
+                the wrong owner or no owner, and workflows that failed silently, with what each one was worth. If we don't find at least
+                $10K of missed pipeline, you don't pay.
               </p>
             </div>
             <div className="md:justify-self-end">
-              <button
-                type="button"
-                onClick={onAudit}
-                className="group inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white px-5 text-[15px] font-medium text-neutral-950 transition hover:bg-neutral-100 sm:w-auto"
-              >
-                Book my audit
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
+              <InverseCTA onClick={onAudit} className="w-full sm:w-auto">Book my audit</InverseCTA>
             </div>
           </div>
         </div>
@@ -778,69 +820,85 @@ const How = ({ onAudit }: { onAudit: () => void }) => (
 
 const Closing = ({ onAccess, onFounder }: { onAccess: () => void; onFounder: () => void }) => (
   <section className="px-5 py-24 sm:px-8 md:py-32" aria-labelledby="closing-title">
-    <Reveal className="mx-auto max-w-3xl text-center">
-      <div className="flex justify-center">
-        <AcceleratorBadge />
-      </div>
-      <h2 id="closing-title" className="mt-8 text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-neutral-950 sm:text-[46px]">
-        Built from conversations, not assumptions.
-      </h2>
-      <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-neutral-600">
-        We're working with a small group of Series A–C revenue teams. If good accounts slip through your stack, we'd like to hear
-        how.
-      </p>
-      <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-        <PrimaryCTA onClick={onAccess}>Request early access</PrimaryCTA>
-        <SecondaryCTA onClick={onFounder}>
-          Talk to the founder <ArrowUpRight className="h-4 w-4 opacity-60" />
-        </SecondaryCTA>
+    <Reveal className="mx-auto max-w-6xl">
+      {/* The page's one full `brand` band, as the brand book allows on marketing pages. */}
+      <div className="rounded-[12px] bg-dx-brand px-6 py-16 text-center text-white sm:px-12 md:py-24">
+        <div className="flex justify-center">
+          <AcceleratorBadge onBrand />
+        </div>
+        <h2 id="closing-title" className="mx-auto mt-8 max-w-3xl text-[36px] font-semibold leading-[1.08] tracking-[-0.025em] sm:text-[52px] sm:leading-[58px]">
+          Seen a deal slip{" "}
+          <br className="hidden sm:block" />
+          <span className="text-white/80">through your stack?</span>
+        </h2>
+        <p className="mx-auto mt-5 max-w-xl text-[18px] leading-[28px] text-white/85">
+          We're working with a small group of B2B SaaS revenue teams running five or more GTM tools. Tell us what slipped, and we'll show
+          you where else it's happening.
+        </p>
+        <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
+          <button
+            type="button"
+            onClick={onAccess}
+            className="group inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-white px-4 text-[14px] font-medium text-dx-brand transition hover:bg-dx-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-dx-brand"
+          >
+            Request early access
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            onClick={onFounder}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-white/40 px-4 text-[14px] font-medium text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-dx-brand"
+          >
+            Talk to the founder <ArrowUpRight className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
     </Reveal>
   </section>
 );
 
 const Footer = () => (
-  <footer className="border-t border-neutral-200 px-5 pb-10 pt-14 sm:px-8">
+  <footer className="border-t border-dx-line bg-dx-raised px-5 pb-10 pt-14 sm:px-8">
     <div className="mx-auto flex max-w-6xl flex-col gap-10 md:flex-row md:items-start md:justify-between">
       <div>
         <Wordmark />
-        <p className="mt-3 text-[13px] text-neutral-500">Recover pipeline you already own.</p>
+        <p className="mt-3 text-[13px] text-dx-ink-muted">Catch the deals your GTM tools silently dropped.</p>
       </div>
-      <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-neutral-500">
-        <a href={`mailto:${CONTACT_EMAIL}`} className="transition hover:text-neutral-950">
+      <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-dx-ink-muted">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="transition hover:text-dx-ink">
           {CONTACT_EMAIL}
         </a>
-        <Link to="/privacy-policy" className="transition hover:text-neutral-950">
+        <Link to="/privacy-policy" className="transition hover:text-dx-ink">
           Privacy
         </Link>
-        <Link to="/terms-conditions" className="transition hover:text-neutral-950">
+        <Link to="/terms-conditions" className="transition hover:text-dx-ink">
           Terms
         </Link>
-        <Link to="/data-deletion" className="transition hover:text-neutral-950">
+        <Link to="/data-deletion" className="transition hover:text-dx-ink">
           Data deletion
         </Link>
       </nav>
     </div>
 
-    <div id="sources" className="mx-auto mt-12 max-w-6xl scroll-mt-24 border-t border-neutral-200 pt-8">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Sources</p>
-      <ol className="mt-3 space-y-1.5 text-[13px] text-neutral-500">
+    <div id="sources" className="mx-auto mt-12 max-w-6xl scroll-mt-24 border-t border-dx-line pt-8">
+      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Sources</p>
+      <ol className="mt-3 space-y-1.5 text-[13px] text-dx-ink-muted">
         {SOURCES.map((s) => (
           <li key={s.id}>
             [{s.id}]{" "}
-            <a href={s.href} target="_blank" rel="noopener noreferrer" className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900">
+            <a href={s.href} target="_blank" rel="noopener noreferrer" className="underline decoration-dx-line-strong underline-offset-2 hover:text-dx-ink">
               {s.label}
             </a>
           </li>
         ))}
       </ol>
-      <p className="mt-4 max-w-3xl text-[12px] leading-relaxed text-neutral-400">
+      <p className="mt-4 max-w-3xl text-[12px] leading-relaxed text-dx-ink-muted">
         Community quotes are real posts from public channels of a RevOps practitioner Slack community. Names, photos and mentions are
         blurred; highlights are ours. Insights summarize our own research and are not statistics.
       </p>
     </div>
 
-    <div className="mx-auto mt-10 max-w-6xl text-[12px] text-neutral-400">© {new Date().getFullYear()} Dexraflow Inc.</div>
+    <div className="mx-auto mt-10 max-w-6xl text-[12px] text-dx-ink-muted">© {new Date().getFullYear()} Dexraflow Inc.</div>
   </footer>
 );
 
@@ -853,23 +911,23 @@ const Landing = () => {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = "Dexraflow — Recover pipeline you already own";
+    document.title = "Dexraflow — Catch the deals your GTM tools silently dropped";
     return () => {
       document.title = prev;
     };
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-white font-geist text-neutral-950 antialiased [overflow-x:clip] selection:bg-[#F26B3A]/20">
+    <div className="relative min-h-screen bg-dx-surface font-dx-sans text-dx-ink antialiased [overflow-x:clip] selection:bg-dx-brand-soft">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-neutral-950 focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[8px] focus:bg-dx-ink focus:px-4 focus:py-2 focus:text-sm focus:text-white"
       >
         Skip to content
       </a>
-      <Nav onAccess={openAccess} />
+      <Nav onAccess={openAccess} onAudit={openFounder} />
       <main id="main">
-        <Hero onAccess={openAccess} onAudit={openFounder} />
+        <Hero onAudit={openFounder} />
         <Problem />
         <BigNumbers />
         <UseCases onAudit={openFounder} onAccess={openAccess} />

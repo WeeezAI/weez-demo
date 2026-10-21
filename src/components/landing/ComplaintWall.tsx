@@ -22,7 +22,7 @@ const COMPLAINTS: Complaint[] = [
 const Card = ({ c, hidden }: { c: Complaint; hidden?: boolean }) => (
   <figure
     aria-hidden={hidden || undefined}
-    className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#1c1d21] shadow-[0_24px_60px_-28px_rgba(0,0,0,0.9)]"
+    className="overflow-hidden rounded-[8px] border border-dx-night-line bg-dx-night-raised"
   >
     <img
       src={c.src}
@@ -34,9 +34,9 @@ const Card = ({ c, hidden }: { c: Complaint; hidden?: boolean }) => (
       draggable={false}
       className="block h-auto w-full select-none"
     />
-    <figcaption className="flex items-center justify-between gap-3 whitespace-nowrap border-t border-white/[0.06] px-4 py-2 font-geist-mono text-[10px] uppercase tracking-[0.14em]">
-      <span className="rounded-full border border-rose-300/20 bg-rose-300/[0.06] px-2 py-0.5 text-rose-200/80">{c.tag}</span>
-      <span className="truncate text-white/30">RevOps Slack</span>
+    <figcaption className="flex items-center justify-between gap-3 whitespace-nowrap border-t border-dx-night-line px-4 py-2 font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em]">
+      <span className="rounded-[4px] border border-dx-night-line px-2 py-0.5 text-dx-brand-night">{c.tag}</span>
+      <span className="truncate text-dx-night-ink-muted">RevOps Slack</span>
     </figcaption>
   </figure>
 );
@@ -44,7 +44,7 @@ const Card = ({ c, hidden }: { c: Complaint; hidden?: boolean }) => (
 const Column = ({ items, duration, reverse, className = "" }: { items: Complaint[]; duration: number; reverse?: boolean; className?: string }) => {
   const reduce = useReducedMotion();
   return (
-    <div className={`group relative min-w-0 flex-1 xl:w-[400px] xl:flex-none ${className}`}>
+    <div className={`group relative min-w-0 flex-1 ${className}`}>
       <div
         className="flex flex-col gap-4 group-hover:[animation-play-state:paused]"
         style={
@@ -64,15 +64,19 @@ const Column = ({ items, duration, reverse, className = "" }: { items: Complaint
 };
 
 const ComplaintWall = ({ className = "" }: { className?: string }) => {
-  const colA = COMPLAINTS.filter((_, i) => i % 2 === 0);
-  const colB = COMPLAINTS.filter((_, i) => i % 2 === 1);
+  const pairA = COMPLAINTS.filter((_, i) => i % 2 === 0);
+  const pairB = COMPLAINTS.filter((_, i) => i % 2 === 1);
+  const thirds = [0, 1, 2].map((k) => COMPLAINTS.filter((_, i) => i % 3 === k));
   return (
     <div className={`relative ${className}`} role="region" aria-label="What RevOps leaders are saying">
-      <div className="h-full overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_7%,black_93%,transparent)] xl:[mask-image:linear-gradient(to_bottom,transparent,black_7%,black_93%,transparent),linear-gradient(to_right,black_78%,transparent)] xl:[mask-composite:intersect] xl:[-webkit-mask-composite:source-in]">
-        <div className="flex h-full gap-4">
+      <div className="h-full overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_6%,black_90%,transparent)]">
+        <div className="flex h-full gap-3 sm:gap-4">
           <Column items={COMPLAINTS} duration={70} className="sm:hidden" />
-          <Column items={colA} duration={56} className="hidden sm:block" />
-          <Column items={colB} duration={64} reverse className="hidden sm:block" />
+          <Column items={pairA} duration={56} className="hidden sm:block lg:hidden" />
+          <Column items={pairB} duration={64} reverse className="hidden sm:block lg:hidden" />
+          <Column items={thirds[0]} duration={48} className="hidden lg:block" />
+          <Column items={thirds[1]} duration={58} reverse className="hidden lg:block" />
+          <Column items={thirds[2]} duration={52} className="hidden lg:block" />
         </div>
       </div>
     </div>
