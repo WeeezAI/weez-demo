@@ -38,11 +38,6 @@ const SOURCES = [
     label: "Gartner, AI agents will outnumber sellers 10 to 1 by 2028 (press release, July 2026)",
     href: "https://www.gartner.com/en/newsroom/press-releases/2026-07-28-gartner-predicts-ai-agents-will-outnumber-sellers-10-to-1-by-2028-yet-fewer-than-40-percent-of-sellers-will-say-agents-improved-productivity",
   },
-  {
-    id: 6,
-    label: "Gartner, prediction that over 40% of AI agent projects will be canceled by end of 2027 (press release, June 2025)",
-    href: "https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027",
-  },
 ] as const;
 
 type SourceId = (typeof SOURCES)[number]["id"];
@@ -315,9 +310,8 @@ const Hero = ({ onAudit }: { onAudit: () => void }) => {
 
 const STATS: { value: string; text: ReactNode; cite: SourceId }[] = [
   { value: "80%", text: "of RevOps leaders don't feel they have clean, actionable data. Only 2 in 10 do.", cite: 1 },
-  { value: "76%", text: "say less than half of their CRM data is accurate and complete.", cite: 2 },
   { value: "37%", text: "of CRM users reported losing revenue as a direct result of poor data quality.", cite: 2 },
-  { value: "28%", text: "of a sales rep's week is spent actually selling. Much of the rest goes to admin and data entry.", cite: 3 },
+  { value: "10", text: "tools used, on average, to close a deal", cite: 3 },
 ];
 
 const Problem = () => (
@@ -332,7 +326,7 @@ const Problem = () => (
         </p>
       </Reveal>
 
-      <div className="mt-14 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="mt-14 grid gap-3 sm:grid-cols-3 sm:gap-4">
         {STATS.map((s, i) => (
           <Reveal key={s.value} delay={i * 0.06}>
             <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-5 sm:p-6">
@@ -346,66 +340,16 @@ const Problem = () => (
         ))}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <Reveal>
-          <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-8">
-            <p className="text-[15px] font-semibold text-dx-ink">
-              The perception gap
-              <Cite n={1} />
-            </p>
-            <p className="mt-1 text-[14px] text-dx-ink-muted">"Our data is clean": who agrees?</p>
-            <div className="mt-6 space-y-5">
-              {[
-                { who: "CROs", pct: 50, tone: "bg-dx-line-strong" },
-                { who: "RevOps leaders", pct: 20, tone: "bg-dx-brand" },
-              ].map((r) => (
-                <div key={r.who}>
-                  <div className="flex justify-between text-[14px]">
-                    <span className="text-dx-ink">{r.who}</span>
-                    <span className="font-semibold tabular-nums text-dx-ink">{r.pct}%</span>
-                  </div>
-                  <div className="mt-2 h-2.5 rounded-[2px] bg-dx-sunken">
-                    <div className={`h-2.5 rounded-[2px] ${r.tone}`} style={{ width: `${r.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="mt-6 text-[14px] leading-relaxed text-dx-ink-muted">
-              Leadership thinks the data is fine. The people who run the systems know it isn't.
-            </p>
-          </div>
-        </Reveal>
-        <Reveal delay={0.06}>
-          <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-6 sm:p-8">
-            <p className="text-[15px] font-semibold text-dx-ink">
-              Tool overload
-              <Cite n={3} />
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-dx-ink">10</p>
-                <p className="mt-2 text-[14px] text-dx-ink-muted">tools used, on average, to close a deal</p>
-              </div>
-              <div>
-                <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-dx-ink">66%</p>
-                <p className="mt-2 text-[14px] text-dx-ink-muted">of reps feel overwhelmed by their tools</p>
-              </div>
-            </div>
-            <p className="mt-6 text-[14px] leading-relaxed text-dx-ink-muted">
-              More tools didn't create more pipeline. It created more places for pipeline to hide.
-            </p>
-          </div>
-        </Reveal>
-      </div>
     </div>
   </section>
 );
 
 /* ───────────────────────── the numbers (bold band) ───────────────────────── */
 
-const BIG_GROUPS: { label: string; stats: { value: string; text: string; cite: SourceId }[] }[] = [
+const BIG_GROUPS: { label: string; cols: string; stats: { value: string; text: string; cite: SourceId }[] }[] = [
   {
     label: "Speed decides the deal",
+    cols: "sm:grid-cols-3",
     stats: [
       { value: "42 hrs", text: "average time for a company to first respond to an inbound lead", cite: 4 },
       { value: "7×", text: "more likely to qualify a lead when you reach out within the hour", cite: 4 },
@@ -414,10 +358,10 @@ const BIG_GROUPS: { label: string; stats: { value: string; text: string; cite: S
   },
   {
     label: "Agents are about to multiply it",
+    cols: "sm:grid-cols-2",
     stats: [
       { value: "10:1", text: "AI agents to sellers by 2028, Gartner predicts", cite: 5 },
       { value: "<40%", text: "of sellers will say those agents actually improved productivity", cite: 5 },
-      { value: "40%+", text: "of AI agent projects will be canceled by 2027, citing unclear value and weak risk controls", cite: 6 },
     ],
   },
 ];
@@ -434,7 +378,7 @@ const BigNumbers = () => (
               {BIG_GROUPS.map((g) => (
                 <div key={g.label}>
                   <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-night-ink-muted">{g.label}</p>
-                  <div className="mt-5 grid gap-8 sm:grid-cols-3">
+                  <div className={`mt-5 grid gap-8 ${g.cols}`}>
                     {g.stats.map((s) => (
                       <div key={s.value} className="border-t border-dx-night-line pt-5">
                         <p className="text-[52px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink sm:text-[64px]">{s.value}</p>
@@ -536,7 +480,7 @@ const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => 
             Your AI agents check with Dexraflow before they act
           </h3>
           <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-dx-ink-muted">
-            Agents from different tools can’t see each other. Connect any agent once, and it asks first: who owns this, is there an open deal, is this allowed.
+            Agents from different tools can’t see each other. With Dexraflow, they ask first.
           </p>
           <div className="mt-8">
             <AgentFlow />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
-import { Bot, Check, Clock, Database, Globe, Mail, Phone, Radar, Search, type LucideIcon } from "lucide-react";
-import { BRAND_ICONS } from "./brandIcons";
+import { AlertTriangle, Bot, Check, Clock, Globe, Mail, Radar, RotateCcw, Search, type LucideIcon } from "lucide-react";
+import { BRAND_ICONS, BRAND_LOGOS } from "./brandIcons";
 
 /* ───────────── shared pieces ───────────── */
 
@@ -45,6 +45,9 @@ function Canvas({ w, h, children }: { w: number; h: number; children: ReactNode 
 }
 
 export function BrandIcon({ k, size = 20 }: { k: keyof typeof BRAND_ICONS | string; size?: number }) {
+  const logo = BRAND_LOGOS[k];
+  if (logo)
+    return <img src={logo.src} alt={logo.title} width={size} height={size} draggable={false} className="shrink-0 object-contain" style={{ width: size, height: size }} />;
   const i = BRAND_ICONS[k];
   if (!i) return null;
   return (
@@ -236,7 +239,7 @@ export function NoOwnerScene() {
           <Drops show={stage === 3} xs={[180, 298]} />
           <Tile x={20} y={95} name="Web form" icon={Globe} />
           <Tile x={138} y={95} name="HubSpot" brand="hubspot" active={stage >= 1 && stage <= 3} />
-          <Tile x={256} y={95} name="Clay" icon={Database} active={stage === 1} />
+          <Tile x={256} y={95} name="Clay" brand="clay" active={stage === 1} />
           {/* routing line HubSpot → Clay */}
           <svg className="pointer-events-none absolute left-0 top-0" width="360" height="290" aria-hidden="true">
             <motion.line x1={222} x2={256} y1={127} y2={127} stroke="#a3a3a3" strokeDasharray="4 4" initial={false} animate={{ opacity: stage >= 1 ? 1 : 0 }} />
@@ -281,7 +284,7 @@ export function SilentFailureScene() {
         <Canvas w={360} h={290}>
           <PlaneBar show={stage >= 3} />
           <Drops show={stage === 3} xs={[288]} />
-          <Tile x={20} y={95} name="Clay" icon={Database} />
+          <Tile x={20} y={95} name="Clay" brand="clay" />
           <Tile x={256} y={95} name="HubSpot" brand="hubspot" active={stage === 1 || stage === 3} />
           <svg className="pointer-events-none absolute left-0 top-0" width="360" height="290" aria-hidden="true">
             <line x1={104} x2={256} y1={127} y2={127} stroke="#d3dcd9" strokeWidth={2} />
@@ -340,7 +343,7 @@ export function MissedSignalScene() {
           <PlaneBar show={stage >= 3} />
           <Tile x={20} y={58} h={58} name="6sense" icon={Radar} active={stage === 0} />
           <Tile x={138} y={58} h={58} name="Website" icon={Globe} active={stage === 0} />
-          <Tile x={256} y={58} h={58} name="Gong" icon={Phone} active={stage === 0} />
+          <Tile x={256} y={58} h={58} name="Gong" brand="gong" active={stage === 0} />
           <Chip x={18} y={122} show tone="amber" w={88}>Surging</Chip>
           <Chip x={130} y={122} show tone="amber" w={100}>3 pricing visits</Chip>
           <Chip x={250} y={122} show tone="amber" w={96}>Asked pricing</Chip>
@@ -384,149 +387,556 @@ export function MissedSignalScene() {
 }
 
 /* ───────────── Use case 2: AI agents ask Dexraflow before they act ───────────── */
+//
+// A five-step story: the problem without Dexraflow, then Ask → Look up → Check → Log.
+// One thing happens at a time; everything not in the current step drops to 30%.
+// Desktop draws on a fixed 880px canvas scaled to fit; when that would push text
+// under 11px it switches to a vertical layout that never scales.
 
-const AGENTS = [
-  { name: "AI SDR", icon: Bot, y: 40 },
-  { name: "Clay agent", icon: Database, y: 128 },
-  { name: "HubSpot agent", brand: "hubspot", y: 216 },
-  { name: "Your Claude agent", brand: "claude", y: 304 },
-];
-const TOOLS = [
-  { name: "HubSpot", brand: "hubspot", y: 24 },
-  { name: "Salesforce", brand: "salesforce", y: 88 },
-  { name: "Apollo", icon: Database, y: 152 },
-  { name: "Outreach", icon: Mail, y: 216 },
-  { name: "Gong", icon: Phone, y: 280 },
-  { name: "Slack", brand: "slack", y: 344 },
-];
-const MCP_STEPS = [
-  "An AI SDR wants to email jane@acme.com. It asks Dexraflow first.",
-  "Dexraflow pulls the account from every tool",
-  "A rule says no outreach during an open deal, so it's held for Priya",
-  "Another agent asks to update a job title. That's allowed.",
-  "Every agent's action lands in one log",
-];
+const STORY = [
+  { label: "The problem", caption: "Agents can't see each other.", ms: 3600 },
+  { label: "Ask", caption: "Before acting, the agent asks Dexraflow.", ms: 3000 },
+  { label: "Look up", caption: "Dexraflow pulls the account from every tool.", ms: 3800 },
+  { label: "Check", caption: "Your rules decide: allowed, held, or ask a human.", ms: 6200 },
+  { label: "Log", caption: "Every agent's action, in one log.", ms: 4000 },
+] as const;
 
-const HUB = { x: 330, y: 40, w: 260, h: 336 };
+type AgentId = "sdr" | "hubspotAgent" | "clay";
+type ToolId = "hubspot" | "salesforce" | "outreach" | "gong" | "slack";
+type Glyph = { name: string; brand?: string; icon?: LucideIcon };
 
-function Bubble({ show, from, to, tone, children }: { show: boolean; from: [number, number]; to: [number, number]; tone: "amber" | "green" | "grey"; children: ReactNode }) {
-  const tones = { amber: "bg-dx-signal-soft text-dx-signal-ink border-dx-signal/40", green: "bg-dx-success-soft text-dx-success border-dx-success/25", grey: "bg-white text-neutral-800 border-neutral-200" };
+const FLOW_AGENTS: (Glyph & { id: AgentId })[] = [
+  { id: "sdr", name: "AI SDR", icon: Bot },
+  { id: "hubspotAgent", name: "HubSpot agent", brand: "hubspot" },
+  { id: "clay", name: "Clay agent", brand: "clay" },
+];
+const FLOW_TOOLS: (Glyph & { id: ToolId })[] = [
+  { id: "hubspot", name: "HubSpot", brand: "hubspot" },
+  { id: "salesforce", name: "Salesforce", brand: "salesforce" },
+  { id: "outreach", name: "Outreach", brand: "outreach" },
+  { id: "gong", name: "Gong", brand: "gong" },
+  { id: "slack", name: "Slack", brand: "slack" },
+];
+/** Look-up order; each tool lights at 0.2s + i × LOOKUP_GAP. */
+const LOOKUP: ToolId[] = ["hubspot", "salesforce", "outreach", "gong"];
+const LOOKUP_GAP = 0.7;
+const ACCOUNT_ROWS: { label: string; value: string; tool: ToolId }[] = [
+  { label: "Owner", value: "Priya", tool: "hubspot" },
+  { label: "Open deal", value: "$40K, Negotiation", tool: "salesforce" },
+  { label: "Last touch", value: "2 days ago", tool: "outreach" },
+];
+const LOG_ROWS: { agent: AgentId; action: string; verdict: "held" | "allowed" | "done" }[] = [
+  { agent: "sdr", action: "Email to Jane", verdict: "held" },
+  { agent: "clay", action: "Job title", verdict: "allowed" },
+  { agent: "hubspotAgent", action: "Task for Priya", verdict: "done" },
+];
+// Check-step beats (seconds into the step).
+const T = { rule: 0.2, hold: 0.8, reply: 1.3, slack: 2.3, clayAsk: 3.5, allowed: 4.4 };
+
+const DIM = 0.3;
+const agentOn = (id: AgentId, step: number) =>
+  step === 0 ? id !== "clay" : step === 1 ? id === "sdr" : step === 3 ? id !== "hubspotAgent" : step === 4;
+const toolOn = (id: ToolId, step: number) => (step === 2 ? id !== "slack" : step === 3 ? id === "slack" : false);
+/** When (seconds into the step) a tool's line lights, or null if it stays idle this step. */
+const toolLitAt = (id: ToolId, step: number) =>
+  step === 2 && id !== "slack" ? 0.2 + LOOKUP.indexOf(id) * LOOKUP_GAP : step === 3 && id === "slack" ? T.slack - 0.2 : null;
+const agentLitAt = (id: AgentId, step: number) =>
+  step === 0 && id !== "clay" ? 0 : step === 1 && id === "sdr" ? 0 : step === 3 && id === "sdr" ? 0 : step === 3 && id === "clay" ? T.clayAsk : null;
+
+function GlyphIcon({ g, size = 18, className = "text-dx-ink-muted" }: { g: Glyph; size?: number; className?: string }) {
+  if (g.brand) return <BrandIcon k={g.brand} size={size} />;
+  const Icon = g.icon;
+  return Icon ? <Icon className={className} style={{ width: size, height: size }} strokeWidth={1.5} aria-hidden="true" /> : null;
+}
+
+/** Transition helper: instant under reduced motion, otherwise eased with a delay. */
+function useTr() {
+  const reduce = !!useReducedMotion();
+  return {
+    reduce,
+    tr: (delay = 0, duration = 0.45) => (reduce ? { duration: 0 } : { delay, duration, ease: [0.22, 1, 0.36, 1] as const }),
+  };
+}
+
+/** Agent or tool tile: dims when not involved, takes a teal border when its line is lit. */
+function FlowTile({ g, on, litAt, compact = false }: { g: Glyph; on: boolean; litAt: number | null; compact?: boolean }) {
+  const { tr } = useTr();
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          className={`absolute z-10 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] font-medium shadow-sm ${tones[tone]}`}
-          initial={{ left: from[0], top: from[1], opacity: 0 }}
-          animate={{ left: to[0], top: to[1], opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.1, ease: "easeInOut" }}
-        >
-          {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <motion.div
+      className={`flex items-center rounded-[8px] border bg-dx-raised ${compact ? "flex-col justify-center gap-1 px-1.5 py-2 text-center" : "h-full gap-2.5 px-3"}`}
+      initial={false}
+      animate={{ opacity: on ? 1 : DIM, borderColor: litAt !== null ? ACCENT : "#d3dcd9" }}
+      transition={{ opacity: tr(0, 0.35), borderColor: tr(litAt ?? 0, 0.3) }}
+    >
+      <GlyphIcon g={g} size={compact ? 18 : 20} />
+      <span className="text-[13px] font-medium leading-tight text-dx-ink">{g.name}</span>
+    </motion.div>
   );
 }
 
-export function AgentFlow() {
-  const { ref, stage } = useStage(MCP_STEPS.length, 2600);
-  const lit = (on: boolean) => ({ stroke: on ? ACCENT : "#d3dcd9", strokeWidth: on ? 2 : 1.25 });
-  const stepActive = (i: number) => (i === 0 ? stage <= 1 : i === 1 ? stage === 2 || stage === 3 : stage === 4);
+function Stamp({ tone, delay, children }: { tone: "hold" | "allowed"; delay: number; children: ReactNode }) {
+  const { tr, reduce } = useTr();
+  const cls = tone === "hold" ? "border-dx-signal text-dx-signal" : "border-dx-success-night text-dx-success-night";
   return (
-    <div>
-      <div ref={ref} className="rounded-xl border border-neutral-200 bg-[radial-gradient(rgba(10,10,10,0.06)_1px,transparent_1px)] [background-size:16px_16px] bg-white p-3">
-        <Canvas w={920} h={400}>
-          <p className="absolute text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400" style={{ left: 20, top: 12 }}>Your AI agents</p>
-          <p className="absolute text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400" style={{ left: 750, top: 0 }}>Your tools</p>
+    <motion.span
+      className={`inline-flex items-center gap-1 rounded-[4px] border-2 px-2 py-0.5 font-dx-mono text-[13px] font-semibold tracking-[0.08em] ${cls}`}
+      initial={reduce ? false : { opacity: 0, scale: 1.7, rotate: -10 }}
+      animate={{ opacity: 1, scale: 1, rotate: -4 }}
+      transition={tr(delay, 0.35)}
+    >
+      {children}
+    </motion.span>
+  );
+}
 
-          <svg className="pointer-events-none absolute left-0 top-0" width="920" height="400" aria-hidden="true">
-            {AGENTS.map((a, i) => (
-              <motion.line key={a.name} x1={180} y1={a.y + 26} x2={HUB.x} y2={HUB.y + 60 + i * 20} initial={false} animate={lit((stage <= 2 && i === 0) || (stage === 3 && i === 1))} />
-            ))}
-            {TOOLS.map((t) => (
-              <motion.line key={t.name} x1={HUB.x + HUB.w} y1={HUB.y + 120} x2={750} y2={t.y + 24} initial={false} animate={lit(stage === 1 && t.name !== "Slack")} />
-            ))}
-            <motion.line x1={HUB.x + HUB.w} y1={HUB.y + 160} x2={750} y2={368} initial={false} animate={lit(stage === 2)} />
-          </svg>
+function Appear({ delay, children, className = "", y = 6 }: { delay: number; children: ReactNode; className?: string; y?: number }) {
+  const { tr, reduce } = useTr();
+  return (
+    <motion.div className={className} initial={reduce ? false : { opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={tr(delay)}>
+      {children}
+    </motion.div>
+  );
+}
 
-          {AGENTS.map((a, i) => (
-            <Tile key={a.name} x={20} y={a.y} w={160} h={52} row name={a.name} brand={a.brand} icon={a.icon} active={(stage <= 2 && i === 0) || (stage === 3 && i === 1)} />
-          ))}
-          {TOOLS.map((t) => (
-            <Tile key={t.name} x={750} y={t.y} w={150} h={48} row name={t.name} brand={t.brand} icon={t.icon} active={(stage === 1 && t.name !== "Slack") || (stage === 2 && t.name === "Slack")} />
-          ))}
-
-          {/* the hub */}
-          <div className="absolute rounded-xl p-4 text-white" style={{ left: HUB.x, top: HUB.y, width: HUB.w, height: HUB.h, background: INK }}>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ background: ACCENT }} />
-              <span className="text-[13px] font-semibold">Dexraflow</span>
-              <span className="ml-auto rounded bg-white/10 px-1.5 py-0.5 font-geist-mono text-[10px] text-white/70">MCP</span>
-            </div>
-            <div className="mt-3 flex gap-1.5">
-              {["Ask", "Check", "Log"].map((s, i) => (
-                <motion.span
-                  key={s}
-                  className="flex-1 rounded-md py-1 text-center text-[11px] font-semibold"
-                  initial={false}
-                  animate={{ background: stepActive(i) ? ACCENT : "rgba(255,255,255,0.08)", color: stepActive(i) ? "#fff" : "rgba(255,255,255,0.55)" }}
-                >
-                  {s}
-                </motion.span>
-              ))}
-            </div>
-            <div className="relative mt-3" style={{ height: 232 }}>
-              <AnimatePresence mode="wait">
-                {stage <= 1 && (
-                  <motion.div key="ctx" initial={{ opacity: 0 }} animate={{ opacity: stage === 1 ? 1 : 0.35 }} exit={{ opacity: 0 }} className="space-y-1.5 text-[12px]">
-                    <p className="text-white/50">Acme Inc · jane@acme.com</p>
-                    <p>Owner: <span className="font-semibold">Priya</span></p>
-                    <p>Open deal: <span className="font-semibold">$40K · Negotiation</span></p>
-                    <p>Last touch: <span className="font-semibold">Outreach, 2 days ago</span></p>
-                  </motion.div>
-                )}
-                {stage === 2 && (
-                  <motion.div key="rule" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2 text-[12px]">
-                    <p className="rounded-md bg-white/10 px-2 py-1.5 font-geist-mono text-[11px] text-white/80">rule: no outreach during an open deal</p>
-                    <p className="rounded-md px-2 py-1.5 font-semibold" style={{ background: "rgba(242,162,58,0.18)", color: "#f5b85e" }}>Held · asked Priya in Slack</p>
-                  </motion.div>
-                )}
-                {stage === 3 && (
-                  <motion.div key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2 text-[12px]">
-                    <p className="rounded-md bg-white/10 px-2 py-1.5 font-geist-mono text-[11px] text-white/80">rule: enrichment updates allowed</p>
-                    <p className="rounded-md bg-dx-success-night/20 px-2 py-1.5 font-semibold text-dx-success-night">Allowed ✓</p>
-                  </motion.div>
-                )}
-                {stage === 4 && (
-                  <motion.div key="log" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1.5">
-                    {[
-                      ["AI SDR", "email held · open deal"],
-                      ["Clay agent", "job title updated"],
-                      ["HubSpot agent", "task for Priya"],
-                    ].map(([who, what], i) => (
-                      <motion.p
-                        key={who}
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.25 }}
-                        className="flex justify-between rounded-md bg-white/10 px-2 py-1.5 font-geist-mono text-[11px] text-white/85"
-                      >
-                        <span>{who}</span>
-                        <span className="text-white/55">{what}</span>
-                      </motion.p>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <Bubble show={stage === 0} from={[60, 96]} to={[196, 64]} tone="grey">Email jane@acme.com?</Bubble>
-          <Bubble show={stage === 2} from={[290, 120]} to={[188, 100]} tone="amber">Held: open deal</Bubble>
-          <Bubble show={stage === 3} from={[60, 184]} to={[192, 150]} tone="green">Update title? ✓</Bubble>
-        </Canvas>
+/** Step 1's middle: the contact both agents email, with the collision they cause. */
+function ContactCard() {
+  return (
+    <div className="rounded-[8px] border border-dx-line bg-dx-raised p-3.5">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-dx-sunken text-[13px] font-semibold text-dx-ink">J</span>
+        <div className="min-w-0">
+          <p className="text-[14px] font-semibold text-dx-ink">Jane · Acme Inc</p>
+          <p className="text-[12px] text-dx-ink-muted">Open deal $40K</p>
+        </div>
       </div>
-      <Caption stage={stage} lines={MCP_STEPS} />
+      <div className="mt-3 space-y-1.5">
+        {[
+          { who: "AI SDR", delay: 1.1 },
+          { who: "HubSpot agent", delay: 1.4 },
+        ].map((e) => (
+          <Appear key={e.who} delay={e.delay} className="flex items-center gap-2 rounded-[4px] bg-dx-surface px-2 py-1 text-[12px] text-dx-ink">
+            <Mail className="h-3.5 w-3.5 text-dx-ink-muted" strokeWidth={1.5} aria-hidden="true" />
+            Email from {e.who}
+          </Appear>
+        ))}
+      </div>
+      <Appear delay={1.9} className="mt-3 flex items-center gap-1.5 rounded-[4px] border border-dx-signal/40 bg-dx-signal-soft px-2 py-1 text-[12px] font-medium text-dx-signal-ink">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />2 emails · same day · deal in progress
+      </Appear>
     </div>
+  );
+}
+
+/** The Dexraflow hub, sized to whatever the current step puts in it. */
+function Hub({ step }: { step: number }) {
+  return (
+    <div className="rounded-[8px] border border-dx-night-line bg-dx-night p-3.5 text-dx-night-ink">
+      <div className="flex items-center justify-between">
+        <img src="/brand/dexraflow-lockup-reversed.svg" alt="Dexraflow" className="h-5 w-auto" />
+        <span className="rounded-[4px] border border-dx-night-line px-1.5 py-0.5 font-dx-mono text-[12px] text-dx-night-ink-muted">MCP</span>
+      </div>
+
+      {step === 1 && (
+        <Appear delay={1.2} className="mt-3 rounded-[4px] bg-dx-night-raised px-2.5 py-2 text-[12px]">
+          <p className="text-dx-night-ink-muted">AI SDR asks</p>
+          <p className="mt-0.5 font-dx-mono text-[12px] text-dx-night-ink">email jane@acme.com?</p>
+        </Appear>
+      )}
+
+      {step === 2 && (
+        <div className="mt-3 rounded-[6px] bg-dx-raised p-3 text-dx-ink">
+          <p className="text-[14px] font-semibold">Acme Inc</p>
+          <p className="text-[12px] text-dx-ink-muted">jane@acme.com</p>
+          <div className="mt-2 space-y-1">
+            {ACCOUNT_ROWS.map((r, i) => (
+              <Appear key={r.label} delay={0.45 + i * LOOKUP_GAP} y={4} className="flex items-center gap-2 border-t border-dx-line pt-1 text-[12px]">
+                <GlyphIcon g={FLOW_TOOLS.find((t) => t.id === r.tool)!} size={14} />
+                <span className="text-dx-ink-muted">{r.label}:</span>
+                <span className="font-medium">{r.value}</span>
+              </Appear>
+            ))}
+          </div>
+          <Appear delay={0.45 + 3 * LOOKUP_GAP} y={0} className="mt-2 font-dx-mono text-[12px] text-dx-ink-muted">
+            4 tools checked
+          </Appear>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="mt-3 space-y-2.5">
+          <p className="rounded-[4px] bg-dx-night-raised px-2.5 py-1.5 text-[12px] text-dx-night-ink-muted">Acme Inc · Owner Priya · Open deal $40K</p>
+          <Appear delay={T.rule} className="rounded-[4px] border border-dx-night-line px-2.5 py-1.5 font-dx-mono text-[12px] text-dx-night-ink">
+            Rule: no outreach during an open deal
+          </Appear>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[12px] text-dx-night-ink-muted">AI SDR email</span>
+            <Stamp tone="hold" delay={T.hold}>HOLD</Stamp>
+          </div>
+          <Appear delay={T.clayAsk + 0.6} y={0} className="flex items-center gap-2.5 border-t border-dx-night-line pt-2.5">
+            <span className="text-[12px] text-dx-night-ink-muted">Clay agent · job title</span>
+            <Stamp tone="allowed" delay={T.allowed}>
+              ALLOWED <Check className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
+            </Stamp>
+          </Appear>
+        </div>
+      )}
+
+      {step === 4 && (
+        <p className="mt-3 text-[12px] text-dx-night-ink-muted">3 agent actions checked today</p>
+      )}
+    </div>
+  );
+}
+
+const VERDICT_CLS = {
+  held: "border-dx-signal/40 bg-dx-signal-soft text-dx-signal-ink",
+  allowed: "border-dx-success/25 bg-dx-success-soft text-dx-success",
+  done: "border-dx-line bg-dx-surface text-dx-ink-muted",
+};
+
+/** Step 5: the timeline that slides in under the hub. */
+function LogCard() {
+  return (
+    <Appear delay={0.1} y={-8} className="rounded-[8px] border border-dx-line bg-dx-raised p-3">
+      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Agent log</p>
+      <div className="mt-2 space-y-1.5">
+        {LOG_ROWS.map((r, i) => {
+          const g = FLOW_AGENTS.find((a) => a.id === r.agent)!;
+          return (
+            <Appear key={r.agent} delay={0.35 + i * 0.3} y={4} className="flex items-center gap-2 border-t border-dx-line pt-1.5 text-[12px]">
+              <GlyphIcon g={g} size={15} />
+              <span className="font-medium text-dx-ink">{g.name}</span>
+              <span className="truncate text-dx-ink-muted">· {r.action}</span>
+              <span className={`ml-auto shrink-0 rounded-[4px] border px-1.5 py-0.5 font-dx-mono text-[12px] font-medium ${VERDICT_CLS[r.verdict]}`}>{r.verdict}</span>
+            </Appear>
+          );
+        })}
+      </div>
+    </Appear>
+  );
+}
+
+function SlackApproval() {
+  return (
+    <Appear delay={T.slack} y={10} className="rounded-[8px] border border-dx-line bg-dx-raised p-3 shadow-dx-overlay">
+      <div className="flex items-start gap-2.5">
+        <BrandIcon k="slack" size={18} />
+        <p className="text-[12px] leading-snug text-dx-ink">
+          <span className="font-semibold">Priya</span>, AI SDR wants to email Jane at Acme.
+        </p>
+      </div>
+      <div className="mt-2.5 flex gap-2 pl-[28px]">
+        <span className="rounded-[6px] bg-dx-brand px-2.5 py-1 text-[12px] font-medium text-white">Approve</span>
+        <span className="rounded-[6px] border border-dx-line-strong px-2.5 py-1 text-[12px] font-medium text-dx-ink">Skip</span>
+      </div>
+    </Appear>
+  );
+}
+
+function Middle({ step }: { step: number }) {
+  return (
+    <div className="space-y-2.5">
+      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">{step === 0 ? "Without Dexraflow" : "With Dexraflow"}</p>
+      {step === 0 ? <ContactCard /> : <Hub step={step} />}
+      {step === 4 && <LogCard />}
+    </div>
+  );
+}
+
+/** A message bubble that flies between two canvas points; optional fade on landing. */
+function Flyer({ from, to, delay, tone = "grey", fade = false, children }: { from: [number, number]; to: [number, number]; delay: number; tone?: "grey" | "amber"; fade?: boolean; children: ReactNode }) {
+  const { reduce } = useTr();
+  if (reduce && fade) return null;
+  const cls = tone === "amber" ? "border-dx-signal/40 bg-dx-signal-soft text-dx-signal-ink" : "border-dx-line bg-dx-raised text-dx-ink";
+  return (
+    <motion.div
+      className={`absolute z-10 flex items-center gap-1.5 whitespace-nowrap rounded-[6px] border px-2.5 py-1 text-[12px] font-medium shadow-dx-overlay ${cls}`}
+      initial={reduce ? { left: to[0], top: to[1], opacity: 1 } : { left: from[0], top: from[1], opacity: 0 }}
+      animate={reduce ? { left: to[0], top: to[1], opacity: 1 } : { left: [from[0], to[0]], top: [from[1], to[1]], opacity: fade ? [0, 1, 1, 0] : [0, 1, 1] }}
+      transition={reduce ? { duration: 0 } : { delay, duration: fade ? 1.1 : 0.9, ease: "easeInOut", times: fade ? [0, 0.15, 0.8, 1] : [0, 0.2, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Bubbles({ step }: { step: number }) {
+  if (step === 0)
+    return (
+      <>
+        <Flyer from={[150, 70]} to={[300, 120]} delay={0.2} fade>
+          <Mail className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" /> Email
+        </Flyer>
+        <Flyer from={[150, 158]} to={[300, 150]} delay={0.5} fade>
+          <Mail className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" /> Email
+        </Flyer>
+      </>
+    );
+  if (step === 1)
+    return (
+      <Flyer from={[120, 70]} to={[300, 80]} delay={0.25} fade>
+        Can I email jane@acme.com?
+      </Flyer>
+    );
+  if (step === 3)
+    return (
+      <>
+        <Flyer from={[290, 150]} to={[20, 101]} delay={T.reply} tone="amber">
+          Held: ask Priya
+        </Flyer>
+        <Flyer from={[120, 246]} to={[296, 196]} delay={T.clayAsk} fade>
+          Update Jane's job title?
+        </Flyer>
+      </>
+    );
+  return null;
+}
+
+/* — desktop canvas geometry — */
+const D = { w: 880, h: 400, agentX: 0, agentW: 176, agentH: 52, midX: 286, midW: 308, toolX: 704, toolW: 176, toolH: 46 };
+const AGENT_Y: Record<AgentId, number> = { sdr: 44, hubspotAgent: 132, clay: 220 };
+const TOOL_Y: Record<ToolId, number> = { hubspot: 28, salesforce: 82, outreach: 136, gong: 190, slack: 250 };
+const MID_ANCHOR: Record<AgentId, number> = { sdr: 84, hubspotAgent: 104, clay: 124 };
+
+function DesktopStory({ step, beat }: { step: number; beat: string }) {
+  const { tr } = useTr();
+  const line = (litAt: number | null) => ({
+    animate: { stroke: litAt !== null ? ACCENT : "#d3dcd9", strokeWidth: litAt !== null ? 2 : 1.25 },
+    transition: tr(litAt ?? 0, 0.3),
+  });
+  return (
+    <div className="relative" style={{ width: D.w, height: D.h }}>
+      <p className="absolute font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted" style={{ left: D.agentX, top: 16 }}>
+        Your AI agents
+      </p>
+      <p className="absolute font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted" style={{ left: D.toolX, top: 0 }}>
+        Your tools
+      </p>
+
+      <svg className="pointer-events-none absolute left-0 top-0" width={D.w} height={D.h} aria-hidden="true">
+        {FLOW_AGENTS.map((a) => (
+          <motion.line key={a.id} x1={D.agentW} y1={AGENT_Y[a.id] + D.agentH / 2} x2={D.midX} y2={MID_ANCHOR[a.id]} initial={false} {...line(agentLitAt(a.id, step))} />
+        ))}
+        {step > 0 &&
+          FLOW_TOOLS.map((t) => (
+            <motion.line key={t.id} x1={D.midX + D.midW} y1={t.id === "slack" ? 120 : 90} x2={D.toolX} y2={TOOL_Y[t.id] + D.toolH / 2} initial={false} {...line(toolLitAt(t.id, step))} />
+          ))}
+      </svg>
+
+      {FLOW_AGENTS.map((a) => (
+        <div key={a.id} className="absolute" style={{ left: D.agentX, top: AGENT_Y[a.id], width: D.agentW, height: D.agentH }}>
+          <FlowTile g={a} on={agentOn(a.id, step)} litAt={agentLitAt(a.id, step)} />
+        </div>
+      ))}
+      {FLOW_TOOLS.map((t) => (
+        <div key={t.id} className="absolute" style={{ left: D.toolX, top: TOOL_Y[t.id], width: D.toolW, height: D.toolH }}>
+          <FlowTile g={t} on={toolOn(t.id, step)} litAt={toolLitAt(t.id, step)} />
+        </div>
+      ))}
+
+      <div className="absolute" style={{ left: D.midX, top: 12, width: D.midW }}>
+        <Middle key={beat} step={step} />
+      </div>
+
+      {step === 3 && (
+        <div className="absolute" style={{ left: D.toolX - 88, top: TOOL_Y.slack + D.toolH + 10, width: D.toolW + 88 }}>
+          <SlackApproval key={beat} />
+        </div>
+      )}
+
+      <Bubbles key={beat} step={step} />
+    </div>
+  );
+}
+
+/** Vertical layout for narrow screens: agents on top, Dexraflow in the middle, tools below. Never scaled. */
+function MobileStory({ step, beat }: { step: number; beat: string }) {
+  const { tr } = useTr();
+  const lane = (litTeal: boolean) => (
+    <motion.span className="mx-auto block h-4 w-px" initial={false} animate={{ backgroundColor: litTeal ? ACCENT : "#d3dcd9" }} transition={tr(0, 0.3)} />
+  );
+  return (
+    <div className="space-y-2.5">
+      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Your AI agents</p>
+      <div className="grid grid-cols-3 gap-2">
+        {FLOW_AGENTS.map((a) => (
+          <FlowTile key={a.id} g={a} compact on={agentOn(a.id, step)} litAt={agentLitAt(a.id, step)} />
+        ))}
+      </div>
+
+      {/* message lane: what travels between the agents and the middle in this step */}
+      <div key={beat} className="flex min-h-[64px] flex-col items-center justify-center gap-1.5">
+        {step === 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {["AI SDR", "HubSpot agent"].map((w, i) => (
+              <Appear key={w} delay={0.2 + i * 0.3} className="flex items-center gap-1.5 rounded-[6px] border border-dx-line bg-dx-raised px-2 py-1 text-[12px] font-medium text-dx-ink">
+                <Mail className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" /> {w}: email ↓
+              </Appear>
+            ))}
+          </div>
+        )}
+        {step === 1 && (
+          <Appear delay={0.25} className="rounded-[6px] border border-dx-line bg-dx-raised px-2.5 py-1 text-[12px] font-medium text-dx-ink">
+            Can I email jane@acme.com? ↓
+          </Appear>
+        )}
+        {step === 3 && (
+          <>
+            <Appear delay={T.reply} className="rounded-[6px] border border-dx-signal/40 bg-dx-signal-soft px-2.5 py-1 text-[12px] font-medium text-dx-signal-ink">
+              ↑ Held: ask Priya
+            </Appear>
+            <Appear delay={T.clayAsk} className="rounded-[6px] border border-dx-line bg-dx-raised px-2.5 py-1 text-[12px] font-medium text-dx-ink">
+              Clay agent: update Jane's job title? ↓
+            </Appear>
+          </>
+        )}
+        {(step === 2 || step === 4) && lane(false)}
+      </div>
+
+      <div className="min-h-[268px]">
+        <Middle key={beat} step={step} />
+      </div>
+
+      {lane(step === 2 || step === 3)}
+      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Your tools</p>
+      <div className="flex flex-wrap gap-2">
+        {FLOW_TOOLS.map((t) => (
+          <div key={t.id} className="w-[calc(33.333%-6px)]">
+            <FlowTile g={t} compact on={toolOn(t.id, step)} litAt={toolLitAt(t.id, step)} />
+          </div>
+        ))}
+      </div>
+      <div className="min-h-[92px]">{step === 3 && <SlackApproval key={beat} />}</div>
+    </div>
+  );
+}
+
+/** Plays the story: auto-advances while in view, pauses on hover or focus, never auto-plays under reduced motion. */
+function useStory() {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { amount: 0.4 });
+  const reduce = !!useReducedMotion();
+  const [step, setStep] = useState(0);
+  const [run, setRun] = useState(0);
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const playing = inView && !hover && !focus && !reduce;
+  useEffect(() => {
+    if (!playing) return;
+    const id = window.setTimeout(() => {
+      setStep((s) => (s + 1) % STORY.length);
+      setRun((r) => r + 1);
+    }, STORY[step].ms);
+    return () => window.clearTimeout(id);
+  }, [playing, step, run]);
+  const go = (i: number) => {
+    setStep(i);
+    setRun((r) => r + 1);
+  };
+  return { ref, step, run, go, playing, reduce, inView, setHover, setFocus };
+}
+
+/** Desktop canvas scale, or "mobile" when scaling would push 12px text under 11px. */
+function useLayout() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const scale = width ? Math.min(1.1, width / D.w) : 1;
+  const mobile = width > 0 && 12 * scale < 11;
+  return { ref, scale, mobile, ready: width > 0 };
+}
+
+export function AgentFlow() {
+  const { ref, step, run, go, playing, reduce, inView, setHover, setFocus } = useStory();
+  const { ref: boxRef, scale, mobile, ready } = useLayout();
+  return (
+    <figure
+      ref={ref}
+      aria-label="Animation: AI agents check with Dexraflow before acting. It pulls the account from every tool, applies your rules, holds or allows the action, and logs it."
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocusCapture={(e) => {
+        if ((e.target as HTMLElement).matches(":focus-visible")) setFocus(true);
+      }}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocus(false);
+      }}
+    >
+      {/* stepper */}
+      <div className="flex flex-wrap items-center gap-2">
+        <ol className="flex flex-wrap gap-1.5" aria-label="Steps">
+          {STORY.map((s, i) => {
+            const active = i === step;
+            return (
+              <li key={s.label}>
+                <button
+                  type="button"
+                  onClick={() => go(i)}
+                  aria-current={active ? "step" : undefined}
+                  className={`relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-[8px] border px-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2 ${
+                    active ? "border-dx-brand bg-dx-brand text-white" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:border-dx-line-strong hover:text-dx-ink"
+                  }`}
+                >
+                  <span className={`font-dx-mono text-[12px] ${active ? "text-white/80" : i < step ? "text-dx-brand" : ""}`}>{i + 1}</span>
+                  {s.label}
+                  {active && playing && (
+                    <motion.span
+                      key={`${run}-${i}`}
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-0 h-[2px] bg-white/70"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: s.ms / 1000, ease: "linear" }}
+                    />
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="ml-auto flex items-center gap-2">
+          {!reduce && inView && !playing && <span className="font-dx-mono text-[12px] text-dx-ink-muted">paused</span>}
+          <button
+            type="button"
+            onClick={() => go(0)}
+            aria-label="Replay animation"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-dx-line bg-dx-raised text-dx-ink-muted transition hover:border-dx-line-strong hover:text-dx-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2"
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {/* the story */}
+      <div
+        ref={boxRef}
+        aria-hidden="true"
+        className="mt-3 rounded-[8px] border border-dx-line bg-dx-raised bg-[url('/brand/dot-grid-tile.svg')] bg-[length:24px_24px] p-3 sm:p-4"
+      >
+        {ready &&
+          (mobile ? (
+            <MobileStory step={step} beat={`${run}-${step}`} />
+          ) : (
+            <div style={{ height: D.h * scale }}>
+              <div style={{ width: D.w, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+                <DesktopStory step={step} beat={`${run}-${step}`} />
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <figcaption aria-live="polite" className="mt-3 flex items-baseline gap-2 text-[15px] font-medium text-dx-ink sm:text-[16px]">
+        <span className="font-dx-mono text-[12px] text-dx-ink-muted">
+          {step + 1}/{STORY.length}
+        </span>
+        {STORY[step].caption}
+      </figcaption>
+    </figure>
   );
 }
