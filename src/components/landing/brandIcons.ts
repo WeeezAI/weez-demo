@@ -16,6 +16,7 @@ export const BRAND_ICONS: Record<string, { title: string; hex: string; path: str
 
 /* Official logo marks supplied by the vendors' brand assets, cropped to the symbol. Trademarks belong to their owners. */
 export const BRAND_LOGOS: Record<string, { title: string; src: string }> = {
+  dexraflow: { title: "Dexraflow", src: "/brand/dexraflow-app-icon.svg" },
   slack: { title: "Slack", src: slackLogo },
   salesforce: { title: "Salesforce", src: salesforceLogo },
   clay: { title: "Clay", src: clayLogo },

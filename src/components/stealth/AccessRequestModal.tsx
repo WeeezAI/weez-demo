@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EMAIL_RE, submitAccessRequest, type AccessIntent } from "@/services/earlyAccessAPI";
-import { CONTACT_EMAIL } from "./contact";
+import { FORM_EMAIL } from "./contact";
 
 interface Props {
   intent: AccessIntent | null;
@@ -92,7 +92,10 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
       });
       setSubmitted(true);
     } catch (err) {
-      setFailure(err instanceof Error ? err.message : "Couldn't send your request. Please try again.");
+      // A network or CORS failure (server down) surfaces as a bare "Failed to fetch"; never show that.
+      // Keep the server's own validation message when it sent one, and always offer the direct email.
+      const serverMsg = err instanceof Error && !(err instanceof TypeError) ? err.message : "";
+      setFailure(`${serverMsg || "We couldn't send your request just now."} You can also email ${FORM_EMAIL}.`);
     } finally {
       setSubmitting(false);
     }
@@ -197,8 +200,8 @@ const AccessRequestModal = ({ intent, onOpenChange }: Props) => {
 
               <p className="pt-1 text-center text-[12px] text-dx-ink-muted">
                 Prefer email?{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-dx-ink-muted underline-offset-4 hover:text-dx-brand hover:underline">
-                  {CONTACT_EMAIL}
+                <a href={`mailto:${FORM_EMAIL}`} className="text-dx-ink-muted underline-offset-4 hover:text-dx-brand hover:underline">
+                  {FORM_EMAIL}
                 </a>
               </p>
             </form>

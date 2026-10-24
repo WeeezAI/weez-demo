@@ -1,3 +1,5 @@
-// The one public contact address the site already used (previous landing footer).
-// If a founder booking link (e.g. a calendar URL) is set up later, add it here.
+// The site's general contact address (footer, legal pages).
 export const CONTACT_EMAIL = "support@dexraflow.com";
+
+// Shown in the early-access / founder form as the direct-email fallback.
+export const FORM_EMAIL = "shakil@dexraflow.com";

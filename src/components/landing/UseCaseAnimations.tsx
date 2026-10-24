@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { AlertTriangle, Bot, Check, Clock, Globe, Mail, Radar, RotateCcw, Search, type LucideIcon } from "lucide-react";
 import { BRAND_ICONS, BRAND_LOGOS } from "./brandIcons";
@@ -10,7 +10,7 @@ const SIGNAL = "#e8962e"; // signal: the one item moving through the flow
 const INK = "#0a0a0a";
 
 /** Cycles 0..count-1 while in view; the last stage holds for an extra beat. Reduced motion shows the final stage. */
-function useStage(count: number, ms = 2100) {
+export function useStage(count: number, ms = 2100) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.35 });
   const reduce = useReducedMotion();
@@ -25,7 +25,7 @@ function useStage(count: number, ms = 2100) {
 }
 
 /** A fixed-size drawing surface scaled to the container's width, so positions stay exact on every screen. */
-function Canvas({ w, h, children }: { w: number; h: number; children: ReactNode }) {
+export function Canvas({ w, h, children }: { w: number; h: number; children: ReactNode }) {
   const outer = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   useEffect(() => {
@@ -57,7 +57,7 @@ export function BrandIcon({ k, size = 20 }: { k: keyof typeof BRAND_ICONS | stri
   );
 }
 
-type TileProps = {
+export type TileProps = {
   x: number;
   y: number;
   w?: number;
@@ -67,10 +67,12 @@ type TileProps = {
   icon?: LucideIcon;
   active?: boolean;
   row?: boolean;
+  /** 12px label for scenes that must stay readable when scaled. */
+  big?: boolean;
 };
 
 /** A tool tile: the vendor's icon where one is available, else a neutral category icon, always with the name. */
-function Tile({ x, y, w = 84, h = 64, name, brand, icon: Icon, active, row }: TileProps) {
+export function Tile({ x, y, w = 84, h = 64, name, brand, icon: Icon, active, row, big }: TileProps) {
   return (
     <motion.div
       className={`absolute flex items-center rounded-lg border bg-white ${row ? "flex-row gap-2.5 px-3" : "flex-col justify-center gap-1.5"}`}
@@ -82,13 +84,13 @@ function Tile({ x, y, w = 84, h = 64, name, brand, icon: Icon, active, row }: Ti
       transition={{ duration: 0.35 }}
     >
       {brand ? <BrandIcon k={brand} size={row ? 20 : 22} /> : Icon ? <Icon className="h-5 w-5 text-neutral-500" strokeWidth={1.75} /> : null}
-      <span className={`font-medium text-neutral-800 ${row ? "text-[13px]" : "text-[11px]"}`}>{name}</span>
+      <span className={`font-medium text-neutral-800 ${row ? "text-[13px]" : big ? "text-[12px]" : "text-[11px]"}`}>{name}</span>
     </motion.div>
   );
 }
 
 /** A small label pinned to the canvas. */
-function Chip({ x, y, show, tone = "amber", children, w }: { x: number; y: number; show: boolean; tone?: "amber" | "green" | "grey"; children: ReactNode; w?: number }) {
+export function Chip({ x, y, show, tone = "amber", children, w }: { x: number; y: number; show: boolean; tone?: "amber" | "green" | "grey"; children: ReactNode; w?: number }) {
   const tones = {
     amber: "border-dx-signal/40 bg-dx-signal-soft text-dx-signal-ink",
     green: "border-dx-success/25 bg-dx-success-soft text-dx-success",
@@ -161,7 +163,7 @@ function Drops({ show, xs, to = 95 }: { show: boolean; xs: number[]; to?: number
 }
 
 /** The Slack message at the end of each scene. */
-function SlackCard({ show, to, text }: { show: boolean; to: string; text: string }) {
+export function SlackCard({ show, to, text }: { show: boolean; to: string; text: string }) {
   return (
     <AnimatePresence>
       {show && (
@@ -187,7 +189,7 @@ function SlackCard({ show, to, text }: { show: boolean; to: string; text: string
   );
 }
 
-function Caption({ stage, lines }: { stage: number; lines: string[] }) {
+export function Caption({ stage, lines }: { stage: number; lines: string[] }) {
   return (
     <div className="mt-3 flex items-center gap-3">
       <div className="flex gap-1">
@@ -211,7 +213,7 @@ function Caption({ stage, lines }: { stage: number; lines: string[] }) {
   );
 }
 
-function SceneFrame({ refEl, children }: { refEl: React.RefObject<HTMLDivElement>; children: ReactNode }) {
+export function SceneFrame({ refEl, children }: { refEl: React.RefObject<HTMLDivElement>; children: ReactNode }) {
   return (
     <div ref={refEl} className="rounded-xl border border-neutral-200 bg-[radial-gradient(rgba(10,10,10,0.06)_1px,transparent_1px)] [background-size:16px_16px] bg-white p-3">
       {children}
@@ -403,7 +405,7 @@ const STORY = [
 
 type AgentId = "sdr" | "hubspotAgent" | "clay";
 type ToolId = "hubspot" | "salesforce" | "outreach" | "gong" | "slack";
-type Glyph = { name: string; brand?: string; icon?: LucideIcon };
+export type Glyph = { name: string; brand?: string; icon?: LucideIcon };
 
 const FLOW_AGENTS: (Glyph & { id: AgentId })[] = [
   { id: "sdr", name: "AI SDR", icon: Bot },
@@ -443,14 +445,14 @@ const toolLitAt = (id: ToolId, step: number) =>
 const agentLitAt = (id: AgentId, step: number) =>
   step === 0 && id !== "clay" ? 0 : step === 1 && id === "sdr" ? 0 : step === 3 && id === "sdr" ? 0 : step === 3 && id === "clay" ? T.clayAsk : null;
 
-function GlyphIcon({ g, size = 18, className = "text-dx-ink-muted" }: { g: Glyph; size?: number; className?: string }) {
+export function GlyphIcon({ g, size = 18, className = "text-dx-ink-muted" }: { g: Glyph; size?: number; className?: string }) {
   if (g.brand) return <BrandIcon k={g.brand} size={size} />;
   const Icon = g.icon;
   return Icon ? <Icon className={className} style={{ width: size, height: size }} strokeWidth={1.5} aria-hidden="true" /> : null;
 }
 
 /** Transition helper: instant under reduced motion, otherwise eased with a delay. */
-function useTr() {
+export function useTr() {
   const reduce = !!useReducedMotion();
   return {
     reduce,
@@ -474,7 +476,7 @@ function FlowTile({ g, on, litAt, compact = false }: { g: Glyph; on: boolean; li
   );
 }
 
-function Stamp({ tone, delay, children }: { tone: "hold" | "allowed"; delay: number; children: ReactNode }) {
+export function Stamp({ tone, delay, children }: { tone: "hold" | "allowed"; delay: number; children: ReactNode }) {
   const { tr, reduce } = useTr();
   const cls = tone === "hold" ? "border-dx-signal text-dx-signal" : "border-dx-success-night text-dx-success-night";
   return (
@@ -489,10 +491,10 @@ function Stamp({ tone, delay, children }: { tone: "hold" | "allowed"; delay: num
   );
 }
 
-function Appear({ delay, children, className = "", y = 6 }: { delay: number; children: ReactNode; className?: string; y?: number }) {
+export function Appear({ delay, children, className = "", y = 6, style }: { delay: number; children: ReactNode; className?: string; y?: number; style?: CSSProperties }) {
   const { tr, reduce } = useTr();
   return (
-    <motion.div className={className} initial={reduce ? false : { opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={tr(delay)}>
+    <motion.div className={className} style={style} initial={reduce ? false : { opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={tr(delay)}>
       {children}
     </motion.div>
   );

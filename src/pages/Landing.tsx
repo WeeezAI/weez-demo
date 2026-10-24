@@ -5,10 +5,10 @@ import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import ComplaintWall from "@/components/landing/ComplaintWall";
 import { AgentFlow, MissedSignalScene, NoOwnerScene, SilentFailureScene } from "@/components/landing/UseCaseAnimations";
+import McpSection from "@/components/landing/McpSection";
+import { EASE, Eyebrow, FOCUS, PrimaryCTA, Reveal, SecondaryCTA, SectionTitle } from "@/components/landing/primitives";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 /* ───────────────────────── sources ───────────────────────── */
 
@@ -54,21 +54,6 @@ const Cite = ({ n }: { n: SourceId }) => (
 
 /* ───────────────────────── primitives ───────────────────────── */
 
-const Reveal = ({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) => {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.8, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-};
-
 /** The official lockup from the design system (public/brand). Never retyped or redrawn. */
 const Wordmark = ({ reversed = false, className = "h-7" }: { reversed?: boolean; className?: string }) => (
   <img
@@ -78,61 +63,6 @@ const Wordmark = ({ reversed = false, className = "h-7" }: { reversed?: boolean;
     height={28}
     className={`w-auto ${className}`}
   />
-);
-
-/** Mono uppercase `eyebrow`, led by a short brand "plane" bar. */
-const Eyebrow = ({ children, dark = false }: { children: ReactNode; dark?: boolean }) => (
-  <p className={`flex items-center gap-2.5 font-dx-mono text-[12px] font-medium uppercase leading-4 tracking-[0.08em] ${dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}`}>
-    <span aria-hidden="true" className={`h-[3px] w-4 rounded-[1px] ${dark ? "bg-dx-brand-night" : "bg-dx-brand"}`} />
-    {children}
-  </p>
-);
-
-/** Two-tone `display` heading: an ink lead sentence, then an ink-muted continuation. */
-const SectionTitle = ({
-  id,
-  lead,
-  muted,
-  dark = false,
-  className = "",
-}: {
-  id: string;
-  lead: ReactNode;
-  muted?: ReactNode;
-  dark?: boolean;
-  className?: string;
-}) => (
-  <h2
-    id={id}
-    className={`mt-5 max-w-3xl text-[30px] font-semibold leading-[1.14] tracking-[-0.02em] sm:text-[44px] sm:leading-[50px] ${dark ? "text-dx-night-ink" : "text-dx-ink"} ${className}`}
-  >
-    {lead}
-    {muted && <span className={dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}> {muted}</span>}
-  </h2>
-);
-
-/** Focus ring per the system: 2px solid `focus`, 2px offset. */
-const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dx-focus focus-visible:ring-offset-2";
-
-const PrimaryCTA = ({ onClick, children, className = "" }: { onClick: () => void; children: ReactNode; className?: string }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`group inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-dx-brand px-4 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover ${FOCUS} ${className}`}
-  >
-    {children}
-    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-  </button>
-);
-
-const SecondaryCTA = ({ onClick, children, className = "" }: { onClick: () => void; children: ReactNode; className?: string }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-dx-line-strong bg-dx-raised px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-surface ${FOCUS} ${className}`}
-  >
-    {children}
-  </button>
 );
 
 /** Button for `night` bands: raised ink-on-light. */
@@ -175,6 +105,7 @@ const AcceleratorBadge = ({ onBrand = false }: { onBrand?: boolean }) => {
 const NAV_LINKS = [
   { href: "#problem", label: "The problem" },
   { href: "#use-cases", label: "Use cases" },
+  { href: "#mcp", label: "MCP" },
   { href: "#how", label: "How it works" },
   { href: "#on-x", label: "Heard on X" },
 ];
@@ -487,9 +418,12 @@ const UseCases = ({ onAudit, onAccess }: { onAudit: () => void; onAccess: () => 
           </div>
           <div className="mt-8 flex flex-col gap-4 border-t border-dx-line pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-2xl text-[15px] text-dx-ink-muted">For teams running AI agents, and GTM engineers building their own. Works through MCP.</p>
-            <SecondaryCTA onClick={onAccess} className="shrink-0">
-              Get early access
-            </SecondaryCTA>
+            <a
+              href="#mcp"
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[8px] border border-dx-line-strong bg-dx-raised px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-surface ${FOCUS}`}
+            >
+              See how it works <ArrowRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+            </a>
           </div>
         </div>
       </Reveal>
@@ -875,6 +809,7 @@ const Landing = () => {
         <Problem />
         <BigNumbers />
         <UseCases onAudit={openFounder} onAccess={openAccess} />
+        <McpSection onAccess={openAccess} />
         <Insights />
         <HeardOnX />
         <How onAudit={openFounder} />
