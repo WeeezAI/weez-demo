@@ -251,19 +251,24 @@ const TOOLS: { name: string; line: string; sample: string[] }[] = [
   { name: "get_recent_actions", line: "What other agents did to this account.", sample: ['[ { agent: "AI SDR", action: "send_email", ago: "1h" },', '  { agent: "Clay agent", action: "update_title", ago: "2d" } ]'] },
 ];
 
-/* ───────────── section ───────────── */
+/* ───────────── exported blocks ───────────── */
 
-export default function McpSection({ onAccess }: { onAccess: () => void }) {
+export function useConnectTabs() {
   const reduce = !!useReducedMotion();
   const [tab, setTab] = useState<TabId>("claude-code");
-  const [run, setRun] = useState<keyof typeof RUNS>("Hold");
   const connectRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
   const goConnect = (t?: TabId) => {
     if (t) setTab(t);
     connectRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
+  return { tab, setTab, connectRef, goConnect };
+}
+
+/** Framework tabs + code window + the example-run terminal. */
+export function ConnectBlock({ tab, setTab, compact = false }: { tab: TabId; setTab: (t: TabId) => void; compact?: boolean }) {
+  const reduce = !!useReducedMotion();
+  const [run, setRun] = useState<keyof typeof RUNS>("Hold");
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = TABS.findIndex((t) => t.id === tab);
     const next = e.key === "ArrowRight" ? (i + 1) % TABS.length : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length : e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : -1;
@@ -273,11 +278,148 @@ export default function McpSection({ onAccess }: { onAccess: () => void }) {
     tabRefs.current[next]?.focus();
   };
   const active = TABS.find((t) => t.id === tab)!;
+  return (
+    <div className="min-w-0">
+      <div role="tablist" aria-label="Agent platform" onKeyDown={onTabKey} className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
+        {TABS.map((t, i) => (
+          <button
+            key={t.id}
+            ref={(el) => (tabRefs.current[i] = el)}
+            type="button"
+            role="tab"
+            id={`mcp-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls="mcp-tabpanel"
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => setTab(t.id)}
+            className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-[8px] border px-3 text-[13px] font-medium transition ${FOCUS} ${
+              tab === t.id ? "border-dx-brand bg-dx-brand text-white" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:border-dx-line-strong hover:text-dx-ink"
+            }`}
+          >
+            {t.brand && <BrandIcon k={t.brand} size={14} />}
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div id="mcp-tabpanel" role="tabpanel" aria-labelledby={`mcp-tab-${tab}`} className="mt-2">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={tab} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.2 }}>
+            <Window title={active.id === "cursor" ? ".cursor/mcp.json" : active.label} action={active.code ? <CopyButton text={active.code} /> : undefined}>
+              {active.code ? (
+                <pre className="max-w-full overflow-x-auto p-3 font-dx-mono text-[12px] leading-5 text-dx-night-ink sm:p-4 sm:text-[13px]">
+                  <code>{highlight(active.code, active.lang)}</code>
+                </pre>
+              ) : active.id === "claude-desktop" ? (
+                <ClaudeDesktopMock />
+              ) : active.id === "n8n" ? (
+                <N8nMock />
+              ) : (
+                <p className="p-4 text-[14px] leading-relaxed text-dx-night-ink-muted">
+                  Works with any client that supports remote MCP (Streamable HTTP). Point it at <span className="font-dx-mono text-dx-night-ink">{ENDPOINT}</span> with an <span className="font-dx-mono text-dx-night-ink">Authorization: Bearer</span> header.
+                </p>
+              )}
+            </Window>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      {!compact && (
+        <div className="mt-4">
+          <Terminal run={run} />
+          <div className="mt-2 flex items-center gap-1.5" role="group" aria-label="Example run">
+            {(Object.keys(RUNS) as (keyof typeof RUNS)[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRun(r)}
+                aria-pressed={run === r}
+                className={`h-8 rounded-[6px] border px-3 text-[13px] font-medium transition ${FOCUS} ${run === r ? "border-dx-brand bg-dx-brand-soft text-dx-brand" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:text-dx-ink"}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
+/** Pausable logo marquee; a static grid under reduced motion. */
+export function LogoStrip({ onPick }: { onPick: (t: TabId) => void }) {
+  const reduce = !!useReducedMotion();
+  return (
+    <div>
+      <div className="group relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]" aria-label="Agent platforms and GTM tools Dexraflow works with">
+        {reduce ? (
+          <div className="flex flex-wrap gap-3">
+            {LOGOS.map((l) => (
+              <LogoTile key={l.name} l={l} onPick={l.tab ? () => onPick(l.tab!) : undefined} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex w-max gap-3 group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]" style={{ animation: "mcp-marquee 48s linear infinite" }}>
+            {LOGOS.map((l) => (
+              <LogoTile key={l.name} l={l} onPick={l.tab ? () => onPick(l.tab!) : undefined} />
+            ))}
+            <div aria-hidden="true" className="flex gap-3">
+              {LOGOS.map((l) => (
+                <LogoTile key={`${l.name}-dup`} l={l} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="mt-3 text-[12px] text-dx-ink-muted">Product names identify tools we connect to; trademarks belong to their owners.</p>
+    </div>
+  );
+}
+
+export function TrustStrip() {
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        { I: Eye, t: "Read-only by default" },
+        { I: MailX, t: "Never sends anything itself" },
+        { I: Scale, t: "Neutral: works with every vendor" },
+        { I: ClipboardList, t: "Every decision logged" },
+      ].map(({ I, t }) => (
+        <li key={t} className="flex items-center gap-2.5 text-[14px] text-dx-ink">
+          <I className="h-5 w-5 shrink-0 text-dx-brand" strokeWidth={1.5} aria-hidden="true" />
+          {t}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The four MCP tools with hover/focus sample answers. */
+export function ToolsGrid({ single = false }: { single?: boolean }) {
+  return (
+    <div className={`grid gap-3 ${single ? "" : "sm:grid-cols-2"}`}>
+      {TOOLS.map((t) => (
+        <div key={t.name} tabIndex={0} className={`group rounded-[8px] border border-dx-line bg-dx-raised p-4 transition hover:border-dx-brand ${FOCUS}`}>
+          <p className="break-all font-dx-mono text-[13px] font-medium text-dx-brand">{t.name}</p>
+          <p className="mt-1 text-[14px] text-dx-ink">{t.line}</p>
+          <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-hover:grid-rows-[1fr] group-focus-within:grid-rows-[1fr]">
+            <div className="overflow-hidden">
+              <pre className="mt-3 overflow-x-auto rounded-[6px] bg-dx-night px-3 py-2 font-dx-mono text-[12px] leading-5 text-dx-night-ink">{t.sample.join("\n")}</pre>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export type { TabId };
+
+/* ───────────── section (kept for the standalone layout) ───────────── */
+
+export default function McpSection({ onAccess }: { onAccess: () => void }) {
+  const { tab, setTab, connectRef, goConnect } = useConnectTabs();
   return (
     <section id="mcp" className="scroll-mt-32 border-t border-dx-line bg-dx-surface px-5 py-24 sm:px-8 md:py-32" aria-labelledby="mcp-title">
       <div className="mx-auto max-w-6xl">
-        {/* 1. header */}
         <Reveal>
           <Eyebrow>Dexraflow MCP · Early access</Eyebrow>
           <SectionTitle id="mcp-title" lead="Let AI agents into your CRM," muted="without the chaos." />
@@ -289,216 +431,36 @@ export default function McpSection({ onAccess }: { onAccess: () => void }) {
             </SecondaryCTA>
           </div>
         </Reveal>
-
-        {/* 2. without vs with */}
         <Reveal className="mt-14">
           <WithoutWith />
         </Reveal>
-
-        {/* 3. three moves */}
-        <Reveal className="mt-20">
-          <Eyebrow>How it works</Eyebrow>
-          <h3 className="mt-4 text-[24px] font-semibold tracking-[-0.02em] text-dx-ink sm:text-[28px]">Three moves: ask, check, log.</h3>
-        </Reveal>
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          {[
-            { title: "Agent asks", line: "A tiny request before any outreach or CRM write.", Scene: AskScene },
-            { title: "Dexraflow checks every tool", line: "Reads context, then matches your rules.", Scene: CheckScene },
-            { title: "Decision is logged", line: "Go, hold or stop, with the reason, in one log.", Scene: LogScene },
-          ].map((c, i) => (
-            <Reveal key={c.title} delay={i * 0.06}>
-              <div className="h-full rounded-[8px] border border-dx-line bg-dx-raised p-4">
-                <c.Scene />
-                <h4 className="mt-4 text-[17px] font-semibold text-dx-ink">{c.title}</h4>
-                <p className="mt-1 text-[14px] text-dx-ink-muted">{c.line}</p>
-              </div>
+          {[AskScene, CheckScene, LogScene].map((Scene, i) => (
+            <Reveal key={i}>
+              <Scene />
             </Reveal>
           ))}
         </div>
-
-        {/* 4. four tools */}
-        <Reveal className="mt-20">
-          <Eyebrow>What your agent gets</Eyebrow>
-          <h3 className="mt-4 text-[24px] font-semibold tracking-[-0.02em] text-dx-ink sm:text-[28px]">Four tools. Hover for a sample answer.</h3>
+        <Reveal className="mt-8">
+          <ToolsGrid />
         </Reveal>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {TOOLS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 0.05}>
-              <div tabIndex={0} className={`group h-full rounded-[8px] border border-dx-line bg-dx-raised p-5 transition hover:border-dx-brand ${FOCUS}`}>
-                <p className="font-dx-mono text-[14px] font-medium text-dx-brand">{t.name}</p>
-                <p className="mt-1.5 text-[15px] text-dx-ink">{t.line}</p>
-                <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-hover:grid-rows-[1fr] group-focus-within:grid-rows-[1fr]">
-                  <div className="overflow-hidden">
-                    <pre className="mt-3 overflow-x-auto rounded-[6px] bg-dx-night px-3 py-2.5 font-dx-mono text-[12px] leading-5 text-dx-night-ink">{t.sample.join("\n")}</pre>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-
-        {/* 5. get started */}
-        <div ref={connectRef} className="scroll-mt-32">
-          <Reveal className="mt-20">
-            <Eyebrow>Get started · Early access</Eyebrow>
-            <h3 className="mt-4 text-[24px] font-semibold tracking-[-0.02em] text-dx-ink sm:text-[28px]">Connect any agent in three steps.</h3>
+        <div ref={connectRef} className="mt-14 scroll-mt-32">
+          <Reveal>
+            <ConnectBlock tab={tab} setTab={setTab} />
           </Reveal>
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.5fr] lg:gap-10 [&>*]:min-w-0">
-            <ol className="space-y-6">
-              {[
-                { n: 1, t: "Get your key", d: "Join early access to get a workspace and API key.", cta: <SecondaryCTA onClick={onAccess}>Get early access</SecondaryCTA> },
-                { n: 2, t: "Connect your agent", d: "Pick your framework and paste one snippet." },
-                { n: 3, t: "Your agent asks first", d: "Every risky action gets a decision it can follow." },
-              ].map((s) => (
-                <Reveal key={s.n}>
-                  <li className="flex gap-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-dx-brand-soft font-dx-mono text-[13px] font-medium text-dx-brand">{s.n}</span>
-                    <div>
-                      <p className="text-[17px] font-semibold text-dx-ink">{s.t}</p>
-                      <p className="mt-1 text-[15px] text-dx-ink-muted">{s.d}</p>
-                      {s.cta && <div className="mt-3">{s.cta}</div>}
-                    </div>
-                  </li>
-                </Reveal>
-              ))}
-            </ol>
-
-            <Reveal className="min-w-0">
-              <div role="tablist" aria-label="Agent platform" onKeyDown={onTabKey} className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
-                {TABS.map((t, i) => (
-                  <button
-                    key={t.id}
-                    ref={(el) => (tabRefs.current[i] = el)}
-                    type="button"
-                    role="tab"
-                    id={`mcp-tab-${t.id}`}
-                    aria-selected={tab === t.id}
-                    aria-controls="mcp-tabpanel"
-                    tabIndex={tab === t.id ? 0 : -1}
-                    onClick={() => setTab(t.id)}
-                    className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-[8px] border px-3 text-[13px] font-medium transition ${FOCUS} ${
-                      tab === t.id ? "border-dx-brand bg-dx-brand text-white" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:border-dx-line-strong hover:text-dx-ink"
-                    }`}
-                  >
-                    {t.brand && <BrandIcon k={t.brand} size={14} />}
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <div id="mcp-tabpanel" role="tabpanel" aria-labelledby={`mcp-tab-${tab}`} className="mt-2">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div key={tab} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <Window title={active.id === "cursor" ? ".cursor/mcp.json" : active.label} action={active.code ? <CopyButton text={active.code} /> : undefined}>
-                      {active.code ? (
-                        <pre className="max-w-full overflow-x-auto p-3 font-dx-mono text-[12px] leading-5 text-dx-night-ink sm:p-4 sm:text-[13px]">
-                          <code>{highlight(active.code, active.lang)}</code>
-                        </pre>
-                      ) : active.id === "claude-desktop" ? (
-                        <ClaudeDesktopMock />
-                      ) : active.id === "n8n" ? (
-                        <N8nMock />
-                      ) : (
-                        <p className="p-4 text-[14px] leading-relaxed text-dx-night-ink-muted">
-                          Works with any client that supports remote MCP (Streamable HTTP). Point it at <span className="font-dx-mono text-dx-night-ink">{ENDPOINT}</span> with an <span className="font-dx-mono text-dx-night-ink">Authorization: Bearer</span> header.
-                        </p>
-                      )}
-                    </Window>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              <div className="mt-6">
-                <Terminal run={run} />
-                <div className="mt-2 flex items-center gap-1.5" role="group" aria-label="Example run">
-                  {(Object.keys(RUNS) as (keyof typeof RUNS)[]).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRun(r)}
-                      aria-pressed={run === r}
-                      className={`h-8 rounded-[6px] border px-3 text-[13px] font-medium transition ${FOCUS} ${run === r ? "border-dx-brand bg-dx-brand-soft text-dx-brand" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:text-dx-ink"}`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-          </div>
-          <p className="mt-6 text-[13px] text-dx-ink-muted">Build with any framework: custom code, Claude, OpenAI, LangChain, n8n, Clay, Make or Zapier agents.</p>
         </div>
-
-        {/* 6. works with any agent */}
-        <Reveal className="mt-20">
-          <Eyebrow>Works with any agent</Eyebrow>
-          <div className="group relative mt-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]" aria-label="Agent platforms and GTM tools Dexraflow works with">
-            {reduce ? (
-              <div className="flex flex-wrap gap-3">
-                {LOGOS.map((l) => (
-                  <LogoTile key={l.name} l={l} onPick={l.tab ? () => goConnect(l.tab) : undefined} />
-                ))}
-              </div>
-            ) : (
-              <div className="flex w-max gap-3 group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]" style={{ animation: "mcp-marquee 48s linear infinite" }}>
-                {LOGOS.map((l) => (
-                  <LogoTile key={l.name} l={l} onPick={l.tab ? () => goConnect(l.tab) : undefined} />
-                ))}
-                <div aria-hidden="true" className="flex gap-3">
-                  {LOGOS.map((l) => (
-                    <LogoTile key={`${l.name}-dup`} l={l} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <p className="mt-3 text-[12px] text-dx-ink-muted">Product names identify tools we connect to; trademarks belong to their owners.</p>
+        <Reveal className="mt-14">
+          <LogoStrip onPick={goConnect} />
         </Reveal>
-
-        {/* 7. scenarios */}
-        <Reveal className="mt-20">
-          <Eyebrow>Three things it stops</Eyebrow>
-        </Reveal>
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {[
-            { t: "Don't email during an open deal", Scene: OpenDealScene },
-            { t: "Don't overwrite what a human fixed", Scene: HumanFixScene },
-            { t: "Two agents, one account", Scene: TwoAgentsScene },
-          ].map((c, i) => (
-            <Reveal key={c.t} delay={i * 0.06}>
-              <h4 className="mb-3 text-[17px] font-semibold text-dx-ink">{c.t}</h4>
-              <c.Scene />
+        <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          {[OpenDealScene, HumanFixScene, TwoAgentsScene].map((Scene, i) => (
+            <Reveal key={i}>
+              <Scene />
             </Reveal>
           ))}
         </div>
-
-        {/* 8. trust strip */}
-        <Reveal className="mt-16">
-          <ul className="grid gap-3 rounded-[8px] border border-dx-line bg-dx-raised p-4 sm:grid-cols-4 sm:p-5">
-            {[
-              { I: Eye, t: "Read-only by default" },
-              { I: MailX, t: "Never sends anything itself" },
-              { I: Scale, t: "Neutral: works with every vendor" },
-              { I: ClipboardList, t: "Every decision logged" },
-            ].map(({ I, t }) => (
-              <li key={t} className="flex items-center gap-2.5 text-[14px] text-dx-ink">
-                <I className="h-5 w-5 shrink-0 text-dx-brand" strokeWidth={1.5} aria-hidden="true" />
-                {t}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[13px] text-dx-ink-muted">Dexraflow never sends emails or acts on its own. It only informs, allows, holds or logs.</p>
-        </Reveal>
-
-        {/* 9. closing */}
-        <Reveal className="mt-16">
-          <div className="flex flex-col items-start gap-5 rounded-[12px] bg-dx-night p-8 text-dx-night-ink sm:flex-row sm:items-center sm:justify-between sm:p-10">
-            <p className="max-w-xl text-[22px] font-semibold leading-snug tracking-[-0.02em] sm:text-[26px]">
-              Your agents do the selling. <span className="text-dx-night-ink-muted">Dexraflow makes sure they work together.</span>
-            </p>
-            <PrimaryCTA onClick={onAccess} className="shrink-0">
-              Get early access
-            </PrimaryCTA>
-          </div>
+        <Reveal className="mt-10">
+          <TrustStrip />
         </Reveal>
       </div>
     </section>

@@ -163,7 +163,7 @@ function Drops({ show, xs, to = 95 }: { show: boolean; xs: number[]; to?: number
 }
 
 /** The Slack message at the end of each scene. */
-export function SlackCard({ show, to, text }: { show: boolean; to: string; text: string }) {
+export function SlackCard({ show, to, text, x = 20, w = 320 }: { show: boolean; to: string; text: string; x?: number; w?: number }) {
   return (
     <AnimatePresence>
       {show && (
@@ -173,7 +173,7 @@ export function SlackCard({ show, to, text }: { show: boolean; to: string; text:
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
           className="absolute flex items-start gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)]"
-          style={{ left: 20, top: 214, width: 320 }}
+          style={{ left: x, top: 214, width: w }}
         >
           <BrandIcon k="slack" size={18} />
           <div className="min-w-0 flex-1">

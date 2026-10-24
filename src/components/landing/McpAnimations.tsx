@@ -438,18 +438,18 @@ export function OpenDealScene() {
     <div>
       <SceneFrame refEl={ref}>
         <div role="img" aria-label="An AI SDR is held from emailing a contact with an open deal, and the deal owner is pinged in Slack.">
-          <Canvas w={330} h={290}>
-            <Tile x={20} y={58} h={58} big name="AI SDR" icon={Bot} active={stage === 0} />
-            <Tile x={123} y={58} h={58} big name="Dexraflow" brand="dexraflow" active={stage >= 1} />
-            <Tile x={226} y={58} h={58} big name="Jane · Acme" icon={User} />
-            <Chip x={20} y={124} show={stage >= 0} tone="grey" w={110}>
+          <Canvas w={300} h={290}>
+            <Tile x={12} y={58} h={58} big name="AI SDR" icon={Bot} active={stage === 0} />
+            <Tile x={108} y={58} h={58} big name="Dexraflow" brand="dexraflow" active={stage >= 1} />
+            <Tile x={204} y={58} h={58} big name="Jane · Acme" icon={User} />
+            <Chip x={12} y={124} show={stage >= 0} tone="grey" w={96}>
               send_email
             </Chip>
-            <Chip x={118} y={124} show={stage >= 1} tone="amber" w={126}>
+            <Chip x={104} y={124} show={stage >= 1} tone="amber" w={118}>
               Open deal · Raj
             </Chip>
-            <div className="absolute" style={{ left: 123, top: 160 }}>{stage >= 2 || reduce ? <Stamp tone="hold" delay={0}>HOLD</Stamp> : null}</div>
-            <SlackCard show={stage >= 2} to="Raj" text="AI SDR wants to email Jane at Acme. Approve?" />
+            <div className="absolute" style={{ left: 108, top: 160 }}>{stage >= 2 || reduce ? <Stamp tone="hold" delay={0}>HOLD</Stamp> : null}</div>
+            <SlackCard show={stage >= 2} to="Raj" text="AI SDR wants to email Jane at Acme. Approve?" x={8} w={284} />
           </Canvas>
         </div>
       </SceneFrame>
@@ -466,17 +466,17 @@ export function HumanFixScene() {
     <div>
       <SceneFrame refEl={ref}>
         <div role="img" aria-label="An enrichment agent tries to overwrite a job title a rep edited yesterday; the change is blocked and logged.">
-          <Canvas w={330} h={290}>
-            <Tile x={20} y={58} h={58} big name="Rep" icon={Pencil} active={stage === 0} />
-            <Tile x={123} y={58} h={58} big name="Clay agent" brand="clay" active={stage === 1} />
-            <Tile x={226} y={58} h={58} big name="HubSpot" brand="hubspot" />
-            <Chip x={20} y={124} show tone="green" w={122}>
+          <Canvas w={300} h={290}>
+            <Tile x={12} y={58} h={58} big name="Rep" icon={Pencil} active={stage === 0} />
+            <Tile x={108} y={58} h={58} big name="Clay agent" brand="clay" active={stage === 1} />
+            <Tile x={204} y={58} h={58} big name="HubSpot" brand="hubspot" />
+            <Chip x={12} y={124} show tone="green" w={110}>
               Title: VP Sales ✓
             </Chip>
-            <Chip x={118} y={124} show={stage >= 1} tone="grey" w={122}>
+            <Chip x={104} y={124} show={stage >= 1} tone="grey" w={112}>
               Title → Director
             </Chip>
-            <div className="absolute flex items-center gap-2" style={{ left: 20, top: 168 }}>
+            <div className="absolute flex items-center gap-2" style={{ left: 12, top: 168 }}>
               {(stage >= 2 || reduce) && (
                 <>
                   <Appear delay={0} className={`inline-flex rounded-[4px] border-2 px-2 py-0.5 font-dx-mono text-[13px] font-semibold tracking-[0.08em] ${DECISION.BLOCK.cls}`}>BLOCK</Appear>
@@ -500,17 +500,17 @@ export function TwoAgentsScene() {
     <div>
       <SceneFrame refEl={ref}>
         <div role="img" aria-label="A second agent asks to email a contact another agent touched an hour ago, and waits instead.">
-          <Canvas w={330} h={290}>
-            <Tile x={20} y={58} h={58} big name="AI SDR" icon={Bot} active={stage === 0} />
-            <Tile x={123} y={58} h={58} big name="Dexraflow" brand="dexraflow" active={stage >= 1} />
-            <Tile x={226} y={58} h={58} big name="Claude agent" brand="claude" active={stage === 1} />
-            <Chip x={20} y={124} show tone="green" w={110}>
+          <Canvas w={300} h={290}>
+            <Tile x={12} y={58} h={58} big name="AI SDR" icon={Bot} active={stage === 0} />
+            <Tile x={108} y={58} h={58} big name="Dexraflow" brand="dexraflow" active={stage >= 1} />
+            <Tile x={204} y={58} h={58} big name="Claude agent" brand="claude" active={stage === 1} />
+            <Chip x={12} y={124} show tone="green" w={96}>
               Emailed 9:00
             </Chip>
-            <Chip x={222} y={124} show={stage >= 1} tone="grey" w={100}>
+            <Chip x={200} y={124} show={stage >= 1} tone="grey" w={92}>
               send_email?
             </Chip>
-            <div className="absolute flex items-center gap-2" style={{ left: 123, top: 168 }}>
+            <div className="absolute flex items-center gap-2" style={{ left: 108, top: 168 }}>
               {(stage >= 2 || reduce) && (
                 <>
                   <Appear delay={0} className={`inline-flex rounded-[4px] border-2 px-2 py-0.5 font-dx-mono text-[13px] font-semibold tracking-[0.08em] ${DECISION.WAIT.cls}`}>WAIT</Appear>
