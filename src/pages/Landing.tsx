@@ -5,9 +5,9 @@ import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import ComplaintWall from "@/components/landing/ComplaintWall";
 import { BrandIcon, MissedSignalScene, NoOwnerScene, SilentFailureScene, useStage } from "@/components/landing/UseCaseAnimations";
-import { AskScene, CheckScene, HumanFixScene, LogScene, OpenDealScene, TwoAgentsScene, WithoutWith } from "@/components/landing/McpAnimations";
-import { ConnectBlock, LogoStrip, ToolsGrid, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
-import { Chapter, Tile, WaveField, Wire, WiredRow } from "@/components/landing/bento/Bento";
+import { AskScene, CheckScene, LogScene, WithoutWith } from "@/components/landing/McpAnimations";
+import { ConnectBlock, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
+import { Chapter, Tile, WaveField, WiredRow } from "@/components/landing/bento/Bento";
 import { EASE, FOCUS, PrimaryCTA, Reveal, SecondaryCTA } from "@/components/landing/primitives";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
@@ -71,12 +71,6 @@ const X_POSTS: { name: string; handle: string; date: string; tag: string; quote:
   { name: "Jack", handle: "JackPineRD", date: "Oct 2026", tag: "Handoff", quote: "I've seen solid outbound and content still dump leads into HubSpot with source overwritten and no owner. The gap was the handoff.", id: "2109711708252262883" },
   { name: "Keith", handle: "keithsalins_", date: "Jul 2026", tag: "Broken workflows", quote: "someone set up a Clay workflow in January / it broke in February, nobody fixed it / 14 Zapier automations that nobody documented", id: "2082126440775217350" },
   { name: "Jason Lemkin", handle: "jasonlk", date: "Oct 2026", tag: "AI agents", quote: "Never let your AI SDR send its first 1,000 emails without manually reviewing every single one.", id: "2109289938692784499" },
-];
-
-const INSIGHTS = [
-  { title: "It's not too many tools. It's tools that disagree.", body: "CRM, billing and support each keep their own record, so one customer shows up three different ways. The most repeated pain in every community we studied." },
-  { title: "Routing rules rot.", body: "Inherited CRMs run routing rules written years ago and patched over and over. It was called “by far the biggest gap”." },
-  { title: "AI agents make bad data louder.", body: "If the CRM has duplicates or stale fields, an agent writes confident updates on top of them. Teams hesitate to give agents write access for this reason." },
 ];
 
 const STEPS = [
@@ -215,91 +209,99 @@ const StackChapter = () => {
           ))}
         />
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        {STATS.map((s) => (
-          <Tile key={s.value}>
-            <p className="text-[40px] font-semibold leading-none tracking-[-0.04em] tabular-nums text-dx-ink">{s.value}</p>
-            <p className="mt-3 text-[14px] leading-relaxed text-dx-ink-muted">
-              {s.text}
-              <Cite n={s.cite} />
-            </p>
-          </Tile>
-        ))}
-      </div>
     </Chapter>
   );
 };
 
 /* ───────────────────────── 02 · where leads slip ───────────────────────── */
 
-const QuoteTile = ({ p }: { p: (typeof X_POSTS)[number] }) => (
-  <Tile as="a" href={`https://x.com/${p.handle}/status/${p.id}`} target="_blank" rel="noopener noreferrer" className="group flex h-full flex-col !p-4 transition hover:border-dx-line-strong">
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-dx-sunken text-[12px] font-semibold text-dx-ink">{p.name.charAt(0)}</span>
-        <p className="truncate text-[13px] font-semibold text-dx-ink">
-          {p.name} <span className="font-normal text-dx-ink-muted">@{p.handle}</span>
-        </p>
-      </div>
-      <span className="shrink-0 rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-1.5 py-0.5 font-dx-mono text-[11px] text-dx-brand">{p.tag}</span>
-    </div>
-    <blockquote className="mt-3 flex-1 text-[14px] leading-relaxed text-dx-ink">“{p.quote}”</blockquote>
-    <p className="mt-3 inline-flex items-center gap-1 text-[12px] text-dx-ink-muted transition group-hover:text-dx-ink">
-      {p.date} · View on X <ArrowUpRight className="h-3.5 w-3.5" />
+const FAILURES = [
+  { tag: "No owner", title: "A hot lead nobody owns", Scene: NoOwnerScene, post: X_POSTS[0] },
+  { tag: "Silent failure", title: "A workflow that says “success”", Scene: SilentFailureScene, post: X_POSTS[1] },
+  { tag: "Missed signal", title: "A buying signal nobody acted on", Scene: MissedSignalScene, post: X_POSTS[2] },
+];
+
+const QuoteCard = ({ p }: { p: (typeof X_POSTS)[number] }) => (
+  <a href={`https://x.com/${p.handle}/status/${p.id}`} target="_blank" rel="noopener noreferrer" className={`group flex h-full flex-col rounded-[8px] border border-dx-line bg-dx-surface p-4 transition hover:border-dx-line-strong ${FOCUS}`}>
+    <p className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Heard on X</p>
+    <blockquote className="mt-3 flex-1 text-[15px] leading-relaxed text-dx-ink">“{p.quote}”</blockquote>
+    <p className="mt-4 text-[13px] text-dx-ink-muted">
+      <span className="font-semibold text-dx-ink">{p.name}</span> @{p.handle} · {p.date}
+      <ArrowUpRight className="ml-1 inline h-3.5 w-3.5 align-text-bottom transition group-hover:text-dx-ink" />
     </p>
-  </Tile>
+  </a>
 );
 
-const SlipsChapter = () => {
-  const { ref, stage } = useStage(3, 7000);
-  const rows = [
-    { tag: "No owner", title: "A hot lead nobody owns", Scene: NoOwnerScene, post: X_POSTS[0], insight: INSIGHTS[1] },
-    { tag: "Silent failure", title: "A workflow that says “success”", Scene: SilentFailureScene, post: X_POSTS[1], insight: INSIGHTS[0] },
-    { tag: "Missed signal", title: "A buying signal nobody acted on", Scene: MissedSignalScene, post: X_POSTS[2], insight: INSIGHTS[2] },
-  ];
+/** One failure at a time: a stepper, the scene at full size, and the operator quote that matches it. */
+const FailureStage = () => {
+  const reduce = !!useReducedMotion();
+  const [i, setI] = useState(0);
+  const [run, setRun] = useState(0);
+  const [hold, setHold] = useState(false);
+  const { ref: viewRef, stage: tick } = useStage(1000, 9000);
+  useEffect(() => {
+    if (reduce || hold || tick === 0) return;
+    setI((k) => (k + 1) % FAILURES.length);
+    setRun((r) => r + 1);
+  }, [tick, reduce, hold]);
+  const go = (k: number) => {
+    setI(k);
+    setRun((r) => r + 1);
+  };
+  const f = FAILURES[i];
   return (
-    <Chapter id="slips" n="02" label="Where leads slip" title="Three failures every stack has." muted="They never throw an error." intro="Illustrative scenes, built from failures RevOps teams have described to us, next to what operators say in public.">
-      <div ref={ref} className="grid gap-2">
-        {rows.map((c, i) => (
-          <div key={c.tag} className="contents">
-            <div className="grid gap-3 lg:grid-cols-12">
-              <Tile active={stage === i} className="!p-4 lg:col-span-6">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-2 py-0.5 text-[12px] font-medium text-dx-brand">{c.tag}</span>
-                  <h3 className="text-[15px] font-semibold text-dx-ink">{c.title}</h3>
-                </div>
-                <c.Scene />
-              </Tile>
-              <div className="lg:col-span-3">
-                <QuoteTile p={c.post} />
-              </div>
-              <Tile className="!p-4 lg:col-span-3">
-                <p className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">What we learned</p>
-                <h4 className="mt-2 text-[15px] font-semibold leading-snug text-dx-ink">{c.insight.title}</h4>
-                <p className="mt-2 text-[13px] leading-relaxed text-dx-ink-muted">{c.insight.body}</p>
-              </Tile>
-            </div>
-            {i < rows.length - 1 && <Wire vertical on={stage > i} pulse={stage === i} />}
-          </div>
+    <div ref={viewRef} onMouseEnter={() => setHold(true)} onMouseLeave={() => setHold(false)} onFocusCapture={() => setHold(true)} onBlurCapture={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setHold(false)}>
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Failure">
+        {FAILURES.map((x, k) => (
+          <button
+            key={x.tag}
+            type="button"
+            role="tab"
+            aria-selected={i === k}
+            onClick={() => go(k)}
+            className={`relative inline-flex h-9 items-center gap-2 overflow-hidden rounded-[8px] border px-3 text-[13px] font-medium transition-colors ${FOCUS} ${i === k ? "border-dx-brand bg-dx-brand text-white" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:border-dx-line-strong hover:text-dx-ink"}`}
+          >
+            <span className={`font-dx-mono text-[12px] ${i === k ? "text-white/80" : ""}`}>{k + 1}</span>
+            {x.tag}
+            {i === k && !reduce && !hold && <motion.span key={run} aria-hidden="true" className="absolute bottom-0 left-0 h-[2px] bg-white/70" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 9, ease: "linear" }} />}
+          </button>
         ))}
       </div>
-      <p className="mt-3 text-[12px] leading-relaxed text-dx-ink-muted">Public posts on X, quoted in part with links to the originals. The authors are not Dexraflow customers and have not endorsed Dexraflow. Product names identify tools we connect to; trademarks belong to their owners.</p>
-    </Chapter>
+      <div className="mt-4 grid gap-3 lg:grid-cols-12">
+        <Tile className="!p-5 lg:col-span-8" active>
+          <h3 className="text-[17px] font-semibold text-dx-ink">{f.title}</h3>
+          <div key={`${run}-${i}`} className="mx-auto mt-4 max-w-[480px]">
+            <f.Scene />
+          </div>
+        </Tile>
+        <div className="lg:col-span-4">
+          <QuoteCard p={f.post} />
+        </div>
+      </div>
+    </div>
   );
 };
+
+const SlipsChapter = () => (
+  <Chapter id="slips" n="02" label="Where leads slip" title="Three failures every stack has." muted="They never throw an error." intro="Illustrative scenes, built from failures RevOps teams have described to us.">
+    <FailureStage />
+    <p className="mt-3 text-[12px] leading-relaxed text-dx-ink-muted">Public posts on X, quoted in part with links to the originals. The authors are not Dexraflow customers and have not endorsed Dexraflow. Product names identify tools we connect to; trademarks belong to their owners.</p>
+  </Chapter>
+);
 
 /* ───────────────────────── 03 · the cost ───────────────────────── */
 
 const NumbersChapter = () => {
   const { ref, stage } = useStage(3, 1600);
+  const more: { value: string; text: string; cite: SourceId }[] = [...STATS, ...AGENTS_STATS];
   return (
-    <Chapter id="numbers" n="03" label="The cost" title="Every hour a lead waits," muted="the deal gets colder." intro="More tools and more AI agents mean more places for leads to slip, and nobody checking the gaps.">
+    <Chapter id="numbers" n="03" label="The cost" title="Every hour a lead waits," muted="the deal gets colder.">
       <div ref={ref}>
         <WiredRow
           step={stage}
           items={SPEED.map((s, i) => (
             <Tile key={s.value} dark active={stage === i}>
-              <p className="text-[44px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink">{s.value}</p>
+              <p className="text-[48px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink">{s.value}</p>
               <p className="mt-3 text-[14px] leading-relaxed text-dx-night-ink-muted">
                 {s.text}
                 <Cite n={s.cite} dark />
@@ -308,23 +310,19 @@ const NumbersChapter = () => {
           ))}
         />
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-12">
-        {AGENTS_STATS.map((s) => (
-          <Tile key={s.value} dark className="lg:col-span-3">
-            <p className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-night-ink-muted">Agents multiply it</p>
-            <p className="mt-3 text-[40px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink">{s.value}</p>
-            <p className="mt-3 text-[14px] leading-relaxed text-dx-night-ink-muted">
-              {s.text}
-              <Cite n={s.cite} dark />
-            </p>
-          </Tile>
-        ))}
-        {X_POSTS.slice(3).map((p) => (
-          <div key={p.id} className="lg:col-span-2">
-            <QuoteTile p={p} />
-          </div>
-        ))}
-      </div>
+      <Tile className="mt-3 !py-4">
+        <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-5">
+          {more.map((s) => (
+            <div key={s.value} className="min-w-0">
+              <dt className="text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-dx-ink">{s.value}</dt>
+              <dd className="mt-1.5 text-[12px] leading-snug text-dx-ink-muted">
+                {s.text}
+                <Cite n={s.cite} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Tile>
     </Chapter>
   );
 };
@@ -347,37 +345,23 @@ const CatchChapter = ({ onAudit }: { onAudit: () => void }) => {
           ))}
         />
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-12">
-        <Tile className="overflow-hidden lg:col-span-7" pad={false}>
-          <img src="/brand/plane-diagram.svg" alt="Diagram: Dexraflow as one bar sitting above six GTM tools, with a single alert moving down to one of them." width={1200} height={630} loading="lazy" decoding="async" className="block h-auto w-full" />
-        </Tile>
-        <div className="grid gap-3 lg:col-span-5">
-          <Tile label="What a rep sees">
-            <div className="flex items-start gap-2.5 rounded-[8px] border border-dx-line bg-dx-surface px-3 py-2.5">
-              <BrandIcon k="slack" size={18} />
-              <div className="min-w-0 text-[13px] leading-snug text-dx-ink">
-                <p className="font-semibold">
-                  Dexraflow <span className="font-normal text-dx-ink-muted">→ Sam</span>
-                </p>
-                <p className="mt-0.5">Acme Inc asked for pricing twice this week. Owner out of office. Reply by 3pm?</p>
-              </div>
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-dx-brand" strokeWidth={1.5} aria-hidden="true" />
-            </div>
-          </Tile>
-          <Tile label="Safe by default">
-            <ul className="grid gap-2 text-[14px] text-dx-ink">
-              {["Read-only by default", "Writes only 10 essential fields", "Every change logged"].map((t) => (
-                <li key={t} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-dx-brand" strokeWidth={1.5} aria-hidden="true" /> {t}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4">
-              <SecondaryCTA onClick={onAudit}>Book an audit</SecondaryCTA>
-            </div>
-          </Tile>
+      <Tile className="mt-3 overflow-hidden" pad={false}>
+        <div className="bg-dx-surface">
+        <img src="/brand/plane-diagram.svg" alt="Diagram: Dexraflow as one bar sitting above six GTM tools, with a single alert moving down to one of them." width={1200} height={630} loading="lazy" decoding="async" className="mx-auto block h-auto w-full max-w-[720px]" />
         </div>
-      </div>
+        <div className="flex flex-col gap-4 border-t border-dx-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-dx-ink">
+            {["Read-only by default", "Writes only 10 essential fields", "Every change logged"].map((t) => (
+              <li key={t} className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-dx-brand" strokeWidth={1.5} aria-hidden="true" /> {t}
+              </li>
+            ))}
+          </ul>
+          <SecondaryCTA onClick={onAudit} className="shrink-0">
+            Book an audit
+          </SecondaryCTA>
+        </div>
+      </Tile>
     </Chapter>
   );
 };
@@ -385,75 +369,47 @@ const CatchChapter = ({ onAudit }: { onAudit: () => void }) => {
 /* ───────────────────────── 05 · agents ask first ───────────────────────── */
 
 const McpChapter = ({ onAccess }: { onAccess: () => void }) => {
-  const { tab, setTab, connectRef, goConnect } = useConnectTabs();
+  const { tab, setTab, connectRef } = useConnectTabs();
   const { ref, stage } = useStage(3, 2200);
-  const { ref: ref2, stage: stage2 } = useStage(3, 7000);
   const moves = [
     { t: "Agent asks", Scene: AskScene },
     { t: "Dexraflow checks every tool", Scene: CheckScene },
     { t: "Decision is logged", Scene: LogScene },
   ];
   return (
-    <Chapter id="mcp" n="05" label="Dexraflow MCP · Early access" title="Let AI agents into your CRM," muted="without the chaos." intro="Any agent asks Dexraflow before it acts. Dexraflow checks every tool, then says go, hold, or stop.">
-      <div className="grid gap-3 lg:grid-cols-12">
-        <Tile className="lg:col-span-7 lg:self-start" label="Without vs with Dexraflow">
+    <Chapter id="mcp" n="05" label="Dexraflow MCP · Early access" title="Let AI agents into your CRM," muted="without the chaos." intro="Any agent asks Dexraflow before it acts. Dexraflow checks every tool, then says go, hold, or stop. It never sends anything itself.">
+      <Tile label="Without vs with Dexraflow">
+        <div className="mx-auto max-w-[880px]">
           <WithoutWith />
-        </Tile>
-        <div ref={ref} className="grid gap-2 lg:col-span-5">
-          {moves.map((m, i) => (
-            <div key={m.t} className="contents">
-              <Tile active={stage === i} className="!p-4">
-                <p className="mb-3 text-[15px] font-semibold text-dx-ink">{m.t}</p>
-                <m.Scene />
-              </Tile>
-              {i < moves.length - 1 && <Wire vertical on={stage > i} pulse={stage === i} />}
-            </div>
-          ))}
         </div>
-      </div>
-
-      <div ref={connectRef} className="mt-3 grid scroll-mt-32 gap-3 lg:grid-cols-12">
-        <Tile className="lg:col-span-8" label="Connect any agent · Preview">
-          <ConnectBlock tab={tab} setTab={setTab} />
-        </Tile>
-        <div className="grid gap-3 lg:col-span-4">
-          <Tile label="Get your key">
-            <p className="text-[15px] text-dx-ink">Join early access to get a workspace and API key.</p>
-            <div className="mt-4">
-              <PrimaryCTA onClick={onAccess}>Get early access</PrimaryCTA>
-            </div>
-          </Tile>
-          <Tile label="What your agent gets">
-            <ToolsGrid single />
-          </Tile>
-        </div>
-      </div>
-
-      <Tile className="mt-3" label="Works with any agent">
-        <LogoStrip onPick={goConnect} />
       </Tile>
-
-      <div ref={ref2} className="mt-3 lg:-ml-24">
+      <div ref={ref} className="mt-3 lg:-ml-24">
         <WiredRow
           narrow
-          step={stage2}
-          items={[
-            { t: "Don't email during an open deal", Scene: OpenDealScene },
-            { t: "Don't overwrite what a human fixed", Scene: HumanFixScene },
-            { t: "Two agents, one account", Scene: TwoAgentsScene },
-          ].map((c, i) => (
-            <Tile key={c.t} active={stage2 === i} className="!p-3">
-              <h3 className="mb-2 px-1 text-[15px] font-semibold text-dx-ink">{c.t}</h3>
-              <c.Scene />
+          step={stage}
+          items={moves.map((m, i) => (
+            <Tile key={m.t} active={stage === i} className="!p-3">
+              <p className="mb-2 px-1 text-[15px] font-semibold text-dx-ink">{m.t}</p>
+              <m.Scene />
             </Tile>
           ))}
         />
       </div>
-
-      <Tile className="mt-3">
-        <TrustStrip />
-        <p className="mt-3 text-[13px] text-dx-ink-muted">Dexraflow never sends emails or acts on its own. It only informs, allows, holds or logs.</p>
-      </Tile>
+      <div ref={connectRef} className="mt-3 grid scroll-mt-32 gap-3 lg:grid-cols-12">
+        <Tile className="lg:col-span-8" label="Connect any agent · Preview">
+          <ConnectBlock tab={tab} setTab={setTab} />
+        </Tile>
+        <Tile className="flex flex-col lg:col-span-4" label="Early access">
+          <p className="text-[17px] font-semibold leading-snug text-dx-ink">Join to get a workspace and API key.</p>
+          <p className="mt-2 text-[14px] leading-relaxed text-dx-ink-muted">Works with Claude, Cursor, OpenAI, LangChain, n8n and any client that supports remote MCP.</p>
+          <div className="mt-5">
+            <PrimaryCTA onClick={onAccess}>Get early access</PrimaryCTA>
+          </div>
+          <div className="mt-auto pt-6">
+            <TrustStrip stacked />
+          </div>
+        </Tile>
+      </div>
     </Chapter>
   );
 };
@@ -562,7 +518,7 @@ const Landing = () => {
       <Nav onAccess={openAccess} onAudit={openFounder} />
       <main id="main">
         <Hero onAudit={openFounder} />
-        <div className="mx-auto max-w-6xl space-y-20 px-5 pt-20 sm:px-8 md:space-y-28 md:pt-28">
+        <div className="mx-auto max-w-6xl space-y-24 px-5 pt-24 sm:px-8 md:space-y-36 md:pt-32">
           <Reveal>
             <StackChapter />
           </Reveal>

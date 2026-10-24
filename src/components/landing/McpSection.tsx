@@ -374,9 +374,9 @@ export function LogoStrip({ onPick }: { onPick: (t: TabId) => void }) {
   );
 }
 
-export function TrustStrip() {
+export function TrustStrip({ stacked = false }: { stacked?: boolean }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <ul className={`grid gap-3 ${stacked ? "" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
       {[
         { I: Eye, t: "Read-only by default" },
         { I: MailX, t: "Never sends anything itself" },
