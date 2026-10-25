@@ -203,11 +203,11 @@ function N8nMock() {
 type Logo = { name: string; k?: string; tab?: TabId };
 const LOGOS: Logo[] = [
   { name: "Claude", k: "claude", tab: "claude-code" },
-  { name: "Cursor", tab: "cursor" },
-  { name: "OpenAI", tab: "openai" },
-  { name: "LangChain", tab: "langchain" },
+  { name: "Cursor", k: "cursor", tab: "cursor" },
+  { name: "OpenAI", k: "openai", tab: "openai" },
+  { name: "LangChain", k: "langchain", tab: "langchain" },
   { name: "n8n", k: "n8n", tab: "n8n" },
-  { name: "Make" },
+  { name: "Make", k: "make" },
   { name: "Zapier", k: "zapier" },
   { name: "Clay", k: "clay" },
   { name: "HubSpot", k: "hubspot" },
@@ -215,7 +215,7 @@ const LOGOS: Logo[] = [
   { name: "Slack", k: "slack" },
   { name: "Gong", k: "gong" },
   { name: "Outreach", k: "outreach" },
-  { name: "Apollo" },
+  { name: "Apollo", k: "apollo" },
 ];
 const hasMark = (k?: string) => !!k && (k in BRAND_ICONS || k in BRAND_LOGOS);
 

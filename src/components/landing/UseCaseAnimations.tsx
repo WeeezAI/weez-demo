@@ -44,7 +44,8 @@ export function Canvas({ w, h, children }: { w: number; h: number; children: Rea
   );
 }
 
-export function BrandIcon({ k, size = 20 }: { k: keyof typeof BRAND_ICONS | string; size?: number }) {
+/** A vendor mark: the logo file where one exists, else the Simple Icons path. `color` overrides a path icon's brand colour (for dark grounds). */
+export function BrandIcon({ k, size = 20, color }: { k: keyof typeof BRAND_ICONS | string; size?: number; color?: string }) {
   const logo = BRAND_LOGOS[k];
   if (logo)
     return <img src={logo.src} alt={logo.title} width={size} height={size} draggable={false} className="shrink-0 object-contain" style={{ width: size, height: size }} />;
@@ -52,7 +53,7 @@ export function BrandIcon({ k, size = 20 }: { k: keyof typeof BRAND_ICONS | stri
   if (!i) return null;
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} role="img" aria-label={i.title}>
-      <path d={i.path} fill={i.hex} />
+      <path d={i.path} fill={color ?? i.hex} />
     </svg>
   );
 }

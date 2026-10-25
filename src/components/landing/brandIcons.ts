@@ -3,6 +3,19 @@ import gongLogo from "@/assets/tools/gong.png";
 import outreachLogo from "@/assets/tools/outreach.png";
 import salesforceLogo from "@/assets/tools/salesforce.png";
 import slackLogo from "@/assets/tools/slack.png";
+import cursorLogo from "@/assets/tools/cursor.svg";
+import langchainLogo from "@/assets/tools/langchain.svg";
+import makeLogo from "@/assets/tools/make.svg";
+import openaiLogo from "@/assets/tools/openai.svg";
+import apolloLogo from "@/assets/tools/apollo.png";
+import salesloftLogo from "@/assets/tools/salesloft.png";
+import zoominfoLogo from "@/assets/tools/zoominfo.png";
+import attioLogo from "@/assets/tools/attio.png";
+import intercomLogo from "@/assets/tools/intercom.svg";
+import calendlyLogo from "@/assets/tools/calendly.svg";
+import zoomLogo from "@/assets/tools/zoom.svg";
+import googlecalendarLogo from "@/assets/tools/googlecalendar.svg";
+import zendeskLogo from "@/assets/tools/zendesk.svg";
 
 /* Brand icons from Simple Icons (CC0, simpleicons.org). Trademarks belong to their owners; shown to name the tools Dexraflow works with. */
 export const BRAND_ICONS: Record<string, { title: string; hex: string; path: string }> = {
@@ -22,4 +35,21 @@ export const BRAND_LOGOS: Record<string, { title: string; src: string }> = {
   clay: { title: "Clay", src: clayLogo },
   gong: { title: "Gong", src: gongLogo },
   outreach: { title: "Outreach", src: outreachLogo },
+  // Cursor, LangChain and Make from Simple Icons (CC0); OpenAI symbol from Wikimedia Commons (public domain);
+  // Apollo mark from apollo.io's own logo file.
+  cursor: { title: "Cursor", src: cursorLogo },
+  langchain: { title: "LangChain", src: langchainLogo },
+  make: { title: "Make", src: makeLogo },
+  openai: { title: "OpenAI", src: openaiLogo },
+  apollo: { title: "Apollo", src: apolloLogo },
+  // Salesloft, ZoomInfo and Attio marks from each vendor's own site icon, backgrounds removed;
+  // Intercom, Calendly, Zoom, Google Calendar and Zendesk from Simple Icons (CC0).
+  salesloft: { title: "Salesloft", src: salesloftLogo },
+  zoominfo: { title: "ZoomInfo", src: zoominfoLogo },
+  attio: { title: "Attio", src: attioLogo },
+  intercom: { title: "Intercom", src: intercomLogo },
+  calendly: { title: "Calendly", src: calendlyLogo },
+  zoom: { title: "Zoom", src: zoomLogo },
+  googlecalendar: { title: "Google Calendar", src: googlecalendarLogo },
+  zendesk: { title: "Zendesk", src: zendeskLogo },
 };

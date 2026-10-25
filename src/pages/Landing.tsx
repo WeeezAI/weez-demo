@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
+import { ArrowRight, Check, ClipboardList, Eye, MailX, Plug, Scale } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
-import ComplaintWall from "@/components/landing/ComplaintWall";
 import { BrandIcon, MissedSignalScene, NoOwnerScene, SilentFailureScene, useStage } from "@/components/landing/UseCaseAnimations";
-import { AskScene, CheckScene, LogScene, WithoutWith } from "@/components/landing/McpAnimations";
-import { ConnectBlock, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
-import { Chapter, Tile, WaveField, WiredRow } from "@/components/landing/bento/Bento";
-import { EASE, FOCUS, PrimaryCTA, Reveal, SecondaryCTA } from "@/components/landing/primitives";
+import { WithoutWith } from "@/components/landing/McpAnimations";
+import HeroCircuit from "@/components/landing/HeroCircuit";
+import { ConnectBlock, useConnectTabs, type TabId } from "@/components/landing/McpSection";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { EASE, FOCUS, Reveal } from "@/components/landing/primitives";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
 
-/* The landing page as one connected story: six numbered chapters of bento tiles, joined
-   by wave wires that pulse in sequence. Every number keeps its citation. */
+/* The landing page: a dark hero with one highlighted phrase, then one idea per section,
+   each centered with a teal keyword, mono-uppercase labels and buttons, and a flat card grid. */
 
 /* ───────────────────────── sources ───────────────────────── */
 
@@ -39,18 +39,30 @@ const Cite = ({ n, dark = false }: { n: SourceId; dark?: boolean }) => (
 /* ───────────────────────── content ───────────────────────── */
 
 const STACK = [
-  { name: "HubSpot", k: "hubspot", role: "CRM" },
-  { name: "Clay", k: "clay", role: "Enrichment" },
-  { name: "Apollo", role: "Data" },
-  { name: "Outreach", k: "outreach", role: "Sequences" },
-  { name: "Gong", k: "gong", role: "Calls" },
-  { name: "Slack", k: "slack", role: "Where reps live" },
+  { name: "HubSpot", k: "hubspot" },
+  { name: "Salesforce", k: "salesforce" },
+  { name: "Clay", k: "clay" },
+  { name: "Apollo", k: "apollo" },
+  { name: "Outreach", k: "outreach" },
+  { name: "Gong", k: "gong" },
+  { name: "Slack", k: "slack" },
 ];
 
-const STATS: { value: string; text: string; cite: SourceId }[] = [
-  { value: "80%", text: "of RevOps leaders don't feel they have clean, actionable data. Only 2 in 10 do.", cite: 1 },
-  { value: "37%", text: "of CRM users reported losing revenue as a direct result of poor data quality.", cite: 2 },
-  { value: "10", text: "tools used, on average, to close a deal", cite: 3 },
+/** Everything on the stack strip; the diagram keeps the core `STACK` above. */
+const TOOLS_ALL = [
+  ...STACK,
+  { name: "Salesloft", k: "salesloft" },
+  { name: "ZoomInfo", k: "zoominfo" },
+  { name: "Attio", k: "attio" },
+  { name: "Intercom", k: "intercom" },
+  { name: "Zendesk", k: "zendesk" },
+  { name: "Calendly", k: "calendly" },
+  { name: "Google Calendar", k: "googlecalendar" },
+  { name: "Zoom", k: "zoom" },
+  { name: "Gmail", k: "gmail" },
+  { name: "LinkedIn", k: "linkedin" },
+  { name: "Zapier", k: "zapier" },
+  { name: "n8n", k: "n8n" },
 ];
 
 const SPEED: { value: string; text: string; cite: SourceId }[] = [
@@ -58,82 +70,138 @@ const SPEED: { value: string; text: string; cite: SourceId }[] = [
   { value: "7×", text: "more likely to qualify a lead when you reach out within the hour", cite: 4 },
   { value: "23%", text: "of companies never responded to the lead at all", cite: 4 },
 ];
-
-const AGENTS_STATS: { value: string; text: string; cite: SourceId }[] = [
-  { value: "10:1", text: "AI agents to sellers by 2028, Gartner predicts", cite: 5 },
-  { value: "<40%", text: "of sellers will say those agents actually improved productivity", cite: 5 },
+const MORE_STATS: { value: string; text: string; cite: SourceId }[] = [
+  { value: "80%", text: "of RevOps leaders don't feel they have clean, actionable data.", cite: 1 },
+  { value: "37%", text: "of CRM users lost revenue as a direct result of poor data quality.", cite: 2 },
+  { value: "10", text: "tools used, on average, to close a deal.", cite: 3 },
+  { value: "10:1", text: "AI agents to sellers by 2028, Gartner predicts.", cite: 5 },
+  { value: "<40%", text: "of sellers will say those agents improved productivity.", cite: 5 },
 ];
 
-const X_POSTS: { name: string; handle: string; date: string; tag: string; quote: string; id: string }[] = [
-  { name: "Tech Sales Guy", handle: "TechSalesGuy", date: "Sep 2026", tag: "No owner", quote: "the leads just sat.... and sat there. no owner. no task. no follow up", id: "2102557390440689959" },
-  { name: "Joshua Pi'Rwot", handle: "pirwot", date: "Sep 2026", tag: "Silent failure", quote: "an automation … had been quietly doing nothing for eleven days. It ran on schedule. The dashboard was green. … It failed politely.", id: "2100906487312744726" },
-  { name: "Alton Syn", handle: "WorkflowWhisper", date: "Apr 2026", tag: "Routing", quote: "a client's lead routing was broken for 6 weeks before they called me … 23 deals routed to a dead inbox. $140k in pipeline gone", id: "2039742868185854146" },
-  { name: "Jack", handle: "JackPineRD", date: "Oct 2026", tag: "Handoff", quote: "I've seen solid outbound and content still dump leads into HubSpot with source overwritten and no owner. The gap was the handoff.", id: "2109711708252262883" },
-  { name: "Keith", handle: "keithsalins_", date: "Jul 2026", tag: "Broken workflows", quote: "someone set up a Clay workflow in January / it broke in February, nobody fixed it / 14 Zapier automations that nobody documented", id: "2082126440775217350" },
-  { name: "Jason Lemkin", handle: "jasonlk", date: "Oct 2026", tag: "AI agents", quote: "Never let your AI SDR send its first 1,000 emails without manually reviewing every single one.", id: "2109289938692784499" },
+const FAILURES = [
+  { tag: "No owner", title: "A hot lead nobody owns", body: "Routing waits on a field that never filled. The lead sits with no owner, no task, no follow-up.", Scene: NoOwnerScene },
+  { tag: "Silent failure", title: "A workflow that says “success”", body: "The run completes on schedule and the dashboard stays green. Rows written: zero.", Scene: SilentFailureScene },
+  { tag: "Missed signal", title: "A buying signal nobody acted on", body: "Three pricing visits in a week. The owner is out of office. Five days pass with no touch.", Scene: MissedSignalScene },
 ];
 
-const STEPS = [
-  { n: "1", title: "Connect", body: "Read-only access to your CRM and GTM tools. Setup takes minutes, not a project." },
-  { n: "2", title: "Match", body: "One record per account and contact across every tool, so signals and owners line up." },
-  { n: "3", title: "Catch", body: "Leads with no owner, workflows that say success but wrote nothing, and buying signals nobody acted on." },
-  { n: "4", title: "Alert & prove", body: "The right rep gets it in Slack with the reason and a deadline. You get a weekly report of pipeline recovered." },
+const AGENTS: { id: TabId; name: string; k?: string; action: string }[] = [
+  { id: "claude-code", name: "Claude Code", k: "claude", action: "Install" },
+  { id: "claude-desktop", name: "Claude Desktop", k: "claude", action: "Add connector" },
+  { id: "cursor", name: "Cursor", k: "cursor", action: "Install" },
+  { id: "openai", name: "OpenAI Agents SDK", k: "openai", action: "Copy snippet" },
+  { id: "langchain", name: "LangChain", k: "langchain", action: "Copy snippet" },
+  { id: "n8n", name: "n8n", k: "n8n", action: "Add node" },
+  { id: "any", name: "Make / Zapier", k: "make", action: "Use MCP URL" },
+  { id: "any", name: "Any MCP client", action: "Copy MCP URL" },
 ];
 
-/* ───────────────────────── chrome ───────────────────────── */
+const TRUST = [
+  { I: Eye, t: "Read-only by default", d: "Connect with read access. Writes are opt-in and limited to 10 essential fields." },
+  { I: MailX, t: "Never sends anything itself", d: "Dexraflow informs, allows, holds or logs. It never emails or contacts a prospect." },
+  { I: Scale, t: "Neutral across vendors", d: "No tool to replace and nothing to migrate. Every vendor gets the same treatment." },
+  { I: ClipboardList, t: "Every change logged", d: "Each alert, hold and write is recorded with the reason, so you can see what happened." },
+];
 
-const Wordmark = ({ reversed = false, className = "h-7" }: { reversed?: boolean; className?: string }) => (
-  <img src={reversed ? "/brand/dexraflow-lockup-reversed.svg" : "/brand/dexraflow-lockup.svg"} alt="Dexraflow" width={137} height={28} className={`w-auto ${className}`} />
-);
+const FAQ = [
+  { q: "Do I have to replace any of my tools?", a: "No. Dexraflow connects to the CRM and GTM tools you already use, read-only by default, and catches what slips between them. Nothing is migrated." },
+  { q: "Does Dexraflow email or contact my prospects?", a: "Never. It tells the right rep in Slack, with the reason and a deadline. People act; Dexraflow informs, allows, holds or logs." },
+  { q: "What does the 14-day audit involve?", a: "You connect your tools read-only. We look back 90 days and show you the high-intent accounts nobody worked, leads routed to the wrong owner or no owner, and workflows that failed silently, with what each one was worth. If we don't find at least $10K of missed pipeline, you don't pay." },
+  { q: "Which tools does it work with?", a: "CRMs like HubSpot, Salesforce and Attio; enrichment and data from Clay, Apollo and ZoomInfo; sequencing in Outreach and Salesloft; calls in Gong and Zoom; support in Intercom and Zendesk; plus Slack, Gmail, Google Calendar, Calendly, LinkedIn, Zapier and n8n. More on request. Product names identify the tools we connect to; trademarks belong to their owners." },
+  { q: "What is the Dexraflow MCP?", a: "An early-access way for AI agents to ask Dexraflow before they act in your CRM. It checks every tool, applies your rules, then answers allow, hold or wait, and logs the decision. It works with any client that supports remote MCP." },
+  { q: "Who is this for?", a: "Heads of RevOps at B2B SaaS companies running a CRM plus five or more GTM tools. We're working with a small group of early-access teams." },
+];
 
-const AcceleratorBadge = ({ onBrand = false }: { onBrand?: boolean }) => {
-  const [logoOk, setLogoOk] = useState(true);
-  return (
-    <span className={`inline-flex items-center gap-2.5 rounded-[8px] border py-1.5 pl-3 pr-3.5 text-[13px] font-medium ${onBrand ? "border-white/25 text-white/85" : "border-dx-line bg-dx-raised text-dx-ink-muted"}`}>
-      <span>Accelerated by</span>
-      {logoOk ? <img src="/brand/draperu-india.png" alt="DraperU India" className="h-5 w-auto" onError={() => setLogoOk(false)} /> : <span className={`font-semibold ${onBrand ? "text-white" : "text-dx-ink"}`}>DraperU India</span>}
-    </span>
+/* ───────────────────────── primitives ───────────────────────── */
+
+const MONO = "font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em]";
+
+const MonoButton = ({ onClick, href, children, tone = "dark", className = "" }: { onClick?: () => void; href?: string; children: ReactNode; tone?: "dark" | "light" | "ghost" | "ghostDark"; className?: string }) => {
+  const tones = {
+    dark: "bg-dx-ink text-dx-night-ink hover:bg-black",
+    light: "bg-white text-dx-ink hover:bg-dx-surface",
+    ghost: "border border-dx-line-strong bg-transparent text-dx-ink hover:bg-dx-surface",
+    ghostDark: "border border-dx-night-line bg-transparent text-dx-night-ink hover:bg-dx-night-raised",
+  };
+  const cls = `inline-flex h-11 items-center justify-center gap-2 rounded-[4px] px-5 ${MONO} transition ${tones[tone]} ${FOCUS} ${className}`;
+  return href ? (
+    <a href={href} className={cls}>
+      {children}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {children}
+    </button>
   );
 };
 
+const Label = ({ children, dark = false, className = "" }: { children: ReactNode; dark?: boolean; className?: string }) => (
+  <p className={`${MONO} ${dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"} ${className}`}>{children}</p>
+);
+
+/** Centered section header: label, big headline with one teal phrase, one-line subline, optional mono CTA. */
+const Head = ({ id, label, lead, accent, tail, sub, cta, dark = false }: { id: string; label: string; lead: string; accent: string; tail?: string; sub?: ReactNode; cta?: ReactNode; dark?: boolean }) => (
+  <div className="mx-auto max-w-3xl text-center">
+    <Label dark={dark}>{label}</Label>
+    <h2 id={id} className={`mt-4 text-[32px] font-semibold leading-[1.1] tracking-[-0.025em] sm:text-[44px] sm:leading-[50px] ${dark ? "text-dx-night-ink" : "text-dx-ink"}`}>
+      {lead} <span className={dark ? "text-dx-brand-night" : "text-dx-brand"}>{accent}</span>
+      {tail ? ` ${tail}` : ""}
+    </h2>
+    {sub && <p className={`mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed ${dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}`}>{sub}</p>}
+    {cta && <div className="mt-7 flex justify-center">{cta}</div>}
+  </div>
+);
+
+const Card = ({ children, className = "", dark = false }: { children: ReactNode; className?: string; dark?: boolean }) => (
+  <div className={`rounded-[8px] border ${dark ? "border-dx-night-line bg-dx-night-raised" : "border-dx-line bg-dx-raised"} ${className}`}>{children}</div>
+);
+
+/* ───────────────────────── chrome ───────────────────────── */
+
+const Wordmark = ({ reversed = false, className = "h-6" }: { reversed?: boolean; className?: string }) => (
+  <img src={reversed ? "/brand/dexraflow-lockup-reversed.svg" : "/brand/dexraflow-lockup.svg"} alt="Dexraflow" width={137} height={28} className={`w-auto ${className}`} />
+);
+
 const NAV_LINKS = [
-  { href: "#stack", label: "Your stack" },
-  { href: "#slips", label: "Where leads slip" },
+  { href: "#slips", label: "Problem" },
   { href: "#catch", label: "How it works" },
   { href: "#mcp", label: "MCP" },
-  { href: "#start", label: "Start here" },
+  { href: "#audit", label: "Audit" },
+  { href: "#faq", label: "FAQ" },
 ];
 
-const Nav = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void }) => (
+const Nav = ({ onAccess, onAudit, dark }: { onAccess: () => void; onAudit: () => void; dark: boolean }) => (
   <header className="fixed inset-x-0 top-0 z-50">
-    <div className="bg-dx-ink text-dx-night-ink">
-      <button type="button" onClick={onAudit} className="group mx-auto flex h-10 w-full max-w-7xl items-center justify-center gap-2 px-5 text-[13px] font-medium sm:text-[14px]">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-dx-signal" />
-        <span className="truncate">
-          <span className="sm:hidden">The 14-day Missed Pipeline Audit</span>
-          <span className="hidden sm:inline">The 14-day Missed Pipeline Audit: find $10K of missed pipeline, or you don't pay</span>
-        </span>
-        <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-      </button>
-    </div>
-    <div className="border-b border-dx-line bg-dx-surface/90 backdrop-blur-xl">
+    <button type="button" onClick={onAudit} className={`group flex h-9 w-full items-center justify-center gap-2 bg-dx-brand px-5 text-white ${MONO}`}>
+      <span className="rounded-[3px] bg-white/15 px-1.5 py-0.5 text-[10px]">Audit</span>
+      <span className="truncate">
+        <span className="sm:hidden">14-day Missed Pipeline Audit</span>
+        <span className="hidden sm:inline">The 14-day Missed Pipeline Audit · find $10K of missed pipeline, or you don't pay</span>
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+    </button>
+    <div className={`border-b backdrop-blur-xl transition-colors duration-500 ${dark ? "border-dx-night-line bg-dx-night/85" : "border-dx-line bg-dx-surface/90"}`}>
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8" aria-label="Primary">
         <div className="flex items-center gap-10">
           <Link to="/" aria-label="Dexraflow home" className={`rounded ${FOCUS}`}>
-            <Wordmark />
+            <Wordmark reversed={dark} />
           </Link>
-          <div className="hidden items-center gap-7 text-[14px] font-medium text-dx-ink-muted lg:flex">
+          <div className={`hidden items-center gap-7 lg:flex ${MONO} ${dark ? "text-dx-night-ink-muted" : "text-dx-ink-muted"}`}>
             {NAV_LINKS.map((l) => (
-              <a key={l.href} href={l.href} className={`rounded transition hover:text-dx-ink ${FOCUS}`}>
+              <a key={l.href} href={l.href} className={`rounded transition ${dark ? "hover:text-dx-night-ink" : "hover:text-dx-ink"} ${FOCUS}`}>
                 {l.label}
               </a>
             ))}
           </div>
         </div>
-        <button type="button" onClick={onAccess} className={`h-9 rounded-[8px] bg-dx-brand px-3.5 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover ${FOCUS}`}>
-          <span className="sm:hidden">Early access</span>
-          <span className="hidden sm:inline">Request early access</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <MonoButton onClick={onAudit} tone={dark ? "ghostDark" : "ghost"} className="hidden !h-9 sm:inline-flex">
+            Get a demo
+          </MonoButton>
+          <MonoButton onClick={onAccess} tone={dark ? "light" : "dark"} className="!h-9">
+            <span className="sm:hidden">Early access</span>
+            <span className="hidden sm:inline">Get early access</span>
+          </MonoButton>
+        </div>
       </nav>
     </div>
   </header>
@@ -141,327 +209,191 @@ const Nav = ({ onAccess, onAudit }: { onAccess: () => void; onAudit: () => void 
 
 /* ───────────────────────── hero ───────────────────────── */
 
-const Hero = ({ onAudit }: { onAudit: () => void }) => {
-  const reduce = useReducedMotion();
-  const enter = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.8, delay: 0.1 + i * 0.08, ease: EASE } });
+const PHRASES = ["drop silently", "route to nobody", "mark as success"];
+
+const Hero = ({ onAccess, onAudit, heroRef }: { onAccess: () => void; onAudit: () => void; heroRef: React.RefObject<HTMLElement> }) => {
+  const reduce = !!useReducedMotion();
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const id = window.setInterval(() => setK((n) => (n + 1) % PHRASES.length), 2600);
+    return () => window.clearInterval(id);
+  }, [reduce]);
+  const enter = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay: 0.1 + i * 0.08, ease: EASE } });
   return (
-    <section className="mx-auto max-w-6xl px-5 pt-36 sm:px-8 md:pt-40" aria-labelledby="hero-title">
-      <div className="grid gap-3 lg:grid-cols-12">
-        <Tile className="relative overflow-hidden lg:col-span-7" pad={false}>
-          <WaveField className="opacity-70 [mask-image:linear-gradient(to_bottom,transparent,black_35%)]" />
-          <div className="relative p-6 sm:p-9">
-            <motion.div {...enter(0)}>
-              <AcceleratorBadge />
-            </motion.div>
-            <motion.h1 id="hero-title" {...enter(1)} className="mt-6 max-w-2xl text-[40px] font-semibold leading-[1.04] tracking-[-0.025em] text-dx-ink sm:text-[54px] sm:leading-[58px]">
-              Your GTM tools are dropping deals. <span className="text-dx-ink-muted">Silently.</span>
-            </motion.h1>
-            <motion.p {...enter(2)} className="mt-5 max-w-[560px] text-[17px] leading-[27px] text-dx-ink-muted">
-              Dexraflow connects to the tools you already use, catches the leads and deals that slip between them, and tells the right rep in Slack before they go cold.
-            </motion.p>
-            <motion.div {...enter(3)} className="mt-7 flex flex-col gap-2.5 sm:flex-row">
-              <a href="#slips" className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-dx-line-strong bg-dx-raised px-4 text-[14px] font-medium text-dx-ink transition hover:bg-dx-surface ${FOCUS}`}>
-                See how it works
-              </a>
-              <PrimaryCTA onClick={onAudit}>Book a 14-day audit</PrimaryCTA>
-            </motion.div>
-            <motion.p {...enter(4)} className="mt-8 text-[13px] text-dx-ink-muted">
-              Built from 1,300+ RevOps community conversations. Real posts shown here, names blurred.
-            </motion.p>
-          </div>
-        </Tile>
-        <Tile className="overflow-hidden lg:col-span-5" pad={false}>
-          <div className="flex items-center gap-3 border-b border-dx-line px-4 py-3">
-            <span className="flex gap-1.5" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="h-2.5 w-2.5 rounded-full bg-dx-line" />
-              ))}
-            </span>
-            <span className="font-dx-mono text-[12px] text-dx-ink"># revops-community</span>
-            <span className="ml-auto font-dx-mono text-[11px] text-dx-ink-muted">real posts · names blurred</span>
-          </div>
-          <div className="bg-dx-night">
-            <ComplaintWall className="h-[400px] px-3 sm:h-[480px] lg:h-full lg:min-h-[520px]" />
-          </div>
-        </Tile>
+    <section ref={heroRef} className="relative isolate overflow-hidden bg-dx-night px-5 pb-16 pt-40 text-dx-night-ink sm:px-8 md:pb-20 md:pt-48" aria-labelledby="hero-title">
+      {/* workflow circuit behind the copy, masked so the headline stays clear */}
+      <HeroCircuit className="pointer-events-none absolute inset-0 -z-10 h-full w-full opacity-55 [mask-image:radial-gradient(ellipse_90%_60%_at_50%_45%,transparent_40%,black_85%)] sm:opacity-80 sm:[mask-image:radial-gradient(ellipse_55%_50%_at_50%_42%,transparent_22%,black_70%)]" />
+      <div className="relative mx-auto max-w-5xl text-center">
+        <motion.h1 id="hero-title" {...enter(0)} className="mx-auto text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[60px] sm:leading-[1.02] lg:text-[72px]">
+          Catch the deals your GTM tools{" "}
+          <span className="relative inline-grid overflow-hidden align-bottom">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={PHRASES[k]}
+                className="col-start-1 row-start-1 whitespace-nowrap bg-dx-brand px-3 text-white"
+                initial={reduce ? false : { y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={reduce ? undefined : { y: "-100%", opacity: 0 }}
+                transition={{ duration: 0.45, ease: EASE }}
+              >
+                {PHRASES[k]}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </motion.h1>
+        <motion.p {...enter(1)} className="mx-auto mt-7 max-w-2xl text-[17px] leading-relaxed text-dx-night-ink-muted sm:text-[19px]">
+          Dexraflow connects to the tools you already use, catches the leads and deals that slip between them, and tells the right rep in Slack before they go cold.
+        </motion.p>
+        <motion.div {...enter(2)} className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+          <MonoButton onClick={onAudit} tone="light">
+            Book a 14-day audit
+          </MonoButton>
+          <MonoButton onClick={onAccess} tone="ghostDark">
+            Get early access
+          </MonoButton>
+        </motion.div>
       </div>
+
+      <motion.div {...enter(3)} className="relative mx-auto mt-20 max-w-6xl">
+        <Label dark className="text-center">
+          Works with your stack →
+        </Label>
+        <ToolStrip reduce={reduce} />
+      </motion.div>
     </section>
   );
 };
 
-/* ───────────────────────── 01 · your stack ───────────────────────── */
+/** Path icons whose brand colour is too dark for the night background are drawn in ink. */
+const DARK_MARKS = new Set(["zendesk", "notion"]);
 
-const StackChapter = () => {
-  const { ref, stage } = useStage(STACK.length, 900);
+const ToolItem = ({ t, hidden = false }: { t: { name: string; k: string }; hidden?: boolean }) => (
+  <li aria-hidden={hidden || undefined} className="flex shrink-0 items-center gap-2.5 whitespace-nowrap text-[15px] font-semibold text-dx-night-ink">
+    <BrandIcon k={t.k} size={22} color={DARK_MARKS.has(t.k) ? "#e6eeec" : undefined} />
+    {t.name}
+  </li>
+);
+
+/** Every tool, as a slow pausable marquee; a wrapping grid when motion is reduced. */
+const ToolStrip = ({ reduce }: { reduce: boolean }) => {
+  if (reduce)
+    return (
+      <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-9 gap-y-5">
+        {TOOLS_ALL.map((t) => (
+          <ToolItem key={t.name} t={t} />
+        ))}
+      </ul>
+    );
   return (
-    <Chapter id="stack" n="01" label="Your stack" title="Every tool does its job." muted="Nobody watches the gaps between them." intro="A lead moves through six tools before a rep sees it. Each hop is a place to slip.">
-      <div ref={ref}>
-        <WiredRow
-          step={stage}
-          items={STACK.map((t, i) => (
-            <Tile key={t.name} active={stage === i} className="flex items-center gap-3 !p-4">
-              {t.k ? <BrandIcon k={t.k} size={22} /> : <span aria-hidden="true" className="flex h-[22px] w-[22px] items-center justify-center rounded-[4px] bg-dx-sunken font-dx-mono text-[12px] text-dx-ink-muted">{t.name[0]}</span>}
-              <div className="min-w-0">
-                <p className="text-[14px] font-semibold leading-tight text-dx-ink">{t.name}</p>
-                <p className="text-[12px] text-dx-ink-muted">{t.role}</p>
-              </div>
-            </Tile>
-          ))}
-        />
-      </div>
-    </Chapter>
+    <div className="group relative mt-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]" aria-label="Tools Dexraflow works with">
+      <ul className="flex w-max gap-x-10 pr-10 group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]" style={{ animation: "mcp-marquee 70s linear infinite" }}>
+        {TOOLS_ALL.map((t) => (
+          <ToolItem key={t.name} t={t} />
+        ))}
+        {TOOLS_ALL.map((t) => (
+          <ToolItem key={`${t.name}-dup`} t={t} hidden />
+        ))}
+      </ul>
+    </div>
   );
 };
 
-/* ───────────────────────── 02 · where leads slip ───────────────────────── */
+/* ───────────────────────── stack diagram ───────────────────────── */
 
-const FAILURES = [
-  { tag: "No owner", title: "A hot lead nobody owns", Scene: NoOwnerScene, post: X_POSTS[0] },
-  { tag: "Silent failure", title: "A workflow that says “success”", Scene: SilentFailureScene, post: X_POSTS[1] },
-  { tag: "Missed signal", title: "A buying signal nobody acted on", Scene: MissedSignalScene, post: X_POSTS[2] },
+const ROWS = [
+  { k: "Match", v: "One record per account" },
+  { k: "Catch", v: "No owner · silent failure · missed signal" },
+  { k: "Alert", v: "Slack, with a deadline" },
+  { k: "Prove", v: "Weekly pipeline recovered" },
+  { k: "Log", v: "Every change" },
 ];
 
-const QuoteCard = ({ p }: { p: (typeof X_POSTS)[number] }) => (
-  <a href={`https://x.com/${p.handle}/status/${p.id}`} target="_blank" rel="noopener noreferrer" className={`group flex h-full flex-col rounded-[8px] border border-dx-line bg-dx-surface p-4 transition hover:border-dx-line-strong ${FOCUS}`}>
-    <p className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Heard on X</p>
-    <blockquote className="mt-3 flex-1 text-[15px] leading-relaxed text-dx-ink">“{p.quote}”</blockquote>
-    <p className="mt-4 text-[13px] text-dx-ink-muted">
-      <span className="font-semibold text-dx-ink">{p.name}</span> @{p.handle} · {p.date}
-      <ArrowUpRight className="ml-1 inline h-3.5 w-3.5 align-text-bottom transition group-hover:text-dx-ink" />
-    </p>
-  </a>
-);
-
-/** One failure at a time: a stepper, the scene at full size, and the operator quote that matches it. */
-const FailureStage = () => {
-  const reduce = !!useReducedMotion();
-  const [i, setI] = useState(0);
-  const [run, setRun] = useState(0);
-  const [hold, setHold] = useState(false);
-  const { ref: viewRef, stage: tick } = useStage(1000, 9000);
-  useEffect(() => {
-    if (reduce || hold || tick === 0) return;
-    setI((k) => (k + 1) % FAILURES.length);
-    setRun((r) => r + 1);
-  }, [tick, reduce, hold]);
-  const go = (k: number) => {
-    setI(k);
-    setRun((r) => r + 1);
-  };
-  const f = FAILURES[i];
+const Connector = ({ on, reduce }: { on: boolean; reduce: boolean }) => {
+  const flow = on && !reduce ? "animate-[wire-flow_1.4s_linear_infinite]" : "";
+  const dash = on && !reduce ? "5 9" : undefined;
   return (
-    <div ref={viewRef} onMouseEnter={() => setHold(true)} onMouseLeave={() => setHold(false)} onFocusCapture={() => setHold(true)} onBlurCapture={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setHold(false)}>
-      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Failure">
-        {FAILURES.map((x, k) => (
-          <button
-            key={x.tag}
-            type="button"
-            role="tab"
-            aria-selected={i === k}
-            onClick={() => go(k)}
-            className={`relative inline-flex h-9 items-center gap-2 overflow-hidden rounded-[8px] border px-3 text-[13px] font-medium transition-colors ${FOCUS} ${i === k ? "border-dx-brand bg-dx-brand text-white" : "border-dx-line bg-dx-raised text-dx-ink-muted hover:border-dx-line-strong hover:text-dx-ink"}`}
-          >
-            <span className={`font-dx-mono text-[12px] ${i === k ? "text-white/80" : ""}`}>{k + 1}</span>
-            {x.tag}
-            {i === k && !reduce && !hold && <motion.span key={run} aria-hidden="true" className="absolute bottom-0 left-0 h-[2px] bg-white/70" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 9, ease: "linear" }} />}
-          </button>
-        ))}
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-12">
-        <Tile className="!p-5 lg:col-span-8" active>
-          <h3 className="text-[17px] font-semibold text-dx-ink">{f.title}</h3>
-          <div key={`${run}-${i}`} className="mx-auto mt-4 max-w-[480px]">
-            <f.Scene />
-          </div>
-        </Tile>
-        <div className="lg:col-span-4">
-          <QuoteCard p={f.post} />
-        </div>
-      </div>
+    <div className="flex justify-center lg:block" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 40 40" className="hidden lg:block">
+        <path d="M0 20 H40" stroke="#d3dcd9" strokeWidth="1.5" />
+        {on && <path d="M0 20 H40" stroke="#0b6e69" strokeWidth="1.5" strokeDasharray={dash} className={flow} />}
+      </svg>
+      <svg width="40" height="32" viewBox="0 0 40 32" className="lg:hidden">
+        <path d="M20 0 V32" stroke="#d3dcd9" strokeWidth="1.5" />
+        {on && <path d="M20 0 V32" stroke="#0b6e69" strokeWidth="1.5" strokeDasharray={dash} className={flow} />}
+      </svg>
     </div>
   );
 };
 
-const SlipsChapter = () => (
-  <Chapter id="slips" n="02" label="Where leads slip" title="Three failures every stack has." muted="They never throw an error." intro="Illustrative scenes, built from failures RevOps teams have described to us.">
-    <FailureStage />
-    <p className="mt-3 text-[12px] leading-relaxed text-dx-ink-muted">Public posts on X, quoted in part with links to the originals. The authors are not Dexraflow customers and have not endorsed Dexraflow. Product names identify tools we connect to; trademarks belong to their owners.</p>
-  </Chapter>
-);
-
-/* ───────────────────────── 03 · the cost ───────────────────────── */
-
-const NumbersChapter = () => {
-  const { ref, stage } = useStage(3, 1600);
-  const more: { value: string; text: string; cite: SourceId }[] = [...STATS, ...AGENTS_STATS];
+/** The signal path: your tools → Dexraflow → the rep. Rows light in sequence as one lead moves through. */
+const StackDiagram = () => {
+  const { ref, stage, reduce } = useStage(ROWS.length + 2, 1100);
+  const lit = (i: number) => reduce || stage >= i;
+  const tools = STACK.filter((t) => t.k !== "slack");
   return (
-    <Chapter id="numbers" n="03" label="The cost" title="Every hour a lead waits," muted="the deal gets colder.">
-      <div ref={ref}>
-        <WiredRow
-          step={stage}
-          items={SPEED.map((s, i) => (
-            <Tile key={s.value} dark active={stage === i}>
-              <p className="text-[48px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink">{s.value}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-dx-night-ink-muted">
-                {s.text}
-                <Cite n={s.cite} dark />
-              </p>
-            </Tile>
+    <div ref={ref} className="grid gap-4 lg:grid-cols-[1fr_auto_1.2fr_auto_1fr] lg:items-center" role="img" aria-label="A lead moves from your tools through Dexraflow, which matches, catches, alerts, proves and logs, to a rep in Slack.">
+      <Card className="p-3">
+        <Label className="px-2 pt-1">Your tools</Label>
+        <ul className="mt-2 space-y-1">
+          {tools.map((t, i) => (
+            <motion.li key={t.name} className="flex items-center gap-2.5 rounded-[6px] px-2 py-1.5 text-[14px] font-medium text-dx-ink" initial={false} animate={{ opacity: lit(0) ? 1 : 0.4, backgroundColor: stage === 0 && !reduce && i === 1 ? "#dcefec" : "rgba(0,0,0,0)" }}>
+              <BrandIcon k={t.k} size={18} />
+              {t.name}
+            </motion.li>
           ))}
-        />
-      </div>
-      <Tile className="mt-3 !py-4">
-        <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-5">
-          {more.map((s) => (
-            <div key={s.value} className="min-w-0">
-              <dt className="text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-dx-ink">{s.value}</dt>
-              <dd className="mt-1.5 text-[12px] leading-snug text-dx-ink-muted">
-                {s.text}
-                <Cite n={s.cite} />
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </Tile>
-    </Chapter>
-  );
-};
-
-/* ───────────────────────── 04 · dexraflow catches it ───────────────────────── */
-
-const CatchChapter = ({ onAudit }: { onAudit: () => void }) => {
-  const { ref, stage } = useStage(STEPS.length, 1500);
-  return (
-    <Chapter id="catch" n="04" label="How it works" title="Connect your tools." muted="We catch what slips." intro="No new tool to learn and nothing to replace. Read-only by default; alerts arrive in Slack.">
-      <div ref={ref}>
-        <WiredRow
-          step={stage}
-          items={STEPS.map((s, i) => (
-            <Tile key={s.title} active={stage === i}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-[4px] bg-dx-brand-soft font-dx-mono text-[13px] font-medium text-dx-brand">{s.n}</span>
-              <h3 className="mt-4 text-[17px] font-semibold text-dx-ink">{s.title}</h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-dx-ink-muted">{s.body}</p>
-            </Tile>
-          ))}
-        />
-      </div>
-      <Tile className="mt-3 overflow-hidden" pad={false}>
-        <div className="bg-dx-surface">
-        <img src="/brand/plane-diagram.svg" alt="Diagram: Dexraflow as one bar sitting above six GTM tools, with a single alert moving down to one of them." width={1200} height={630} loading="lazy" decoding="async" className="mx-auto block h-auto w-full max-w-[720px]" />
+        </ul>
+      </Card>
+      <Connector on={lit(1)} reduce={reduce} />
+      <Card className="relative p-3">
+        <div className="flex items-center justify-between px-2 pt-1">
+          <img src="/brand/dexraflow-lockup.svg" alt="Dexraflow" className="h-5 w-auto" />
+          <span className="rounded-[4px] border border-dx-line px-1.5 py-0.5 font-dx-mono text-[11px] text-dx-ink-muted">read-only</span>
         </div>
-        <div className="flex flex-col gap-4 border-t border-dx-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-dx-ink">
-            {["Read-only by default", "Writes only 10 essential fields", "Every change logged"].map((t) => (
-              <li key={t} className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-dx-brand" strokeWidth={1.5} aria-hidden="true" /> {t}
-              </li>
-            ))}
-          </ul>
-          <SecondaryCTA onClick={onAudit} className="shrink-0">
-            Book an audit
-          </SecondaryCTA>
-        </div>
-      </Tile>
-    </Chapter>
-  );
-};
-
-/* ───────────────────────── 05 · agents ask first ───────────────────────── */
-
-const McpChapter = ({ onAccess }: { onAccess: () => void }) => {
-  const { tab, setTab, connectRef } = useConnectTabs();
-  const { ref, stage } = useStage(3, 2200);
-  const moves = [
-    { t: "Agent asks", Scene: AskScene },
-    { t: "Dexraflow checks every tool", Scene: CheckScene },
-    { t: "Decision is logged", Scene: LogScene },
-  ];
-  return (
-    <Chapter id="mcp" n="05" label="Dexraflow MCP · Early access" title="Let AI agents into your CRM," muted="without the chaos." intro="Any agent asks Dexraflow before it acts. Dexraflow checks every tool, then says go, hold, or stop. It never sends anything itself.">
-      <Tile label="Without vs with Dexraflow">
-        <div className="mx-auto max-w-[880px]">
-          <WithoutWith />
-        </div>
-      </Tile>
-      <div ref={ref} className="mt-3 lg:-ml-24">
-        <WiredRow
-          narrow
-          step={stage}
-          items={moves.map((m, i) => (
-            <Tile key={m.t} active={stage === i} className="!p-3">
-              <p className="mb-2 px-1 text-[15px] font-semibold text-dx-ink">{m.t}</p>
-              <m.Scene />
-            </Tile>
+        <ul className="mt-2 space-y-1">
+          {ROWS.map((r, i) => (
+            <motion.li key={r.k} className="flex items-center justify-between gap-3 rounded-[6px] border px-3 py-2" initial={false} animate={{ borderColor: stage === i + 1 && !reduce ? "#0b6e69" : "#d3dcd9", opacity: lit(i + 1) ? 1 : 0.4 }} transition={{ duration: 0.3 }}>
+              <span className={`${MONO} text-dx-ink`}>{r.k}</span>
+              <span className="truncate text-[13px] text-dx-ink-muted">{r.v}</span>
+            </motion.li>
           ))}
-        />
-      </div>
-      <div ref={connectRef} className="mt-3 grid scroll-mt-32 gap-3 lg:grid-cols-12">
-        <Tile className="lg:col-span-8" label="Connect any agent · Preview">
-          <ConnectBlock tab={tab} setTab={setTab} />
-        </Tile>
-        <Tile className="flex flex-col lg:col-span-4" label="Early access">
-          <p className="text-[17px] font-semibold leading-snug text-dx-ink">Join to get a workspace and API key.</p>
-          <p className="mt-2 text-[14px] leading-relaxed text-dx-ink-muted">Works with Claude, Cursor, OpenAI, LangChain, n8n and any client that supports remote MCP.</p>
-          <div className="mt-5">
-            <PrimaryCTA onClick={onAccess}>Get early access</PrimaryCTA>
+        </ul>
+      </Card>
+      <Connector on={lit(ROWS.length + 1)} reduce={reduce} />
+      <Card className="p-3">
+        <Label className="px-2 pt-1">The rep</Label>
+        <motion.div className="mt-2 flex items-start gap-2.5 rounded-[6px] border border-dx-line bg-dx-surface px-3 py-2.5" initial={false} animate={{ opacity: lit(ROWS.length + 1) ? 1 : 0.4 }}>
+          <BrandIcon k="slack" size={18} />
+          <div className="min-w-0 text-[13px] leading-snug text-dx-ink">
+            <p className="font-semibold">
+              Dexraflow <span className="font-normal text-dx-ink-muted">→ Sam</span>
+            </p>
+            <p className="mt-0.5">Acme Inc asked for pricing twice this week. Owner out of office. Reply by 3pm?</p>
           </div>
-          <div className="mt-auto pt-6">
-            <TrustStrip stacked />
-          </div>
-        </Tile>
-      </div>
-    </Chapter>
-  );
-};
-
-/* ───────────────────────── 06 · start here ───────────────────────── */
-
-const StartChapter = ({ onAccess, onFounder }: { onAccess: () => void; onFounder: () => void }) => (
-  <Chapter id="start" n="06" label="Start here" title="Seen a deal slip" muted="through your stack?" intro="We're working with a small group of B2B SaaS revenue teams running five or more GTM tools.">
-    <div className="grid gap-3 lg:grid-cols-12">
-      <Tile dark className="lg:col-span-7">
-        <p className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-night-ink-muted">The 14-day Missed Pipeline Audit</p>
-        <h3 className="mt-3 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-dx-night-ink sm:text-[30px]">Find $10K of missed pipeline, or you don't pay.</h3>
-        <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-dx-night-ink-muted">
-          Connect your tools read-only. We look back 90 days and show you the high-intent accounts nobody worked, leads routed to the wrong owner or no owner, and workflows that failed silently, with what each one was worth.
-        </p>
-        <div className="mt-6">
-          <button type="button" onClick={onFounder} className={`group inline-flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-dx-night-ink px-4 text-[14px] font-medium text-dx-ink transition hover:bg-white ${FOCUS} focus-visible:ring-dx-brand-night focus-visible:ring-offset-dx-night`}>
-            Book my audit
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-          </button>
-        </div>
-      </Tile>
-      <Tile className="flex flex-col lg:col-span-5">
-        <div>
-          <AcceleratorBadge />
-        </div>
-        <h3 className="mt-5 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-dx-ink">
-          Built from conversations, <span className="text-dx-ink-muted">not assumptions.</span>
-        </h3>
-        <p className="mt-3 text-[15px] leading-relaxed text-dx-ink-muted">Tell us what slipped, and we'll show you where else it's happening.</p>
-        <div className="mt-auto flex flex-col gap-2.5 pt-6 sm:flex-row">
-          <PrimaryCTA onClick={onAccess}>Request early access</PrimaryCTA>
-          <SecondaryCTA onClick={onFounder}>
-            Talk to the founder <ArrowUpRight className="h-4 w-4 opacity-60" />
-          </SecondaryCTA>
-        </div>
-      </Tile>
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-dx-brand" strokeWidth={1.5} aria-hidden="true" />
+        </motion.div>
+      </Card>
     </div>
-  </Chapter>
-);
+  );
+};
 
-/* ───────────────────────── footer ───────────────────────── */
+/* ───────────────────────── sections ───────────────────────── */
+
+const Section = ({ id, children, dark = false, tight = false, wide = false }: { id?: string; children: ReactNode; dark?: boolean; tight?: boolean; wide?: boolean }) => (
+  <section id={id} className={`scroll-mt-28 px-5 sm:px-8 ${tight ? "py-16 md:py-20" : "py-24 md:py-32"} ${dark ? "bg-dx-night text-dx-night-ink" : ""}`} aria-labelledby={id ? `${id}-title` : undefined}>
+    <div className={`mx-auto ${wide ? "max-w-7xl" : "max-w-6xl"}`}>{children}</div>
+  </section>
+);
 
 const Footer = () => (
-  <footer className="mt-24 border-t border-dx-line bg-dx-raised px-5 pb-10 pt-14 sm:px-8">
+  <footer className="border-t border-dx-line bg-dx-raised px-5 pb-10 pt-14 sm:px-8">
     <div className="mx-auto flex max-w-6xl flex-col gap-10 md:flex-row md:items-start md:justify-between">
       <div>
         <Wordmark />
         <p className="mt-3 text-[13px] text-dx-ink-muted">Catch the deals your GTM tools silently dropped.</p>
       </div>
-      <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-dx-ink-muted">
-        <a href={`mailto:${CONTACT_EMAIL}`} className="transition hover:text-dx-ink">
+      <nav aria-label="Footer" className={`flex flex-wrap gap-x-7 gap-y-3 ${MONO} text-dx-ink-muted`}>
+        <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case tracking-normal transition hover:text-dx-ink">
           {CONTACT_EMAIL}
         </a>
         <Link to="/privacy-policy" className="transition hover:text-dx-ink">
@@ -476,7 +408,7 @@ const Footer = () => (
       </nav>
     </div>
     <div id="sources" className="mx-auto mt-12 max-w-6xl scroll-mt-24 border-t border-dx-line pt-8">
-      <p className="font-dx-mono text-[12px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Sources</p>
+      <Label>Sources</Label>
       <ol className="mt-3 space-y-1.5 text-[13px] text-dx-ink-muted">
         {SOURCES.map((s) => (
           <li key={s.id}>
@@ -488,7 +420,7 @@ const Footer = () => (
         ))}
       </ol>
       <p className="mt-4 max-w-3xl text-[12px] leading-relaxed text-dx-ink-muted">
-        Community quotes are real posts from public channels of a RevOps practitioner Slack community. Names, photos and mentions are blurred; highlights are ours. Insights summarize our own research and are not statistics.
+        Scenes are illustrative, built from failures RevOps teams have described to us. Product names identify tools we connect to; trademarks belong to their owners.
       </p>
     </div>
     <div className="mx-auto mt-10 max-w-6xl text-[12px] text-dx-ink-muted">© {new Date().getFullYear()} Dexraflow Inc.</div>
@@ -501,6 +433,10 @@ const Landing = () => {
   const [intent, setIntent] = useState<AccessIntent | null>(null);
   const openAccess = () => setIntent("early-access");
   const openFounder = () => setIntent("founder-conversation");
+  const { tab, setTab, connectRef, goConnect } = useConnectTabs();
+  const heroRef = useRef<HTMLElement>(null);
+  const heroInView = useInView(heroRef, { amount: 0.15 });
+  const { ref: speedRef, stage: speedStage } = useStage(3, 1600);
 
   useEffect(() => {
     const prev = document.title;
@@ -512,32 +448,222 @@ const Landing = () => {
 
   return (
     <div className="relative min-h-screen bg-dx-surface font-dx-sans text-dx-ink antialiased [overflow-x:clip] selection:bg-dx-brand-soft">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[8px] focus:bg-dx-ink focus:px-4 focus:py-2 focus:text-sm focus:text-white">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[4px] focus:bg-dx-ink focus:px-4 focus:py-2 focus:text-sm focus:text-white">
         Skip to content
       </a>
-      <Nav onAccess={openAccess} onAudit={openFounder} />
+      <Nav onAccess={openAccess} onAudit={openFounder} dark={heroInView} />
       <main id="main">
-        <Hero onAudit={openFounder} />
-        <div className="mx-auto max-w-6xl space-y-24 px-5 pt-24 sm:px-8 md:space-y-36 md:pt-32">
+        <Hero onAccess={openAccess} onAudit={openFounder} heroRef={heroRef} />
+
+        {/* 1 · what it does */}
+        <Section id="what">
           <Reveal>
-            <StackChapter />
+            <Head id="what-title" label="What Dexraflow does" lead="Every tool says success." accent="Your pipeline says otherwise." sub="Your CRM, enrichment, intent and outreach tools each keep their own version of the customer. Dexraflow reads all of them, catches what falls in between, and tells a rep." cta={<MonoButton href="#slips" tone="ghost">See where leads slip →</MonoButton>} />
           </Reveal>
+          <Reveal className="mt-14">
+            <StackDiagram />
+          </Reveal>
+        </Section>
+
+        {/* 2 · three failures */}
+        <Section id="slips" wide>
           <Reveal>
-            <SlipsChapter />
+            <Head id="slips-title" label="Where leads slip" lead="Three failures every stack has." accent="They never throw an error." />
           </Reveal>
+          <div className="mt-14 grid gap-4 lg:grid-cols-3">
+            {FAILURES.map((f, i) => (
+              <Reveal key={f.tag} delay={i * 0.06}>
+                <Card className="h-full p-5">
+                  <span className={`inline-block rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-2 py-0.5 ${MONO} text-dx-brand`}>{f.tag}</span>
+                  <div className="mt-4">
+                    <f.Scene />
+                  </div>
+                  <h3 className="mt-5 text-[18px] font-semibold text-dx-ink">{f.title}</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-dx-ink-muted">{f.body}</p>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
+
+        {/* 3 · the cost */}
+        <Section id="cost" dark>
           <Reveal>
-            <NumbersChapter />
+            <Head id="cost-title" label="The cost" lead="Every hour a lead waits," accent="the deal gets colder." dark />
           </Reveal>
+          <div ref={speedRef} className="mt-14 grid gap-4 sm:grid-cols-3">
+            {SPEED.map((s, i) => (
+              <Reveal key={s.value} delay={i * 0.06}>
+                <motion.div className="h-full rounded-[8px] border bg-dx-night-raised p-6" initial={false} animate={{ borderColor: speedStage === i ? "#3bbfaf" : "#24333a" }} transition={{ duration: 0.3 }}>
+                  <p className="text-[52px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-dx-night-ink">{s.value}</p>
+                  <p className="mt-4 text-[14px] leading-relaxed text-dx-night-ink-muted">
+                    {s.text}
+                    <Cite n={s.cite} dark />
+                  </p>
+                </motion.div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal className="mt-4">
+            <dl className="grid gap-x-8 gap-y-5 rounded-[8px] border border-dx-night-line p-6 sm:grid-cols-3 lg:grid-cols-5">
+              {MORE_STATS.map((s) => (
+                <div key={s.value}>
+                  <dt className="text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-dx-night-ink">{s.value}</dt>
+                  <dd className="mt-1.5 text-[12px] leading-snug text-dx-night-ink-muted">
+                    {s.text}
+                    <Cite n={s.cite} dark />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </Section>
+
+        {/* 4 · how it works */}
+        <Section id="catch">
           <Reveal>
-            <CatchChapter onAudit={openFounder} />
+            <Head id="catch-title" label="How it works" lead="Connect your tools." accent="We catch what slips." sub="No new tool to learn and nothing to replace. Read-only by default, and alerts arrive where your team already works: Slack." cta={<MonoButton onClick={openFounder}>Book an audit →</MonoButton>} />
           </Reveal>
+          <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { n: "01", t: "Connect", d: "Read-only access to your CRM and GTM tools. Setup takes minutes, not a project." },
+              { n: "02", t: "Match", d: "One record per account and contact across every tool, so signals and owners line up." },
+              { n: "03", t: "Catch", d: "Leads with no owner, workflows that say success but wrote nothing, and buying signals nobody acted on." },
+              { n: "04", t: "Alert & prove", d: "The right rep gets it in Slack with the reason and a deadline. You get a weekly report of pipeline recovered." },
+            ].map((s, i) => (
+              <Reveal key={s.t} delay={i * 0.05}>
+                <Card className="h-full p-5">
+                  <span className={`${MONO} text-dx-brand`}>{s.n}</span>
+                  <h3 className="mt-3 text-[18px] font-semibold text-dx-ink">{s.t}</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-dx-ink-muted">{s.d}</p>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
+
+        {/* 5 · MCP: works with any agent */}
+        <Section id="mcp" dark>
           <Reveal>
-            <McpChapter onAccess={openAccess} />
+            <Head id="mcp-title" label="Dexraflow MCP · Early access" lead="Let AI agents into your CRM," accent="without the chaos." sub="Any agent asks Dexraflow before it acts. Dexraflow checks every tool, then says go, hold, or stop. It never sends anything itself." dark />
           </Reveal>
+          <Reveal className="mt-14">
+            <Card className="p-4 sm:p-6">
+              <div className="mx-auto max-w-[880px]">
+                <WithoutWith />
+              </div>
+            </Card>
+          </Reveal>
+
+          <Reveal className="mt-20">
+            <Head id="agents-title" label="Works with any agent" lead="Connect yours" accent="in a minute." sub="Pick your agent. Every snippet is a preview; the API may change before launch." dark />
+          </Reveal>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {AGENTS.map((a, i) => (
+              <Reveal key={a.name} delay={i * 0.04}>
+                <Card dark className="flex h-full flex-col gap-4 p-4">
+                  <div className="flex items-center gap-2.5 text-[15px] font-semibold text-dx-night-ink">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-white">
+                      {a.k ? <BrandIcon k={a.k} size={18} /> : <Plug className="h-[18px] w-[18px] text-dx-ink" strokeWidth={1.5} aria-hidden="true" />}
+                    </span>
+                    {a.name}
+                  </div>
+                  <button type="button" onClick={() => goConnect(a.id)} className={`mt-auto inline-flex h-9 items-center justify-center rounded-[4px] bg-white px-3 ${MONO} text-dx-ink transition hover:bg-dx-surface ${FOCUS} focus-visible:ring-offset-dx-night`}>
+                    {a.action}
+                  </button>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+          <div ref={connectRef} className="mt-6 scroll-mt-28">
+            <Reveal>
+              <Card dark className="p-4 sm:p-6">
+                <ConnectBlock tab={tab} setTab={setTab} />
+              </Card>
+            </Reveal>
+          </div>
+          <p className="mt-4 text-center text-[12px] text-dx-night-ink-muted">Product names identify tools we connect to; trademarks belong to their owners.</p>
+        </Section>
+
+        {/* 6 · trust */}
+        <Section id="trust">
           <Reveal>
-            <StartChapter onAccess={openAccess} onFounder={openFounder} />
+            <Head id="trust-title" label="Safe by default" lead="Your tools, your rules." accent="Dexraflow stays in its lane." />
           </Reveal>
-        </div>
+          <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {TRUST.map(({ I, t, d }, i) => (
+              <Reveal key={t} delay={i * 0.05}>
+                <Card className="h-full p-5">
+                  <I className="h-6 w-6 text-dx-brand" strokeWidth={1.5} aria-hidden="true" />
+                  <h3 className="mt-4 text-[17px] font-semibold text-dx-ink">{t}</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-dx-ink-muted">{d}</p>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
+
+        {/* 7 · audit */}
+        <Section id="audit" tight>
+          <Reveal>
+            <div className="grid gap-4 lg:grid-cols-12">
+              <Card dark className="p-8 sm:p-10 lg:col-span-7">
+                <Label dark>The 14-day Missed Pipeline Audit</Label>
+                <h2 id="audit-title" className="mt-4 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-dx-night-ink sm:text-[34px]">
+                  Find $10K of missed pipeline, <span className="text-dx-brand-night">or you don't pay.</span>
+                </h2>
+                <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-dx-night-ink-muted">Connect your tools read-only. We look back 90 days and show you the high-intent accounts nobody worked, leads routed to the wrong owner or no owner, and workflows that failed silently, with what each one was worth.</p>
+                <div className="mt-7">
+                  <MonoButton onClick={openFounder} tone="light">
+                    Book my audit →
+                  </MonoButton>
+                </div>
+              </Card>
+              <Card className="flex flex-col p-8 lg:col-span-5">
+                <Label>Built from conversations</Label>
+                <h3 className="mt-4 text-[22px] font-semibold leading-snug tracking-[-0.02em] text-dx-ink">Tell us what slipped, and we'll show you where else it's happening.</h3>
+                <p className="mt-3 text-[14px] leading-relaxed text-dx-ink-muted">We're working with a small group of B2B SaaS revenue teams running five or more GTM tools.</p>
+                <div className="mt-auto pt-6">
+                  <MonoButton onClick={openFounder} tone="ghost">
+                    Talk to the founder
+                  </MonoButton>
+                </div>
+              </Card>
+            </div>
+          </Reveal>
+        </Section>
+
+        {/* 8 · FAQ */}
+        <Section id="faq">
+          <Reveal>
+            <Head id="faq-title" label="FAQ" lead="Frequently asked" accent="questions." />
+          </Reveal>
+          <Reveal className="mx-auto mt-12 max-w-3xl">
+            <Accordion type="single" collapsible className="rounded-[8px] border border-dx-line bg-dx-raised px-5">
+              {FAQ.map((f, i) => (
+                <AccordionItem key={f.q} value={`q${i}`} className="border-dx-line">
+                  <AccordionTrigger className="py-4 text-left text-[16px] font-semibold text-dx-ink hover:no-underline">{f.q}</AccordionTrigger>
+                  <AccordionContent className="pb-5 text-[15px] leading-relaxed text-dx-ink-muted">{f.a}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </Reveal>
+        </Section>
+
+        {/* 9 · closing */}
+        <Section dark>
+          <Reveal>
+            <Head id="closing-title" label="Start here" lead="Seen a deal slip" accent="through your stack?" sub="Free to start the conversation. Early access for a small group of revenue teams." dark />
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <MonoButton onClick={openAccess} tone="light">
+                Get early access
+              </MonoButton>
+              <MonoButton onClick={openFounder} tone="ghostDark">
+                Book a 14-day audit
+              </MonoButton>
+            </div>
+          </Reveal>
+        </Section>
       </main>
       <Footer />
       <AccessRequestModal intent={intent} onOpenChange={(open) => !open && setIntent(null)} />
