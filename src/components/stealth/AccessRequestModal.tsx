@@ -20,6 +20,13 @@ const COPY: Record<AccessIntent, { title: string; description: string; note: str
     notePlaceholder: "Optional",
     submit: "Request access",
   },
+  audit: {
+    title: "Book a Missed Pipeline Audit",
+    description: "14 days, read-only exports, the last 90 days. Tell us a little about your stack and we'll set it up.",
+    note: "Which tools are in the handoff? (CRM, forms, routing, sequencing)",
+    notePlaceholder: "e.g. HubSpot forms → Zapier → HubSpot → Outreach",
+    submit: "Book the audit",
+  },
   "founder-conversation": {
     title: "Talk to the founder",
     description: "Share a little context and we'll set up a conversation.",

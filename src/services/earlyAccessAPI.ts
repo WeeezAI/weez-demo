@@ -15,7 +15,7 @@
 
 import CONFIG from "./config";
 
-export type AccessIntent = "early-access" | "founder-conversation";
+export type AccessIntent = "early-access" | "founder-conversation" | "audit";
 
 export interface AccessRequest {
   intent: AccessIntent;
@@ -32,6 +32,7 @@ export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const INTENT_LABEL: Record<AccessIntent, string> = {
   "early-access": "Early access",
   "founder-conversation": "Founder conversation",
+  audit: "Missed Pipeline Audit",
 };
 
 const toLegacyPosition = (req: AccessRequest): string =>

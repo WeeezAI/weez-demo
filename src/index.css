@@ -260,3 +260,73 @@
     @apply backdrop-blur-3xl bg-background/40 border-b border-border/40 sticky top-0 z-50;
   }
 }
+/* ───────────── V1 landing page motion ───────────── */
+
+/* A thin teal beam that travels the border of a card. Needs @property for the smooth angle;
+   browsers without it keep a static ring. */
+@property --dx-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes dx-angle {
+  to {
+    --dx-angle: 360deg;
+  }
+}
+
+.dx-beam {
+  padding: 1px;
+  background:
+    conic-gradient(from var(--dx-angle), transparent 0 74%, var(--dx-beam-color, rgba(11, 110, 105, 0.9)) 88%, transparent 100%),
+    #d3dcd9;
+  animation: dx-angle 7s linear infinite;
+}
+
+.dx-beam[data-static] {
+  animation: none;
+  background: #d3dcd9;
+}
+
+/* Perspective floor grid behind the closing panel, rolling slowly toward the viewer. */
+@keyframes dx-grid-move {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 0 56px;
+  }
+}
+
+.dx-night-grid {
+  background-image:
+    linear-gradient(rgba(59, 191, 175, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 191, 175, 0.2) 1px, transparent 1px);
+  background-size: 56px 56px;
+  animation: dx-grid-move 4.5s linear infinite;
+}
+
+/* The hero's slow daily-check sweep across the dot grid. */
+@keyframes dx-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(340%);
+  }
+}
+
+.dx-sweep {
+  animation: dx-sweep 16s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-beam,
+  .dx-night-grid,
+  .dx-sweep {
+    animation: none;
+  }
+}
