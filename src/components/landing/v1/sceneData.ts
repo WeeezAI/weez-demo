@@ -40,3 +40,39 @@ export const T = {
   scanFrom: -2.6,
   scanTo: 2.6,
 };
+
+/* ───────────── the MCP gate scene ─────────────
+   Three agents above a Dexraflow plane above four CRM/GTM tools. Each agent asks before it acts;
+   the plane checks every tool, answers, and logs. One request per slot, three slots per loop. */
+
+export type McpDecision = "ALLOW" | "HOLD" | "WAIT";
+export type McpRequest = { agent: number; ask: string; decision: McpDecision; why: string; target: string | null; after: string };
+
+export const MCP = {
+  tiles: [
+    { k: "hubspot", x: -2.1 },
+    { k: "salesforce", x: -0.7 },
+    { k: "outreach", x: 0.7 },
+    { k: "slack", x: 2.1 },
+  ],
+  tileZ: 0.35,
+  planeY: 1.2,
+  planeW: 5.4,
+  planeD: 2.3,
+  agentY: 2.4,
+  agentZ: -0.45,
+  agentSize: 0.55,
+  agents: [
+    { k: "clay", name: "Clay agent", x: -1.6 },
+    { k: "bot", name: "AI SDR", x: 0 },
+    { k: "claude", name: "Claude agent", x: 1.6 },
+  ],
+  requests: [
+    { agent: 0, ask: "update_title · jane@acme.com", decision: "ALLOW", why: "no conflict · write allowed", target: "hubspot", after: "logged · act_8f21" },
+    { agent: 1, ask: "send_email · jane@acme.com", decision: "HOLD", why: "open deal · Raj owns it", target: null, after: "Raj notified in Slack" },
+    { agent: 2, ask: "send_email · jane@acme.com", decision: "WAIT", why: "emailed 1h ago by AI SDR", target: null, after: "one touch per contact" },
+  ] as McpRequest[],
+  /** Seconds per request. Phases inside a slot: ask → check → decide → act. */
+  slot: 4.8,
+  t: { ask: 0.9, check: 2.0, decide: 2.6, act: 3.6, hide: 4.55 },
+};

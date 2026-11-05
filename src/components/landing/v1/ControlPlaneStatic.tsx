@@ -15,7 +15,17 @@ const sp = (x: number, y: number, z: number) => {
   return [ORIGIN[0] + a * S, ORIGIN[1] + b * S] as const;
 };
 
-function TileMark({ k }: { k: string }) {
+export function TileMark({ k }: { k: string }) {
+  if (k === "bot")
+    return (
+      <g stroke="#3bbfaf" strokeWidth={0.04} strokeLinecap="round" fill="none">
+        <rect x={-0.2} y={-0.12} width={0.4} height={0.3} rx={0.07} />
+        <circle cx={-0.08} cy={0.03} r={0.035} fill="#3bbfaf" stroke="none" />
+        <circle cx={0.08} cy={0.03} r={0.035} fill="#3bbfaf" stroke="none" />
+        <line x1={0} y1={-0.12} x2={0} y2={-0.2} />
+        <circle cx={0} cy={-0.23} r={0.03} fill="#3bbfaf" stroke="none" />
+      </g>
+    );
   if (k === "form")
     return (
       <g stroke="#0f1a1f" strokeWidth={0.035} strokeLinecap="round" fill="none">

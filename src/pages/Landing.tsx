@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
@@ -6,6 +6,10 @@ import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import { BrandIcon, MissedSignalScene, NoOwnerScene, SilentFailureScene, useStage } from "@/components/landing/UseCaseAnimations";
 import { EASE, FOCUS, Reveal } from "@/components/landing/primitives";
 import HeroVisual from "@/components/landing/v1/HeroVisual";
+import LazyScene from "@/components/landing/v1/LazyScene";
+import McpGateStatic from "@/components/landing/v1/McpGateStatic";
+import { ConnectBlock, LogoStrip, ToolsGrid, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
+import { WithoutWith } from "@/components/landing/McpAnimations";
 import { IsoAgents, IsoFormDrop, IsoHotLead, IsoNoOwner, IsoRadar, IsoShield, IsoStopped } from "@/components/landing/v1/IsoIcons";
 import { BorderBeam, CountUp, ElapsedBar, HeroBackdrop, NightGrid, ScrollProgress, TiltCard, WordReveal } from "@/components/landing/v1/motion";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
@@ -40,6 +44,13 @@ const CATCHES = [
 ];
 
 const TRUST = ["Read-only access", "NDA before any data moves", "Your data never goes into AI models", "Raw exports deleted within 7 days"];
+
+const MCP_STEPS = [
+  { k: "01", t: "The agent asks", d: "Before any outreach or CRM write, it calls check_action with what it wants to do." },
+  { k: "02", t: "Dexraflow checks every tool", d: "Owner, open deals, last touch, what other agents did, your rules." },
+  { k: "03", t: "It answers allow, hold or wait", d: "With the reason. It never sends anything itself." },
+  { k: "04", t: "Every decision is logged", d: "Allowed writes go through and are recorded. Held ones go to the owner in Slack." },
+];
 
 const VISION = [
   { k: "Now", t: "Catch silent breaks.", d: "A daily check across every handoff, with the leads you lost and what they were worth.", Icon: IsoRadar },
@@ -99,6 +110,7 @@ const NAV_LINKS = [
   { href: "#how", label: "How it works" },
   { href: "#catches", label: "What it catches" },
   { href: "#offer", label: "The offer" },
+  { href: "#mcp", label: "MCP" },
 ];
 
 const Nav = ({ onAudit }: { onAudit: () => void }) => (
@@ -317,6 +329,38 @@ const VisionTimeline = () => {
   );
 };
 
+/* ───────────────────────── 8 · MCP explainer ───────────────────────── */
+
+const loadMcpScene = () => import("@/components/landing/v1/McpGateScene");
+
+/** The four steps beside the 3D gate scene. The scene reports which step it is on; the still shows all four. */
+const McpExplainer = () => {
+  const [phase, setPhase] = useState(-1);
+  const [live, setLive] = useState(false);
+  const onPhase = useCallback((p: number) => setPhase(p), []);
+  const onMode = useCallback((m: "still" | "3d") => setLive(m === "3d"), []);
+  return (
+    <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12">
+      <ol className="space-y-1">
+        {MCP_STEPS.map((s, i) => {
+          const on = !live || phase === i;
+          return (
+            <li key={s.k} className="relative rounded-[8px] px-4 py-3.5 transition-colors duration-300" style={{ background: live && phase === i ? "rgba(11,110,105,0.06)" : "transparent" }}>
+              <motion.span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-full bg-dx-brand" initial={false} animate={{ opacity: live && phase === i ? 1 : 0, scaleY: live && phase === i ? 1 : 0.4 }} transition={{ duration: 0.3 }} />
+              <div className="flex items-baseline gap-3">
+                <span className={`${MONO} ${on ? "text-dx-brand" : "text-dx-ink-muted"}`}>{s.k}</span>
+                <h3 className={`text-[17px] font-semibold transition-colors ${on ? "text-dx-ink" : "text-dx-ink-muted"}`}>{s.t}</h3>
+              </div>
+              <p className={`mt-1 text-[14px] leading-relaxed transition-colors ${on ? "text-dx-ink-muted" : "text-dx-ink-muted/70"}`}>{s.d}</p>
+            </li>
+          );
+        })}
+      </ol>
+      <LazyScene load={loadMcpScene} still={<McpGateStatic className="h-full w-full" />} onPhase={onPhase} onMode={onMode} />
+    </div>
+  );
+};
+
 /* ───────────────────────── footer ───────────────────────── */
 
 const Footer = () => (
@@ -355,6 +399,8 @@ const Landing = () => {
   const reduce = !!useReducedMotion();
   const openAudit = () => setIntent("audit");
   const openFounder = () => setIntent("founder-conversation");
+  const openEarlyAccess = () => setIntent("early-access");
+  const { tab, setTab, connectRef, goConnect } = useConnectTabs();
 
   useEffect(() => {
     const prev = document.title;
@@ -530,7 +576,50 @@ const Landing = () => {
           <VisionTimeline />
         </Section>
 
-        {/* 8 · final CTA */}
+        {/* 8 · the MCP */}
+        <Section id="mcp">
+          <Reveal>
+            <Head id="mcp-title" label="Dexraflow MCP · Early access" title="Let AI agents into your CRM, without the chaos." sub="Any agent asks Dexraflow before it acts. Dexraflow checks every tool, then answers allow, hold or wait, and logs the decision. It never sends anything itself." />
+          </Reveal>
+          <Reveal className="mt-12">
+            <McpExplainer />
+          </Reveal>
+          <Reveal className="mt-12">
+            <Card className="p-4 sm:p-6">
+              <div className="mx-auto max-w-[880px]">
+                <WithoutWith />
+              </div>
+            </Card>
+          </Reveal>
+          <Reveal className="mt-12">
+            <Label>Four tools, one question: is this safe to do right now?</Label>
+            <div className="mt-4">
+              <ToolsGrid />
+            </div>
+          </Reveal>
+          <div ref={connectRef} className="mt-14 scroll-mt-28">
+            <Reveal>
+              <Label>Connect your agent</Label>
+              <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-dx-ink-muted">Pick your agent. Every snippet is a preview; the API may change before launch.</p>
+              <div className="mt-5">
+                <ConnectBlock tab={tab} setTab={setTab} />
+              </div>
+            </Reveal>
+          </div>
+          <Reveal className="mt-10">
+            <LogoStrip onPick={goConnect} />
+          </Reveal>
+          <Reveal className="mt-8">
+            <Card className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+              <TrustStrip />
+              <Button onClick={openEarlyAccess} tone="ghost" className="shrink-0">
+                Get early access <ArrowRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+            </Card>
+          </Reveal>
+        </Section>
+
+        {/* 9 · final CTA */}
         <Section id="start">
           <Reveal>
             <div className="relative overflow-hidden rounded-[8px] border border-dx-night-line bg-dx-night p-8 text-dx-night-ink sm:p-12">
