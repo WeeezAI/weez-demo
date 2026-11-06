@@ -5,12 +5,11 @@ import { ArrowRight, Check } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import { BrandIcon, MissedSignalScene, NoOwnerScene, SilentFailureScene, useStage } from "@/components/landing/UseCaseAnimations";
 import { EASE, FOCUS, Reveal } from "@/components/landing/primitives";
-import HeroVisual from "@/components/landing/v1/HeroVisual";
-import LazyScene from "@/components/landing/v1/LazyScene";
-import McpGateStatic from "@/components/landing/v1/McpGateStatic";
+import ControlPlaneIso from "@/components/landing/v1/ControlPlaneIso";
+import McpGateIso from "@/components/landing/v1/McpGateIso";
 import { ConnectBlock, LogoStrip, ToolsGrid, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
 import { WithoutWith } from "@/components/landing/McpAnimations";
-import { IsoAgents, IsoFormDrop, IsoHotLead, IsoNoOwner, IsoRadar, IsoShield, IsoStopped } from "@/components/landing/v1/IsoIcons";
+import { IsoAgents, IsoAudit, IsoBrokenZap, IsoCoverage, IsoDailyCheck, IsoEmptyRows, IsoFormDrop, IsoHotLead, IsoNightStack, IsoNoOwner, IsoRadar, IsoSchemaShift, IsoShield, IsoStopped, IsoTestLead } from "@/components/landing/v1/IsoIcons";
 import { BorderBeam, CountUp, ElapsedBar, HeroBackdrop, NightGrid, ScrollProgress, TiltCard, WordReveal } from "@/components/landing/v1/motion";
 import { CONTACT_EMAIL } from "@/components/stealth/contact";
 import type { AccessIntent } from "@/services/earlyAccessAPI";
@@ -24,9 +23,9 @@ const ONE_LINER = "Dexraflow catches workflows that silently break and tells you
 /* ───────────────────────── content ───────────────────────── */
 
 const STORIES = [
-  { n: 3, unit: "weeks", days: 21, title: "A Zap broke after an update.", body: "A $30k deal was lost. The prospect wrote back to ask why nobody had followed up." },
-  { n: 11, unit: "days", days: 11, title: "The workflow kept running with zero rows.", body: "Every run reported success. From the dashboard, it looked exactly like a quiet week." },
-  { n: 8, unit: "days", days: 8, title: "A schema change broke routing.", body: "The webhook reported success before the CRM write happened. Nothing was assigned." },
+  { n: 3, unit: "weeks", days: 21, title: "A Zap broke after an update.", body: "A $30k deal was lost. The prospect wrote back to ask why nobody had followed up.", Icon: IsoBrokenZap },
+  { n: 11, unit: "days", days: 11, title: "The workflow kept running with zero rows.", body: "Every run reported success. From the dashboard, it looked exactly like a quiet week.", Icon: IsoEmptyRows },
+  { n: 8, unit: "days", days: 8, title: "A schema change broke routing.", body: "The webhook reported success before the CRM write happened. Nothing was assigned.", Icon: IsoSchemaShift },
 ];
 
 const HANDOFFS = [
@@ -170,7 +169,7 @@ const Hero = ({ onAudit }: { onAudit: () => void }) => {
           </motion.p>
         </div>
         <motion.div initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1.1, delay: 0.3, ease: EASE }} className="mx-auto w-full max-w-[560px] lg:max-w-none">
-          <HeroVisual />
+          <ControlPlaneIso />
         </motion.div>
       </div>
     </section>
@@ -331,14 +330,11 @@ const VisionTimeline = () => {
 
 /* ───────────────────────── 8 · MCP explainer ───────────────────────── */
 
-const loadMcpScene = () => import("@/components/landing/v1/McpGateScene");
-
-/** The four steps beside the 3D gate scene. The scene reports which step it is on; the still shows all four. */
+/** The four steps beside the gate scene. The scene reports which step it is on; under reduced motion all four read as one. */
 const McpExplainer = () => {
   const [phase, setPhase] = useState(-1);
-  const [live, setLive] = useState(false);
   const onPhase = useCallback((p: number) => setPhase(p), []);
-  const onMode = useCallback((m: "still" | "3d") => setLive(m === "3d"), []);
+  const live = phase >= 0;
   return (
     <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12">
       <ol className="space-y-1">
@@ -356,7 +352,7 @@ const McpExplainer = () => {
           );
         })}
       </ol>
-      <LazyScene load={loadMcpScene} still={<McpGateStatic className="h-full w-full" />} onPhase={onPhase} onMode={onMode} />
+      <McpGateIso onPhase={onPhase} />
     </div>
   );
 };
@@ -429,10 +425,15 @@ const Landing = () => {
               <Reveal key={s.title} delay={i * 0.08} className="h-full min-w-0">
                 <TiltCard className="group h-full rounded-[8px]">
                   <Card className="h-full p-6 transition-shadow duration-300 group-hover:shadow-dx-overlay">
-                    <p className="font-dx-mono text-[28px] font-medium leading-none tracking-[-0.02em] text-dx-signal-ink">
-                      <CountUp to={s.n} duration={1.2} /> {s.unit}
-                    </p>
-                    <p className={`mt-1 ${MONO} text-dx-ink-muted`}>before anyone noticed</p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-dx-mono text-[28px] font-medium leading-none tracking-[-0.02em] text-dx-signal-ink">
+                          <CountUp to={s.n} duration={1.2} /> {s.unit}
+                        </p>
+                        <p className={`mt-1 ${MONO} text-dx-ink-muted`}>before anyone noticed</p>
+                      </div>
+                      <s.Icon size={64} />
+                    </div>
                     <ElapsedBar days={s.days} label={`${s.days} days passed before anyone noticed.`} />
                     <h3 className="mt-5 text-[18px] font-semibold leading-snug text-dx-ink">{s.title}</h3>
                     <p className="mt-2 text-[15px] leading-relaxed text-dx-ink-muted">{s.body}</p>
@@ -458,9 +459,12 @@ const Landing = () => {
             <HandoffFlow />
           </Reveal>
           <Reveal className="mt-8">
-            <p className="max-w-2xl text-[15px] leading-relaxed text-dx-ink-muted">
-              <span className="font-medium text-dx-ink">Plus a daily test lead</span> runs through your real form, CRM, routing and sequence, so a break shows up even on a quiet day.
-            </p>
+            <div className="flex max-w-2xl items-center gap-5">
+              <IsoTestLead size={88} />
+              <p className="text-[15px] leading-relaxed text-dx-ink-muted">
+                <span className="font-medium text-dx-ink">Plus a daily test lead</span> runs through your real form, CRM, routing and sequence, so a break shows up even on a quiet day.
+              </p>
+            </div>
           </Reveal>
         </Section>
 
@@ -495,11 +499,14 @@ const Landing = () => {
         {/* 5 · why not build it */}
         <Section id="why" tight>
           <Reveal>
-            <Card className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[auto_1fr] lg:gap-12">
+            <Card className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[auto_1fr_auto] lg:gap-12 lg:items-center">
               <Label>Why not just build it?</Label>
               <div className="max-w-2xl space-y-4 text-[17px] leading-relaxed text-dx-ink">
                 <p>A script covers one pipe. Dexraflow checks every handoff, every day, across every tool, puts a dollar figure on what was lost, and nobody has to maintain it.</p>
                 <p className="text-dx-ink-muted">We watch the automations you build. We don't replace them.</p>
+              </div>
+              <div className="hidden lg:block">
+                <IsoCoverage size={120} />
               </div>
             </Card>
           </Reveal>
@@ -514,7 +521,10 @@ const Landing = () => {
             <Reveal className="h-full">
               <BorderBeam className="h-full">
                 <div className="flex h-full flex-col p-6 sm:p-8">
-                  <Label>Missed Pipeline Audit</Label>
+                  <div className="flex items-start justify-between gap-4">
+                    <Label>Missed Pipeline Audit</Label>
+                    <IsoAudit size={72} />
+                  </div>
                   <h3 className="mt-3 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-dx-ink">14 days. Read-only exports. The last 90 days.</h3>
                   <p className="mt-3 text-[15px] leading-relaxed text-dx-ink-muted">You get the exact leads that slipped, what they were worth and why. Then we fix the top issues with you.</p>
                   <div className="mt-6 flex items-baseline gap-3">
@@ -536,8 +546,9 @@ const Landing = () => {
             </Reveal>
             <Reveal delay={0.06} className="h-full">
               <Card className="flex h-full flex-col p-6 sm:p-8">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Label>Daily monitoring</Label>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Label>Daily monitoring</Label>
                   <span className={`inline-flex items-center gap-1.5 rounded-[4px] border border-dx-brand/20 bg-dx-brand-soft px-2 py-0.5 ${MONO} text-dx-brand`}>
                     <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
                       {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-dx-brand opacity-60" />}
@@ -545,6 +556,8 @@ const Landing = () => {
                     </span>
                     Now taking 3 design partners
                   </span>
+                  </div>
+                  <IsoDailyCheck size={72} />
                 </div>
                 <h3 className="mt-3 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-dx-ink">After the audit, Dexraflow keeps checking every day.</h3>
                 <p className="mt-3 text-[15px] leading-relaxed text-dx-ink-muted">You get an alert in Slack the same day something stops, with the leads affected and what they're worth. The audit fee is credited.</p>
@@ -624,7 +637,10 @@ const Landing = () => {
           <Reveal>
             <div className="relative overflow-hidden rounded-[8px] border border-dx-night-line bg-dx-night p-8 text-dx-night-ink sm:p-12">
               <NightGrid />
-              <div className="relative">
+              <div aria-hidden="true" className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 lg:block xl:right-12">
+                <IsoNightStack size={300} />
+              </div>
+              <div className="relative lg:max-w-[60%]">
                 <h2 id="start-title" className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
                   Find out what your stack dropped last quarter.
                 </h2>

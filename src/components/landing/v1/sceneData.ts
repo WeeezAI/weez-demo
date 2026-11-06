@@ -29,18 +29,6 @@ export const BROKEN_SEGMENT = 2;
 
 export const SIDE_WIRES: [string, string][] = [["hubspot", "clay"]];
 
-/** One cycle: a healthy run, then a broken run that the plane catches. Seconds. */
-export const T = {
-  period: 11,
-  hop: 0.9, // per route segment
-  okChip: [3.7, 4.7] as const,
-  brokenStart: 4.9,
-  dropDur: 0.75,
-  scan: [6.8, 8.2] as const,
-  scanFrom: -2.6,
-  scanTo: 2.6,
-};
-
 /* ───────────── the MCP gate scene ─────────────
    Three agents above a Dexraflow plane above four CRM/GTM tools. Each agent asks before it acts;
    the plane checks every tool, answers, and logs. One request per slot, three slots per loop. */

@@ -21,6 +21,8 @@ export const PAL = {
   amber: { top: "#f6b25c", left: "#e8962e", right: "#c47516", stroke: "rgba(138,75,0,0.45)" },
   ink: { top: "#2a3a40", left: "#0f1a1f", right: "#0a1216", stroke: "rgba(0,0,0,0.5)" },
   glass: { top: "rgba(220,239,236,0.55)", left: "rgba(11,110,105,0.18)", right: "rgba(11,110,105,0.28)", stroke: "rgba(11,110,105,0.55)" },
+  night: { top: "#1c2a2f", left: "#131d20", right: "#0e1619", stroke: "rgba(59,191,175,0.35)" },
+  glassNight: { top: "rgba(59,191,175,0.2)", left: "rgba(59,191,175,0.08)", right: "rgba(59,191,175,0.14)", stroke: "rgba(59,191,175,0.85)" },
 } satisfies Record<string, IsoPalette>;
 
 /** Polygon point strings for the three visible faces of an axis-aligned box. */

@@ -272,3 +272,193 @@ export function IsoAgents({ size = 64 }: IconProps) {
     </Frame>
   );
 }
+
+/* ───────────── story 01 · a Zap broke after an update ───────────── */
+
+export function IsoBrokenZap({ size = 56 }: IconProps) {
+  const reduce = useReducedMotion();
+  const a = toScreen(-0.9, 0.55, 0);
+  const b = toScreen(0.9, 0.55, 0);
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  return (
+    <Frame size={size} scale={11} cy={30} label="Two tools joined by an automation wire that has a gap in the middle">
+      <Shadow rx={2.3} ry={1.1} cy={0.8} />
+      <IsoBox x={-1.6} y={0} z={-0.5} w={0.9} h={0.5} d={0.9} pal={PAL.tile} />
+      <IsoBox x={0.7} y={0} z={-0.5} w={0.9} h={0.5} d={0.9} pal={PAL.tile} />
+      <line x1={a.x} y1={a.y} x2={mx - 0.28} y2={my - 0.08} stroke={PAL.brand.left} strokeWidth={0.07} strokeLinecap="round" />
+      <line x1={mx + 0.28} y1={my + 0.08} x2={b.x} y2={b.y} stroke={PAL.brand.left} strokeWidth={0.07} strokeLinecap="round" />
+      <motion.path d={`M${mx - 0.28} ${my - 0.08} l0.2 -0.22 l0.1 0.3 l0.26 -0.08`} fill="none" stroke={PAL.amber.left} strokeWidth={0.07} strokeLinecap="round" strokeLinejoin="round" initial={false} animate={reduce ? { opacity: 1 } : { opacity: [1, 1, 0.1, 1, 0.1, 1, 1] }} transition={reduce ? undefined : { duration: 3, times: [0, 0.5, 0.55, 0.6, 0.65, 0.7, 1], repeat: Infinity }} />
+      <motion.circle cx={mx + 0.05} cy={my - 0.3} r={0.1} fill={PAL.amber.left} initial={false} animate={reduce ? { opacity: 1 } : { opacity: [0, 0, 1, 0], y: [0, 0, -0.25, -0.45] }} transition={reduce ? undefined : { duration: 3, times: [0, 0.5, 0.65, 0.95], repeat: Infinity }} />
+    </Frame>
+  );
+}
+
+/* ───────────── story 02 · success, zero rows ───────────── */
+
+export function IsoEmptyRows({ size = 56 }: IconProps) {
+  const reduce = useReducedMotion();
+  const tag = toScreen(0.3, 1.35, 0);
+  return (
+    <Frame size={size} scale={11} cy={30} label="An empty tray reporting success">
+      <Shadow rx={2.2} ry={1.1} cy={0.6} />
+      <IsoBox x={-1.3} y={0} z={-0.9} w={2.6} h={0.12} d={1.8} pal={PAL.tile} />
+      {[-0.5, 0, 0.5].map((z) => (
+        <IsoBox key={z} x={-1.0} y={0.12} z={z - 0.18} w={2.0} h={0.001} d={0.36} pal={PAL.tile} dashed />
+      ))}
+      <motion.g initial={false} animate={reduce ? {} : { y: [0, -0.1, 0] }} transition={reduce ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}>
+        <rect x={tag.x - 0.72} y={tag.y - 0.26} width={1.44} height={0.52} rx={0.12} fill="#e3f2ea" stroke="rgba(30,122,74,0.35)" strokeWidth={0.04} />
+        <path d={`M${tag.x - 0.5} ${tag.y} l0.14 0.14 l0.26 -0.3`} fill="none" stroke="#1e7a4a" strokeWidth={0.07} strokeLinecap="round" strokeLinejoin="round" />
+        <text x={tag.x + 0.02} y={tag.y + 0.09} fontSize={0.26} fontFamily="'JetBrains Mono', monospace" fontWeight={600} fill="#1e7a4a">
+          0 rows
+        </text>
+      </motion.g>
+    </Frame>
+  );
+}
+
+/* ───────────── story 03 · a schema change broke routing ───────────── */
+
+export function IsoSchemaShift({ size = 56 }: IconProps) {
+  const reduce = useReducedMotion();
+  const slide = toScreen(0.55, 0, 0);
+  return (
+    <Frame size={size} scale={11} cy={30} label="A field block sliding out of the slot the routing rule expects">
+      <Shadow rx={2.3} ry={1.1} cy={0.7} />
+      <IsoBox x={-1.6} y={0} z={-0.7} w={3.2} h={0.12} d={1.4} pal={PAL.tile} />
+      <IsoBox x={-1.1} y={0.12} z={-0.3} w={0.6} h={0.001} d={0.6} pal={PAL.brand} dashed />
+      <IsoBox x={-0.3} y={0.12} z={-0.3} w={0.6} h={0.001} d={0.6} pal={PAL.brand} dashed />
+      <IsoBox x={-1.1} y={0.12} z={-0.3} w={0.6} h={0.5} d={0.6} pal={PAL.brand} />
+      <motion.g initial={false} animate={reduce ? { x: slide.x, y: slide.y } : { x: [0, 0, slide.x, slide.x, 0], y: [0, 0, slide.y, slide.y, 0] }} transition={reduce ? undefined : { duration: 4, times: [0, 0.3, 0.45, 0.9, 1], ease: "easeInOut", repeat: Infinity }}>
+        <IsoBox x={-0.3} y={0.12} z={-0.3} w={0.6} h={0.5} d={0.6} pal={PAL.amber} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+/* ───────────── how it works · the daily test lead ───────────── */
+
+export function IsoTestLead({ size = 72 }: IconProps) {
+  const reduce = useReducedMotion();
+  const xs = [-1.5, -0.5, 0.5, 1.5];
+  const steps = xs.map((x) => toScreen(x, 0.42, 0));
+  return (
+    <Frame size={size} scale={9} cy={28} label="A test lead hopping across four tools in a row">
+      <Shadow rx={3} ry={1.2} cy={0.6} />
+      {xs.map((x) => (
+        <IsoBox key={x} x={x - 0.4} y={0} z={-0.4} w={0.8} h={0.14} d={0.8} pal={PAL.tile} />
+      ))}
+      {xs.slice(0, -1).map((x, i) => {
+        const a = toScreen(x, 0.14, 0);
+        const b = toScreen(xs[i + 1], 0.14, 0);
+        return <line key={x} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={PAL.brand.left} strokeWidth={0.05} strokeOpacity={0.5} />;
+      })}
+      <motion.circle r={0.22} fill={PAL.brand.left} initial={false} animate={reduce ? { cx: steps[3].x, cy: steps[3].y } : { cx: steps.map((s) => s.x), cy: steps.map((s, i) => s.y - (i % 2 ? 0 : 0)) }} transition={reduce ? undefined : { duration: 3, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.8 }} />
+      <motion.circle r={0.22} fill="none" stroke={PAL.brand.left} strokeWidth={0.05} initial={false} animate={reduce ? { cx: steps[3].x, cy: steps[3].y, scale: 2, opacity: 0 } : { cx: steps.map((s) => s.x), cy: steps.map((s) => s.y), scale: [1, 2.2, 1, 2.2], opacity: [0.6, 0, 0.6, 0] }} transition={reduce ? undefined : { duration: 3, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.8 }} />
+    </Frame>
+  );
+}
+
+/* ───────────── why not build it · one script vs one plane ───────────── */
+
+export function IsoCoverage({ size = 72 }: IconProps) {
+  const reduce = useReducedMotion();
+  const zs = [-0.8, 0, 0.8];
+  return (
+    <Frame size={size} scale={9} cy={30} label="A translucent plane covering three wires at once, with a pulse checking each in turn">
+      <Shadow rx={3} ry={1.3} cy={0.6} />
+      {zs.map((z) => (
+        <g key={z}>
+          <IsoBox x={-2} y={0} z={z - 0.3} w={0.6} h={0.12} d={0.6} pal={PAL.tile} />
+          <IsoBox x={1.4} y={0} z={z - 0.3} w={0.6} h={0.12} d={0.6} pal={PAL.tile} />
+          <line x1={toScreen(-1.4, 0.12, z).x} y1={toScreen(-1.4, 0.12, z).y} x2={toScreen(1.4, 0.12, z).x} y2={toScreen(1.4, 0.12, z).y} stroke={PAL.brand.left} strokeWidth={0.05} strokeOpacity={0.5} />
+        </g>
+      ))}
+      {zs.map((z, i) => (
+        <motion.circle key={z} r={0.14} fill={PAL.brand.left} initial={false} animate={reduce ? { cx: toScreen(0.6, 0.14, z).x, cy: toScreen(0.6, 0.14, z).y } : { cx: [toScreen(-1.3, 0.14, z).x, toScreen(1.3, 0.14, z).x], cy: [toScreen(-1.3, 0.14, z).y, toScreen(1.3, 0.14, z).y], opacity: [0, 1, 1, 0] }} transition={reduce ? undefined : { duration: 2.2, repeat: Infinity, ease: "linear", delay: i * 0.7 }} />
+      ))}
+      <IsoBox x={-2.3} y={1.1} z={-1.4} w={4.6} h={0.06} d={2.8} pal={PAL.glass} />
+      <motion.rect x={toScreen(-2.3, 1.1, -1.4).x - 0.03} y={toScreen(-2.3, 1.1, -1.4).y} width={0.06} height={0.001} fill="none" />
+    </Frame>
+  );
+}
+
+/* ───────────── offer · the audit ───────────── */
+
+export function IsoAudit({ size = 64 }: IconProps) {
+  const reduce = useReducedMotion();
+  const lens = toScreen(0.5, 1.4, 0.4);
+  return (
+    <Frame size={size} scale={11} cy={32} label="A magnifier over a stack of 90 days of exports, with one amber find">
+      <Shadow rx={2.2} ry={1.1} cy={0.8} />
+      {[0, 0.14, 0.28].map((y) => (
+        <IsoBox key={y} x={-1.0} y={y} z={-1.0} w={2.0} h={0.08} d={2.0} pal={PAL.tile} />
+      ))}
+      <motion.circle cx={toScreen(0.2, 0.37, 0.3).x} cy={toScreen(0.2, 0.37, 0.3).y} r={0.12} fill={PAL.amber.left} initial={false} animate={reduce ? { opacity: 1 } : { opacity: [0.2, 1, 0.2] }} transition={reduce ? undefined : { duration: 1.8, repeat: Infinity }} />
+      <motion.g initial={false} animate={reduce ? {} : { x: [0, -0.5, 0.3, 0], y: [0, 0.25, -0.2, 0] }} transition={reduce ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}>
+        <circle cx={lens.x} cy={lens.y} r={0.62} fill="rgba(220,239,236,0.55)" stroke={PAL.brand.left} strokeWidth={0.09} />
+        <line x1={lens.x + 0.46} y1={lens.y + 0.46} x2={lens.x + 1.0} y2={lens.y + 1.0} stroke={PAL.brand.left} strokeWidth={0.16} strokeLinecap="round" />
+      </motion.g>
+    </Frame>
+  );
+}
+
+/* ───────────── offer · daily monitoring ───────────── */
+
+export function IsoDailyCheck({ size = 64 }: IconProps) {
+  const reduce = useReducedMotion();
+  const days = [-0.9, -0.3, 0.3, 0.9];
+  return (
+    <Frame size={size} scale={11} cy={30} label="A week of days on a tile, each one checked in turn">
+      <Shadow rx={2.3} ry={1.1} cy={0.6} />
+      <IsoBox x={-1.4} y={0} z={-0.9} w={2.8} h={0.14} d={1.8} pal={PAL.tile} />
+      {days.map((x) =>
+        [-0.45, 0.35].map((z) => <IsoBox key={`${x}${z}`} x={x - 0.22} y={0.14} z={z - 0.22} w={0.44} h={0.001} d={0.44} pal={PAL.brand} dashed />),
+      )}
+      {days.map((x, i) => (
+        <motion.g key={x} initial={false} animate={reduce ? { opacity: 1 } : { opacity: [0, 0, 1, 1] }} transition={reduce ? undefined : { duration: 4, times: [0, (i * 0.9) / 4, (i * 0.9 + 0.25) / 4, 1], repeat: Infinity, repeatDelay: 0.6 }}>
+          <IsoBox x={x - 0.22} y={0.14} z={-0.67} w={0.44} h={0.22} d={0.44} pal={PAL.brand} />
+        </motion.g>
+      ))}
+      <motion.g initial={false} animate={reduce ? { opacity: 1 } : { opacity: [0, 0, 1, 1] }} transition={reduce ? undefined : { duration: 4, times: [0, 0.75, 0.82, 1], repeat: Infinity, repeatDelay: 0.6 }}>
+        <IsoBox x={0.3 - 0.22} y={0.14} z={0.13} w={0.44} h={0.22} d={0.44} pal={PAL.amber} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+/* ───────────── closing panel · the stack at night ───────────── */
+
+export function IsoNightStack({ size = 240 }: IconProps) {
+  const reduce = useReducedMotion();
+  const tiles = [
+    [-1.3, -0.65],
+    [0, -0.65],
+    [1.3, -0.65],
+    [-1.3, 0.65],
+    [0, 0.65],
+    [1.3, 0.65],
+  ];
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true" className="overflow-visible">
+      <defs>
+        <radialGradient id="iso-night-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor="#3bbfaf" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#3bbfaf" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <g transform="translate(24 30) scale(7)">
+        <motion.ellipse rx={3} ry={1.5} cy={0.3} fill="url(#iso-night-glow)" initial={false} animate={reduce ? {} : { opacity: [0.6, 1, 0.6] }} transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }} />
+        {tiles.map(([x, z]) => (
+          <IsoBox key={`${x}${z}`} x={x - 0.45} y={0} z={z - 0.45} w={0.9} h={0.16} d={0.9} pal={PAL.night} />
+        ))}
+        {tiles.map(([x, z], i) => (
+          <motion.circle key={`d${x}${z}`} cx={toScreen(x, 0.2, z).x} cy={toScreen(x, 0.2, z).y} r={0.07} fill="#3bbfaf" initial={false} animate={reduce ? { opacity: 0.8 } : { opacity: [0.2, 1, 0.2] }} transition={reduce ? undefined : { duration: 2.6, repeat: Infinity, delay: i * 0.3 }} />
+        ))}
+        <motion.g initial={false} animate={reduce ? {} : { y: [0, -0.08, 0] }} transition={reduce ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+          <IsoBox x={-2.2} y={1.2} z={-1.3} w={4.4} h={0.05} d={2.6} pal={PAL.glassNight} />
+        </motion.g>
+      </g>
+    </svg>
+  );
+}
