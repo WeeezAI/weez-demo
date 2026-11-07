@@ -1,19 +1,11 @@
 // src/services/earlyAccessAPI.ts
 //
-// Early-access and founder-conversation requests from the landing page.
-//
-// There is no dedicated endpoint for these yet, so both ride the existing public
-// lead-capture route the site already uses — `POST /demo/request` on the poster
-// pipeline, which emails the team via SES (see backend `api/demo.py`). That route's
-// model only knows `name / position / company / businessEmail / phone` and silently
-// drops anything else, so the fields it has no column for (intent, LinkedIn, the
-// free-text note) are folded into `position` to reach the inbox intact.
-//
-// The structured fields are sent alongside as well. Once the backend model grows
-// `intent`, `role`, `linkedin` and `note`, it can read them directly and the folding
-// in `toLegacyPosition` can be deleted — this file is the only place that changes.
+// Requests from the landing page forms (Missed Pipeline Audit, early access, founder
+// conversation). Each one is inserted straight into `public.access_requests` in the
+// "Dexraflow-Form" Supabase project, where the team triages them (every row starts with
+// status = 'new'). The old poster-pipeline endpoint this used to post to is stopped.
 
-import CONFIG from "./config";
+import { supabase } from "./supabase";
 
 export type AccessIntent = "early-access" | "founder-conversation" | "audit";
 
@@ -29,41 +21,39 @@ export interface AccessRequest {
 
 export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-const INTENT_LABEL: Record<AccessIntent, string> = {
-  "early-access": "Early access",
-  "founder-conversation": "Founder conversation",
-  audit: "Missed Pipeline Audit",
-};
+const TABLE = "access_requests";
+const FALLBACK = "We couldn't send your request just now.";
 
-const toLegacyPosition = (req: AccessRequest): string =>
-  [
-    `[${INTENT_LABEL[req.intent]}] ${req.role}`,
-    req.linkedin ? `LinkedIn: ${req.linkedin}` : "",
-    req.note ? `Note: ${req.note}` : "",
-  ]
-    .filter(Boolean)
-    .join(" — ");
+/** Where the visitor came from, so inbound can be attributed. All optional, all trimmed to the column limits. */
+function attribution() {
+  if (typeof window === "undefined") return {};
+  const q = new URLSearchParams(window.location.search);
+  const cut = (v: string | null | undefined, n: number) => (v ? v.slice(0, n) : null);
+  return {
+    source_page: cut(window.location.pathname + window.location.hash, 300),
+    referrer: cut(document.referrer, 500),
+    utm_source: cut(q.get("utm_source"), 120),
+    utm_medium: cut(q.get("utm_medium"), 120),
+    utm_campaign: cut(q.get("utm_campaign"), 120),
+    user_agent: cut(navigator.userAgent, 500),
+  };
+}
 
 export async function submitAccessRequest(req: AccessRequest): Promise<void> {
-  const resp = await fetch(`${CONFIG.WEEZ_BASE_URL}/demo/request`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      // Fields the current endpoint reads.
-      name: req.name,
-      company: req.company,
-      businessEmail: req.email,
-      position: toLegacyPosition(req),
-      phone: "",
-      // Structured fields for when the endpoint learns them.
-      intent: req.intent,
-      role: req.role,
-      linkedin: req.linkedin ?? "",
-      note: req.note ?? "",
-    }),
+  if (!supabase) throw new Error(FALLBACK);
+  const { error } = await supabase.from(TABLE).insert({
+    intent: req.intent,
+    name: req.name,
+    email: req.email,
+    company: req.company,
+    role: req.role,
+    linkedin: req.linkedin ?? null,
+    note: req.note ?? null,
+    ...attribution(),
   });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err?.detail || "Something went wrong. Please try again.");
+  if (error) {
+    // A check constraint (e.g. a malformed email) is the only error worth surfacing as the visitor's own.
+    const theirs = error.code === "23514" ? "Please check the details you entered." : "";
+    throw new Error(theirs || FALLBACK);
   }
 }

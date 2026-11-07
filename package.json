@@ -43,6 +43,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-three/drei": "9.88.0",
     "@react-three/fiber": "8.15.12",
+    "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.83.0",
     "@types/lodash": "^4.17.21",
     "@types/three": "0.160.0",
