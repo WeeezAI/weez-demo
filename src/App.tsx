@@ -39,6 +39,8 @@ import GTMDashboard from "./pages/GTMDashboard";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import TermsConditions from "./pages/TermsConditions";
 import DataDeletion from "./pages/DataDeletion";
 
@@ -219,6 +221,10 @@ const AppContent = () => {
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
               <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
+
+              {/* Blog */}
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
 
               {/* Legal pages */}
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />

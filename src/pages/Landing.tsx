@@ -19,6 +19,7 @@ import type { AccessIntent } from "@/services/earlyAccessAPI";
    Motion tells the same story: leads move, a handoff breaks silently, the plane catches it. */
 
 const ONE_LINER = "Dexraflow catches workflows that silently break and tells you which leads you lost, the same day, not three weeks later.";
+const HERO_SUB = "Lead leakage and GTM automation failures rarely throw an error. Dexraflow catches the workflows that silently break and tells you which leads you lost, the same day, not three weeks later.";
 
 /* ───────────────────────── content ───────────────────────── */
 
@@ -49,6 +50,14 @@ const MCP_STEPS = [
   { k: "02", t: "Dexraflow checks every tool", d: "Owner, open deals, last touch, what other agents did, your rules." },
   { k: "03", t: "It answers allow, hold or wait", d: "With the reason. It never sends anything itself." },
   { k: "04", t: "Every decision is logged", d: "Allowed writes go through and are recorded. Held ones go to the owner in Slack." },
+];
+
+const FAQ = [
+  { q: "What is lead leakage?", a: "Lead leakage is when a lead enters your GTM stack but never reaches a person who can follow up. A form fill that never became a CRM contact, a contact nobody was assigned to, or a demo request nobody replied to. The lead existed. It just leaked out between two tools." },
+  { q: "What are GTM automation failures?", a: "GTM automation failures are breaks in the workflows that move leads between your tools: forms, CRM, routing, enrichment and sequencing. The worst ones are silent. A Zap keeps running with zero rows, a HubSpot workflow stops after a field changes, a webhook reports success before the CRM write happens. Nothing errors, so nobody looks." },
+  { q: "How does Dexraflow catch lead leakage?", a: "Dexraflow runs one daily check across every handoff. It compares what each tool received with what the next one should have, and flags the gap the same day, with the exact leads and what they were worth. It is read-only and never writes to your tools." },
+  { q: "Which tools does Dexraflow connect to?", a: "HubSpot, Salesforce and Zapier first, with read-only access. More connectors follow." },
+  { q: "What is a Missed Pipeline Audit?", a: "A 14-day, read-only review of the last 90 days of your lead workflows. You get the exact leads that leaked, what they were worth and why. After the audit, Dexraflow keeps checking every day." },
 ];
 
 const VISION = [
@@ -110,6 +119,8 @@ const NAV_LINKS = [
   { href: "#catches", label: "What it catches" },
   { href: "#offer", label: "The offer" },
   { href: "#mcp", label: "MCP" },
+  { href: "#faq", label: "FAQ" },
+  { href: "/blog", label: "Blog" },
 ];
 
 const Nav = ({ onAudit }: { onAudit: () => void }) => (
@@ -150,7 +161,7 @@ const Hero = ({ onAudit }: { onAudit: () => void }) => {
           <WordReveal id="hero-title" text="Your GTM tools are dropping leads." muted="Silently." className="max-w-3xl text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-dx-ink sm:text-[54px] sm:leading-[1.02] lg:text-[58px]" />
           <div className="lg:border-l lg:border-dx-line lg:pl-8">
             <motion.p {...enter(1)} className="max-w-xl text-[17px] leading-relaxed text-dx-ink-muted sm:text-[18px]">
-              {ONE_LINER}
+              {HERO_SUB}
             </motion.p>
             <motion.div {...enter(2)} className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button onClick={onAudit}>
@@ -372,6 +383,9 @@ const Footer = () => (
         <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-dx-ink-muted">{ONE_LINER}</p>
       </div>
       <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-dx-ink-muted">
+        <Link to="/blog" className="transition hover:text-dx-ink">
+          Blog
+        </Link>
         <a href={`mailto:${CONTACT_EMAIL}`} className="transition hover:text-dx-ink">
           {CONTACT_EMAIL}
         </a>
@@ -403,9 +417,17 @@ const Landing = () => {
   const openEarlyAccess = () => setIntent("early-access");
   const { tab, setTab, connectRef, goConnect } = useConnectTabs();
 
+  // Arriving from another route with a hash (e.g. /blog → /#offer): React Router doesn't scroll, so we do.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 50);
+    return () => window.clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     const prev = document.title;
-    document.title = "Dexraflow — Catch workflows that silently break";
+    document.title = "Lead Leakage & GTM Automation Failures, Caught the Same Day | Dexraflow";
     return () => {
       document.title = prev;
     };
@@ -423,7 +445,7 @@ const Landing = () => {
         {/* 2 · the problem */}
         <Section id="problem">
           <Reveal>
-            <Head id="problem-title" label="The problem" title="The worst breaks don't throw an error." />
+            <Head id="problem-title" label="The problem" title="Lead leakage doesn't throw an error." sub="The worst GTM automation failures look like a quiet week. Every run says success, and the leads are already gone." />
           </Reveal>
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
             {STORIES.map((s, i) => (
@@ -476,7 +498,7 @@ const Landing = () => {
         {/* 4 · what it catches */}
         <Section id="catches">
           <Reveal>
-            <Head id="catches-title" label="What it catches" title="Four ways a lead disappears." />
+            <Head id="catches-title" label="What it catches" title="Four ways a lead leaks out of your GTM stack." />
           </Reveal>
           <div className="mt-12 grid gap-4 md:grid-cols-2">
             {CATCHES.map((c, i) => (
@@ -637,7 +659,30 @@ const Landing = () => {
           </Reveal>
         </Section>
 
-        {/* 9 · final CTA */}
+        {/* 9 · FAQ */}
+        <Section id="faq" tight>
+          <Reveal>
+            <Head id="faq-title" label="Questions" title="Lead leakage and GTM automation failures, explained." />
+          </Reveal>
+          <div className="mt-10 grid gap-x-10 gap-y-2 lg:grid-cols-2">
+            {FAQ.map((f, i) => (
+              <Reveal key={f.q} delay={i * 0.05}>
+                <details className="group border-t border-dx-line py-5 open:pb-6">
+                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold text-dx-ink [&::-webkit-details-marker]:hidden ${FOCUS} rounded`}>
+                    <h3 className="text-[17px] font-semibold">{f.q}</h3>
+                    <span aria-hidden="true" className="relative h-4 w-4 shrink-0 text-dx-ink-muted">
+                      <span className="absolute left-0 top-1/2 h-px w-4 -translate-y-1/2 bg-current" />
+                      <span className="absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:rotate-90" />
+                    </span>
+                  </summary>
+                  <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-dx-ink-muted">{f.a}</p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
+
+        {/* 10 · final CTA */}
         <Section id="start">
           <Reveal>
             <div className="relative overflow-hidden rounded-[8px] border border-dx-night-line bg-dx-night p-8 text-dx-night-ink sm:p-12">

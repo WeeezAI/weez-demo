@@ -6,9 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Primary Meta Tags -->
-  <title>Dexraflow — Catch workflows that silently break</title>
-  <meta name="title" content="Dexraflow — Catch workflows that silently break" />
-  <meta name="description" content="Dexraflow catches workflows that silently break and tells you which leads you lost, the same day, not three weeks later." />
+  <title>Lead Leakage &amp; GTM Automation Failures, Caught the Same Day | Dexraflow</title>
+  <meta name="title" content="Lead Leakage &amp; GTM Automation Failures, Caught the Same Day | Dexraflow" />
+  <meta name="description" content="Dexraflow finds lead leakage and GTM automation failures in HubSpot, Salesforce and Zapier. It tells you which leads you lost and what they were worth, the same day, not three weeks later." />
+  <meta name="keywords" content="lead leakage, GTM automation failures, silent workflow failures, missed leads, HubSpot workflow broken, Zapier zap stopped, lead routing failure, RevOps monitoring, missed pipeline audit" />
   <meta name="author" content="Dexraflow" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
   <meta http-equiv="content-language" content="en" />
@@ -36,16 +37,21 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://www.dexraflow.com/" />
-  <meta property="og:title" content="Dexraflow — Catch workflows that silently break" />
-  <meta property="og:description" content="Dexraflow catches workflows that silently break and tells you which leads you lost, the same day, not three weeks later." />
+  <meta property="og:title" content="Lead Leakage &amp; GTM Automation Failures, Caught the Same Day | Dexraflow" />
+  <meta property="og:description" content="Dexraflow finds lead leakage and GTM automation failures in HubSpot, Salesforce and Zapier. It tells you which leads you lost and what they were worth, the same day, not three weeks later." />
+  <meta property="og:image" content="https://www.dexraflow.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Dexraflow catches lead leakage and GTM automation failures the same day" />
   <meta property="og:site_name" content="Dexraflow" />
   <meta property="og:locale" content="en_US" />
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://www.dexraflow.com/" />
-  <meta name="twitter:title" content="Dexraflow — Catch workflows that silently break" />
-  <meta name="twitter:description" content="Dexraflow catches workflows that silently break and tells you which leads you lost, the same day, not three weeks later." />
+  <meta name="twitter:title" content="Lead Leakage &amp; GTM Automation Failures, Caught the Same Day | Dexraflow" />
+  <meta name="twitter:description" content="Dexraflow finds lead leakage and GTM automation failures in HubSpot, Salesforce and Zapier. It tells you which leads you lost and what they were worth, the same day, not three weeks later." />
+  <meta name="twitter:image" content="https://www.dexraflow.com/og-image.png" />
 
   <!-- Additional SEO -->
   <meta name="theme-color" content="#f5f7f6" />
@@ -55,14 +61,88 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Structured Data: Organization -->
+  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Dexraflow",
-    "url": "https://www.dexraflow.com",
-    "description": "Dexraflow catches workflows that silently break and tells you which leads you lost, the same day, not three weeks later."
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.dexraflow.com/#org",
+        "name": "Dexraflow",
+        "url": "https://www.dexraflow.com",
+        "logo": "https://www.dexraflow.com/brand/dexraflow-app-icon.svg",
+        "description": "Dexraflow catches lead leakage and GTM automation failures the same day, and tells you which leads you lost and what they were worth."
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.dexraflow.com/#site",
+        "url": "https://www.dexraflow.com",
+        "name": "Dexraflow",
+        "publisher": { "@id": "https://www.dexraflow.com/#org" },
+        "inLanguage": "en"
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://www.dexraflow.com/#page",
+        "url": "https://www.dexraflow.com/",
+        "name": "Lead Leakage & GTM Automation Failures, Caught the Same Day",
+        "isPartOf": { "@id": "https://www.dexraflow.com/#site" },
+        "about": [
+          { "@type": "Thing", "name": "Lead leakage" },
+          { "@type": "Thing", "name": "GTM automation failures" }
+        ],
+        "description": "Dexraflow finds lead leakage and GTM automation failures in HubSpot, Salesforce and Zapier. It tells you which leads you lost and what they were worth, the same day."
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://www.dexraflow.com/#app",
+        "name": "Dexraflow",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "url": "https://www.dexraflow.com",
+        "publisher": { "@id": "https://www.dexraflow.com/#org" },
+        "description": "A daily check across every GTM handoff. Dexraflow compares what each tool received with what the next one should have, and flags lead leakage and automation failures the same day.",
+        "featureList": [
+          "Catches workflows that stopped while still reporting success",
+          "Finds form fills that never became leads",
+          "Finds leads with no owner",
+          "Finds hot leads with no follow-up",
+          "Read-only access to HubSpot, Salesforce and Zapier"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://www.dexraflow.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is lead leakage?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Lead leakage is when a lead enters your GTM stack but never reaches a person who can follow up. A form fill that never became a CRM contact, a contact nobody was assigned to, or a demo request nobody replied to. The lead existed. It just leaked out between two tools." }
+          },
+          {
+            "@type": "Question",
+            "name": "What are GTM automation failures?",
+            "acceptedAnswer": { "@type": "Answer", "text": "GTM automation failures are breaks in the workflows that move leads between your tools: forms, CRM, routing, enrichment and sequencing. The worst ones are silent. A Zap keeps running with zero rows, a HubSpot workflow stops after a field changes, a webhook reports success before the CRM write happens. Nothing errors, so nobody looks." }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Dexraflow catch lead leakage?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Dexraflow runs one daily check across every handoff. It compares what each tool received with what the next one should have, and flags the gap the same day, with the exact leads and what they were worth. It is read-only and never writes to your tools." }
+          },
+          {
+            "@type": "Question",
+            "name": "Which tools does Dexraflow connect to?",
+            "acceptedAnswer": { "@type": "Answer", "text": "HubSpot, Salesforce and Zapier first, with read-only access. More connectors follow." }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a Missed Pipeline Audit?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A 14-day, read-only review of the last 90 days of your lead workflows. You get the exact leads that leaked, what they were worth and why. After the audit, Dexraflow keeps checking every day." }
+          }
+        ]
+      }
+    ]
   }
   </script>
 
@@ -73,6 +153,10 @@
 
 <body>
   <div id="root"></div>
+  <noscript>
+    <h1>Dexraflow catches lead leakage and GTM automation failures the same day</h1>
+    <p>Your GTM tools are dropping leads, silently. Dexraflow runs one daily check across every handoff in HubSpot, Salesforce and Zapier, and tells you which leads you lost and what they were worth. Book a Missed Pipeline Audit at support@dexraflow.com.</p>
+  </noscript>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

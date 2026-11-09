@@ -1,14 +1,20 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+Disallow: /auth
+Disallow: /internal
+Disallow: /spaces
+Disallow: /chat/
+Disallow: /gallery/
+Disallow: /sales/
+Disallow: /leads/
+Disallow: /gtm-dashboard/
+Disallow: /analytics/
+Disallow: /connections/
+Disallow: /action-queue/
+Disallow: /platform/
+Disallow: /integrations/
+Disallow: /verify-email
+Disallow: /verification-success
+Disallow: /verification-failed
+
+Sitemap: https://www.dexraflow.com/sitemap.xml
