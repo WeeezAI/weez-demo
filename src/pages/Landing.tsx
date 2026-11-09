@@ -5,7 +5,7 @@ import { ArrowRight, Check } from "lucide-react";
 import AccessRequestModal from "@/components/stealth/AccessRequestModal";
 import { BrandIcon, MissedSignalScene, NoOwnerScene, SilentFailureScene, useStage } from "@/components/landing/UseCaseAnimations";
 import { EASE, FOCUS, Reveal } from "@/components/landing/primitives";
-import ControlPlaneIso from "@/components/landing/v1/ControlPlaneIso";
+import HeroStory from "@/components/landing/v1/HeroStory";
 import McpGateIso from "@/components/landing/v1/McpGateIso";
 import { ConnectBlock, LogoStrip, ToolsGrid, TrustStrip, useConnectTabs } from "@/components/landing/McpSection";
 import { WithoutWith } from "@/components/landing/McpAnimations";
@@ -142,34 +142,39 @@ const Hero = ({ onAudit }: { onAudit: () => void }) => {
   const reduce = !!useReducedMotion();
   const enter = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay: 0.45 + i * 0.08, ease: EASE } });
   return (
-    <section className="relative px-5 pb-12 pt-32 sm:px-8 md:pb-20 md:pt-40" aria-labelledby="hero-title">
+    <section className="relative overflow-hidden px-5 pb-10 pt-28 sm:px-8 md:pb-16 md:pt-36" aria-labelledby="hero-title">
       <HeroBackdrop />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10">
-        <div>
-          <WordReveal id="hero-title" text="Your GTM tools are dropping leads." muted="Silently." className="max-w-4xl text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-dx-ink sm:text-[56px] sm:leading-[1.02] lg:text-[60px]" />
-          <motion.p {...enter(1)} className="mt-7 max-w-xl text-[18px] leading-relaxed text-dx-ink-muted sm:text-[20px]">
-            {ONE_LINER}
-          </motion.p>
-          <motion.div {...enter(2)} className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Button onClick={onAudit}>
-              Book a Missed Pipeline Audit <ArrowRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-            </Button>
-            <Button href="#how" tone="ghost">
-              See how it works
-            </Button>
-          </motion.div>
-          <motion.p {...enter(3)} className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-dx-ink-muted">
-            <span>Read-only.</span>
-            <span className="inline-flex items-center gap-3">
-              {["hubspot", "salesforce", "zapier"].map((k) => (
-                <BrandIcon key={k} k={k} size={16} />
-              ))}
-            </span>
-            <span>HubSpot, Salesforce and Zapier first.</span>
-          </motion.p>
+      <div className="relative mx-auto max-w-6xl">
+        {/* headline left, the one-liner and actions right, like a magazine spread */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
+          <WordReveal id="hero-title" text="Your GTM tools are dropping leads." muted="Silently." className="max-w-3xl text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-dx-ink sm:text-[54px] sm:leading-[1.02] lg:text-[58px]" />
+          <div className="lg:border-l lg:border-dx-line lg:pl-8">
+            <motion.p {...enter(1)} className="max-w-xl text-[17px] leading-relaxed text-dx-ink-muted sm:text-[18px]">
+              {ONE_LINER}
+            </motion.p>
+            <motion.div {...enter(2)} className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button onClick={onAudit}>
+                Book a Missed Pipeline Audit <ArrowRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+              <Button href="#how" tone="ghost">
+                See how it works
+              </Button>
+            </motion.div>
+            <motion.p {...enter(3)} className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-dx-ink-muted">
+              <span>Read-only.</span>
+              <span className="inline-flex items-center gap-3">
+                {["hubspot", "salesforce", "zapier"].map((k) => (
+                  <BrandIcon key={k} k={k} size={16} />
+                ))}
+              </span>
+              <span>HubSpot, Salesforce and Zapier first.</span>
+            </motion.p>
+          </div>
         </div>
-        <motion.div initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1.1, delay: 0.3, ease: EASE }} className="mx-auto w-full max-w-[560px] lg:max-w-none">
-          <ControlPlaneIso />
+
+        {/* the stage: one lead's journey in three chapters */}
+        <motion.div initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.5, ease: EASE }} className="mt-10 md:mt-14">
+          <HeroStory />
         </motion.div>
       </div>
     </section>
