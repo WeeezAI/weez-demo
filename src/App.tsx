@@ -41,6 +41,7 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import Inventory from "./pages/Inventory";
 import TermsConditions from "./pages/TermsConditions";
 import DataDeletion from "./pages/DataDeletion";
 
@@ -221,6 +222,9 @@ const AppContent = () => {
               <Route path="/revenue-intelligence/:spaceId" element={<RedirectToRevenue />} />
               <Route path="/platform/success" element={<PlatformCallback />} />
               <Route path="/integrations/hubspot/callback" element={<HubSpotCallbackRedirect />} />
+
+              {/* Free tool: Silent Break Score */}
+              <Route path="/inventory" element={<Inventory />} />
 
               {/* Blog */}
               <Route path="/blog" element={<Blog />} />

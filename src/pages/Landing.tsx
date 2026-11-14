@@ -120,6 +120,7 @@ const NAV_LINKS = [
   { href: "#offer", label: "The offer" },
   { href: "#mcp", label: "MCP" },
   { href: "#faq", label: "FAQ" },
+  { href: "/inventory", label: "Free tool" },
   { href: "/blog", label: "Blog" },
 ];
 
@@ -383,6 +384,9 @@ const Footer = () => (
         <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-dx-ink-muted">{ONE_LINER}</p>
       </div>
       <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-dx-ink-muted">
+        <Link to="/inventory" className="transition hover:text-dx-ink">
+          Free tool
+        </Link>
         <Link to="/blog" className="transition hover:text-dx-ink">
           Blog
         </Link>

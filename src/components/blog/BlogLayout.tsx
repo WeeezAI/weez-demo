@@ -21,6 +21,9 @@ const BlogNav = () => (
           <Link to="/blog" className={`rounded transition hover:text-dx-ink ${FOCUS}`}>
             Blog
           </Link>
+          <Link to="/inventory" className={`rounded transition hover:text-dx-ink ${FOCUS}`}>
+            Free tool
+          </Link>
           <Link to="/#how" className={`rounded transition hover:text-dx-ink ${FOCUS}`}>
             How it works
           </Link>
@@ -41,6 +44,9 @@ const BlogFooter = () => (
         <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-dx-ink-muted">{ONE_LINER}</p>
       </div>
       <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-[13px] text-dx-ink-muted">
+        <Link to="/inventory" className="transition hover:text-dx-ink">
+          Free tool
+        </Link>
         <Link to="/blog" className="transition hover:text-dx-ink">
           Blog
         </Link>
