@@ -10,6 +10,10 @@ export type Post = {
   readMinutes: number;
   tags: string[];
   body: string;
+  /** Optional card shown after the intro, before the first H2. The body text is not touched. */
+  callout?: { text: string; cta: string; href: string };
+  /** Optional closing section after the body, before the related posts. */
+  closing?: { title: string; body: string; cta: string; href: string; secondary?: { label: string; href: string } };
 };
 
 export const POSTS: Post[] = [
@@ -21,6 +25,18 @@ export const POSTS: Post[] = [
     date: "2026-11-09",
     readMinutes: 8,
     tags: ["Lead leakage", "RevOps"],
+    callout: {
+      text: "Not sure where your own leads go missing? Run the two-minute self-check. It lists every workflow that writes to your CRM and flags the four places leads usually slip. Free, no login.",
+      cta: "Check my workflows",
+      href: "/inventory",
+    },
+    closing: {
+      title: "Find out what you've already lost",
+      body: "We run a 14-day missed-pipeline audit. Read-only, under NDA. We match every submission from the last 90 days to your CRM by email and show you which leads never reached a rep, what they were worth, and the fixes that matter. Founding price: $1,500 (list $3,000). Half on signing, half on delivery.",
+      cta: "Book a 15-minute call",
+      href: "https://calendar.app.google/Jm892hC4kmMXafec6",
+      secondary: { label: "Or run the free self-check first", href: "/inventory" },
+    },
     body: `
 Lead leakage is when a lead enters your GTM stack but never reaches a person who can follow up.
 

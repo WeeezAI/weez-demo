@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AuditCta, BlogLayout, fmtDate } from "@/components/blog/BlogLayout";
 import { FOCUS } from "@/components/landing/primitives";
 import { POSTS, findPost } from "@/content/blog";
@@ -54,6 +54,15 @@ const components: Components = {
   code: ({ children }) => <code className="rounded bg-dx-sunken px-1.5 py-0.5 font-dx-mono text-[14px] text-dx-ink">{children}</code>,
 };
 
+const CTA_BTN = `group inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-dx-brand px-5 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover active:scale-[0.98] ${FOCUS}`;
+const Arrow = () => <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={1.5} aria-hidden="true" />;
+
+/** The intro (everything before the first H2) and the rest, so a callout can sit between them without editing the text. */
+const splitAtFirstH2 = (body: string): [string, string] => {
+  const i = body.search(/^## /m);
+  return i < 0 ? [body, ""] : [body.slice(0, i), body.slice(i)];
+};
+
 const BlogPost = () => {
   const { slug } = useParams();
   const post = findPost(slug);
@@ -102,6 +111,7 @@ const BlogPost = () => {
   if (!post) return <Navigate to="/blog" replace />;
 
   const others = POSTS.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const [intro, rest] = splitAtFirstH2(post.body);
 
   return (
     <BlogLayout>
@@ -118,10 +128,46 @@ const BlogPost = () => {
         <hr className="mt-8 border-dx-line" />
 
         <div className="mt-2">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-            {post.body}
-          </ReactMarkdown>
+          {post.callout ? (
+            <>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {intro}
+              </ReactMarkdown>
+              <aside aria-label="Free self-check" className="mt-8 rounded-[8px] border border-dx-line border-l-[3px] border-l-dx-brand bg-dx-raised p-5 sm:flex sm:items-center sm:gap-6 sm:p-6">
+                <p className="text-[16px] leading-relaxed text-dx-ink sm:flex-1">{post.callout.text}</p>
+                <Link to={post.callout.href} className={`${CTA_BTN} mt-4 w-full shrink-0 sm:mt-0 sm:w-auto`}>
+                  {post.callout.cta} <Arrow />
+                </Link>
+              </aside>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {rest}
+              </ReactMarkdown>
+            </>
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+              {post.body}
+            </ReactMarkdown>
+          )}
         </div>
+
+        {post.closing && (
+          <section aria-labelledby="closing-title" className="mt-12">
+            <h2 id="closing-title" className="scroll-mt-28 text-[26px] font-semibold leading-tight tracking-[-0.02em] text-dx-ink sm:text-[30px]">
+              {post.closing.title}
+            </h2>
+            <p className="mt-5 text-[17px] leading-[1.7] text-dx-ink-muted">{post.closing.body}</p>
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <a href={post.closing.href} target="_blank" rel="noopener noreferrer" className={CTA_BTN}>
+                {post.closing.cta} <Arrow />
+              </a>
+              {post.closing.secondary && (
+                <Link to={post.closing.secondary.href} className={`rounded text-[15px] font-medium text-dx-brand underline decoration-dx-brand/40 underline-offset-4 transition hover:decoration-dx-brand ${FOCUS}`}>
+                  {post.closing.secondary.label}
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
 
         <AuditCta />
 
