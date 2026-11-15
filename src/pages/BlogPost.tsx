@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { isValidElement, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AuditCta, BlogLayout, fmtDate } from "@/components/blog/BlogLayout";
+import { DIAGRAMS } from "@/components/blog/diagrams";
 import { FOCUS } from "@/components/landing/primitives";
-import { POSTS, findPost } from "@/content/blog";
+import { POSTS, findPost, type Block } from "@/content/blog";
 import { useSeo } from "@/lib/seo";
 
 const slugify = (s: string) =>
@@ -17,6 +18,23 @@ const slugify = (s: string) =>
 
 const text = (n: unknown): string => (Array.isArray(n) ? n.map(text).join("") : typeof n === "string" ? n : n && typeof n === "object" && "props" in (n as object) ? text((n as { props: { children?: unknown } }).props.children) : "");
 
+/** An article image. Until the file exists (or if it fails to load) it shows a neutral box with the alt text, never a stand-in picture. */
+const PostImage = ({ src, alt }: { src: string; alt: string }) => {
+  const [missing, setMissing] = useState(false);
+  return (
+    <figure className="mt-8">
+      {missing ? (
+        <div role="img" aria-label={alt} className="flex aspect-[16/9] w-full flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-dx-line-strong bg-dx-sunken px-6 text-center">
+          <span className="font-dx-mono text-[11px] font-medium uppercase tracking-[0.08em] text-dx-ink-muted">Screenshot to be added</span>
+          <span className="max-w-md text-[14px] leading-relaxed text-dx-ink-muted">{alt}</span>
+        </div>
+      ) : (
+        <img src={src} alt={alt} onError={() => setMissing(true)} className="w-full rounded-[8px] border border-dx-line" />
+      )}
+    </figure>
+  );
+};
+
 /* Markdown rendered in the design system's type. Internal links use the router so the SPA doesn't reload. */
 const components: Components = {
   h2: ({ children }) => (
@@ -25,7 +43,12 @@ const components: Components = {
     </h2>
   ),
   h3: ({ children }) => <h3 className="mt-8 text-[19px] font-semibold leading-snug text-dx-ink">{children}</h3>,
-  p: ({ children }) => <p className="mt-5 text-[17px] leading-[1.7] text-dx-ink-muted">{children}</p>,
+  p: ({ children, node }) => {
+    const only = node?.children.length === 1 ? node.children[0] : null;
+    if (only && only.type === "element" && only.tagName === "img") return <>{children}</>; // a figure can't sit inside a <p>
+    return <p className="mt-5 text-[17px] leading-[1.7] text-dx-ink-muted">{children}</p>;
+  },
+  img: ({ src, alt }) => <PostImage src={typeof src === "string" ? src : ""} alt={alt ?? ""} />,
   ul: ({ children }) => <ul className="mt-5 list-disc space-y-2 pl-6 text-[17px] leading-[1.7] text-dx-ink-muted marker:text-dx-brand">{children}</ul>,
   ol: ({ children }) => <ol className="mt-5 list-decimal space-y-2 pl-6 text-[17px] leading-[1.7] text-dx-ink-muted marker:font-medium marker:text-dx-ink">{children}</ol>,
   li: ({ children }) => <li className="pl-1">{children}</li>,
@@ -57,6 +80,61 @@ const components: Components = {
 const CTA_BTN = `group inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-dx-brand px-5 text-[14px] font-medium text-white transition hover:bg-dx-brand-hover active:scale-[0.98] ${FOCUS}`;
 const Arrow = () => <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={1.5} aria-hidden="true" />;
 
+const isExternal = (href: string) => /^https?:/.test(href);
+const CtaLink = ({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) =>
+  isExternal(href) ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`${CTA_BTN} ${className}`}>
+      {children} <Arrow />
+    </a>
+  ) : (
+    <Link to={href} className={`${CTA_BTN} ${className}`}>
+      {children} <Arrow />
+    </Link>
+  );
+
+/** A block the post body places by name: a slim callout, or cards that sit side by side on desktop and stack on phones. */
+const PostBlock = ({ block }: { block: Block }) => {
+  if (block.kind === "diagram") {
+    const Diagram = DIAGRAMS[block.name];
+    return <Diagram />;
+  }
+  return block.kind === "callout" ? (
+    <aside className="mt-8 rounded-[8px] border border-dx-line border-l-[3px] border-l-dx-brand bg-dx-raised px-5 py-4 sm:flex sm:items-center sm:gap-6">
+      <p className="text-[16px] font-medium leading-relaxed text-dx-ink sm:flex-1">{block.text}</p>
+      <CtaLink href={block.href} className="mt-3 w-full shrink-0 sm:mt-0 sm:w-auto">
+        {block.cta}
+      </CtaLink>
+    </aside>
+  ) : (
+    <div className="mt-6 grid gap-4 md:grid-cols-2">
+      {block.cards.map((c) => (
+        <section key={c.title} className="flex flex-col rounded-[8px] border border-dx-line bg-dx-raised p-5 sm:p-6">
+          <h3 className="text-[19px] font-semibold leading-snug text-dx-ink">{c.title}</h3>
+          {c.price && <p className="mt-2 font-dx-mono text-[13px] font-medium text-dx-brand">{c.price}</p>}
+          <div className="flex-1 [&>p]:mt-3 [&>p]:text-[15px] [&>p]:leading-relaxed">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+              {c.body}
+            </ReactMarkdown>
+          </div>
+          <CtaLink href={c.href} className="mt-5 w-full">
+            {c.cta}
+          </CtaLink>
+        </section>
+      ))}
+    </div>
+  );
+};
+
+/** The base components plus the post's named blocks: a fenced ~~~block holding a key renders that block. */
+const withBlocks = (blocks: Record<string, Block> | undefined): Components => ({
+  ...components,
+  pre: ({ children }) => {
+    const code = isValidElement<{ className?: string; children?: ReactNode }>(children) ? children.props : null;
+    const block = code?.className === "language-block" ? blocks?.[text(code.children).trim()] : undefined;
+    return block ? <PostBlock block={block} /> : <pre className="mt-6 overflow-x-auto rounded-[8px] bg-dx-sunken p-4 text-[14px]">{children}</pre>;
+  },
+});
+
 /** The intro (everything before the first H2) and the rest, so a callout can sit between them without editing the text. */
 const splitAtFirstH2 = (body: string): [string, string] => {
   const i = body.search(/^## /m);
@@ -83,7 +161,9 @@ const BlogPost = () => {
             keywords: post.tags.join(", "),
             inLanguage: "en",
             mainEntityOfPage: url,
-            author: { "@type": "Organization", name: "Dexraflow", url: "https://www.dexraflow.com" },
+            author: post.author
+              ? { "@type": "Person", name: post.author.name, jobTitle: post.author.role, worksFor: { "@id": "https://www.dexraflow.com/#org" } }
+              : { "@type": "Organization", name: "Dexraflow", url: "https://www.dexraflow.com" },
             publisher: { "@id": "https://www.dexraflow.com/#org" },
             image: "https://www.dexraflow.com/og-image.png",
           },
@@ -110,8 +190,9 @@ const BlogPost = () => {
 
   if (!post) return <Navigate to="/blog" replace />;
 
-  const others = POSTS.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const others = POSTS.filter((p) => p.slug !== post.slug).slice(0, 4);
   const [intro, rest] = splitAtFirstH2(post.body);
+  const md = post.blocks ? withBlocks(post.blocks) : components;
 
   return (
     <BlogLayout>
@@ -123,7 +204,7 @@ const BlogPost = () => {
         <h1 className="mt-4 text-[34px] font-semibold leading-[1.08] tracking-[-0.03em] text-dx-ink sm:text-[44px]">{post.title}</h1>
         <p className="mt-5 text-[18px] leading-relaxed text-dx-ink-muted">{post.description}</p>
         <p className="mt-5 text-[13px] text-dx-ink-muted">
-          <time dateTime={post.date}>{fmtDate(post.date)}</time> · {post.readMinutes} min read · Dexraflow
+          <time dateTime={post.date}>{fmtDate(post.date)}</time> · {post.readMinutes} min read · {post.author ? `${post.author.name}, ${post.author.role}` : "Dexraflow"}
         </p>
         <hr className="mt-8 border-dx-line" />
 
@@ -144,7 +225,7 @@ const BlogPost = () => {
               </ReactMarkdown>
             </>
           ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
               {post.body}
             </ReactMarkdown>
           )}
