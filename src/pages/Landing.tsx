@@ -526,6 +526,24 @@ const Landing = () => {
           <Reveal>
             <Head id="how-title" label="How it works" title="Three steps, all read-only" />
           </Reveal>
+          <Reveal className="mt-10">
+            <figure className="max-w-4xl">
+              <video
+                className="aspect-video w-full rounded-[8px] border border-dx-line bg-dx-raised"
+                controls
+                playsInline
+                preload="none"
+                poster="/video/dexraflow-launch-poster.jpg"
+                width={1920}
+                height={1080}
+                aria-label="Dexraflow in 25 seconds: a demo request goes missing, the daily check finds it, and an alert names the cause and the fix."
+              >
+                <source src="/video/dexraflow-launch.mp4" type="video/mp4" />
+                <track kind="captions" src="/video/dexraflow-launch.vtt" srcLang="en" label="English" />
+              </video>
+              <figcaption className="mt-3 text-[12px] text-dx-ink-muted">25 seconds, with sound. The lead, the cause and the fix shown are examples.</figcaption>
+            </figure>
+          </Reveal>
           <ol className="mt-12 grid gap-4 lg:grid-cols-3">
             {STEPS.map((s, i) => (
               <Reveal key={s.k} delay={i * 0.08} className="h-full">
